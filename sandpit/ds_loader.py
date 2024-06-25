@@ -97,7 +97,10 @@ if __name__ == '__main__':
 
     # pdf2.loc[pdf['occupancy'] >= 0.5]
 
-
+    pdf_merged = pdf_merged['S_auth_seq_num', 'A_auth_seq_id', 'A_id', 'A_label_atom_id', 'A_type_symbol',
+                            'S_pdb_seq_num', 'S_seq_id', 'S_ndb_seq_num', 'S_mon_id', 'S_pdb_mon_id', 'S_auth_mon_id',
+                            'A_label_comp_id', 'S_pdb_strand_id', 'A_Cartn_x ', 'A_Cartn_y',  'A_Cartn_z',
+                            'A_occupancy']
 
 
 
