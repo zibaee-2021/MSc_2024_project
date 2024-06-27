@@ -28,13 +28,17 @@ from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 
 if __name__ == '__main__':
 
-    # Note: I'm using `S_` prefix for `_pdbx_poly_seq_scheme` and `A_` prefix for `_atom_site`
+    # NOTE: I'm using prefix `S_` for `_pdbx_poly_seq_scheme` and prefix `A_` for `_atom_site`
     class CIF(Enum):
+        S = '_pdbx_poly_seq_scheme.'
+        A = '_atom_site.'
+
         S_seq_id = 'S_seq_id'
         S_mon_id = 'S_mon_id'
         S_pdb_seq_num = 'S_pdb_seq_num'
-        S_auth_seq_num = 'S_auth_seq_num'
-        S_pdb_mon_id = 'S_pdb_mon_id'
+        S_pdb_mon_id = 'S_pdb_mon_id'  # not used as seems to be identical to `A_label_comp_id` (but ? instead of <NA>)
+        A_group_PDB = 'A_group_PDB'
+
         A_id = 'A_id'
         A_label_atom_id = 'A_label_atom_id'
         A_label_comp_id = 'A_label_comp_id'
@@ -46,13 +50,10 @@ if __name__ == '__main__':
 
     cif = '../data/4hb1.cif'
     mmcif_dict = MMCIF2Dict(cif)
-
-    seq_id_list = mmcif_dict['_pdbx_poly_seq_scheme.seq_id']
-    mon_id_list = mmcif_dict['_pdbx_poly_seq_scheme.mon_id']
-    pdb_seq_num_list = mmcif_dict['_pdbx_poly_seq_scheme.pdb_seq_num']
-    auth_seq_num_list = mmcif_dict['_pdbx_poly_seq_scheme.auth_seq_num']
-    pdb_mon_id_list = mmcif_dict['_pdbx_poly_seq_scheme.pdb_mon_id']
-    auth_mon_id_list = mmcif_dict['_pdbx_poly_seq_scheme.auth_mon_id']
+    seq_id_list = mmcif_dict[CIF.S.value + CIF.S_seq_id.value[2:]]
+    mon_id_list = mmcif_dict[CIF.S.value + CIF.S_mon_id.value[2:]]
+    pdb_seq_num_list = mmcif_dict[CIF.S.value + CIF.S_pdb_seq_num.value[2:]]
+    pdb_mon_id_list = mmcif_dict[CIF.S.value + CIF.S_pdb_mon_id.value[2:]]
 
     # 'S_' is `_pdbx_poly_seq_scheme`
     pdf_left = pd.DataFrame(
@@ -60,23 +61,23 @@ if __name__ == '__main__':
             CIF.S_seq_id.value: seq_id_list,
             CIF.S_mon_id.value: mon_id_list,
             CIF.S_pdb_seq_num.value: pdb_seq_num_list,
-            CIF.S_auth_seq_num.value: auth_seq_num_list,
             CIF.S_pdb_mon_id.value: pdb_mon_id_list
         })
 
-    id_list = mmcif_dict['_atom_site.id']
-    label_atom_id_list = mmcif_dict['_atom_site.label_atom_id']  #
-    label_comp_id_list = mmcif_dict['_atom_site.label_comp_id']  # aa 3-letter
-    label_asym_id_list = mmcif_dict['_atom_site.label_asym_id']  # chain
-    auth_seq_id_list = mmcif_dict['_atom_site.auth_seq_id']
-    x_list = mmcif_dict['_atom_site.Cartn_x']
-    y_list = mmcif_dict['_atom_site.Cartn_y']
-    z_list = mmcif_dict['_atom_site.Cartn_z']
-    occupancy_list = mmcif_dict['_atom_site.occupancy']
+    group_PDB_list = mmcif_dict[CIF.A.value + CIF.A_group_PDB.value[2:]]
+    id_list = mmcif_dict[CIF.A.value + CIF.A_id.value[2:]]
+    label_atom_id_list = mmcif_dict[CIF.A.value + CIF.A_label_atom_id.value[2:]]  #
+    label_comp_id_list = mmcif_dict[CIF.A.value + CIF.A_label_comp_id.value[2:]]  # aa 3-letter
+    auth_seq_id_list = mmcif_dict[CIF.A.value + CIF.A_auth_seq_id.value[2:]]
+    x_list = mmcif_dict[CIF.A.value + CIF.A_Cartn_x.value[2:]]
+    y_list = mmcif_dict[CIF.A.value + CIF.A_Cartn_y.value[2:]]
+    z_list = mmcif_dict[CIF.A.value + CIF.A_Cartn_z.value[2:]]
+    occupancy_list = mmcif_dict[CIF.A.value + CIF.A_occupancy.value[2:]]
 
     # 'A_' is `_atom_site`
     pdf_right = pd.DataFrame(
         data={
+            CIF.A_group_PDB.value: group_PDB_list,
             CIF.A_id.value: id_list,
             CIF.A_label_atom_id.value: label_atom_id_list,
             CIF.A_label_comp_id.value: label_comp_id_list,
@@ -104,7 +105,6 @@ if __name__ == '__main__':
 
     # Cast strings (of ints) to numeric and then to integers
     for col in [CIF.S_seq_id.value,
-                CIF.S_auth_seq_num.value,
                 CIF.S_pdb_seq_num.value,
                 CIF.A_id.value,
                 CIF.A_auth_seq_id.value]:
@@ -119,13 +119,13 @@ if __name__ == '__main__':
     # pdf2.loc[pdf[CIF.occupancy.value] >= 0.5]
 
     pdf_merged = pdf_merged[[
+        CIF.A_group_PDB.value,      # 'ATOM' or 'HETATM'
         CIF.S_seq_id.value,         # amino acid sequence number
         CIF.S_mon_id.value,         # amino acid sequence
+        CIF.S_pdb_seq_num.value,    # amino acid sequence number (structure)
         CIF.A_auth_seq_id.value,    # amino acid sequence number (structure)
         CIF.A_label_comp_id.value,  # amino acid sequence (structure)
-        CIF.S_pdb_seq_num.value,    # amino acid sequence number (structure)
-        CIF.S_auth_seq_num.value,   # amino acid sequence number (structure)
-        CIF.S_pdb_mon_id.value,     # amino acid sequence (structure)
+        # CIF.S_pdb_mon_id.value,     # amino acid sequence (structure)  # not included (redundant ?)
         CIF.A_id.value,             # atom number
         CIF.A_label_atom_id.value,  # atom codes
         CIF.A_Cartn_x.value,        # atom x-coordinates
@@ -134,6 +134,12 @@ if __name__ == '__main__':
         CIF.A_occupancy.value       # occupancy
     ]]
 
-    pdf_merged = pdf_merged.sort_values(CIF.S_seq_id.value)
+    # SORT
+    pdf_merged = pdf_merged.sort_values([CIF.S_seq_id.value, CIF.A_id.value])
 
+    # FILTER
+    # pdf_merged = pdf_merged[pdf_merged.A_group_PDB == 'ATOM']
+    pdf_merged = pdf_merged.drop(pdf_merged[pdf_merged['A_group_PDB'] == 'HETATM'].index)
 print('yes')
+
+
