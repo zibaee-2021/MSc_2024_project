@@ -5,7 +5,6 @@ Store in dicts and save to ../data/json.
 
 (Atom names manually collected from https://www.ebi.ac.uk/pdbe-srv/pdbechem/atom/list/ARG to TRP)
 """
-
 import yaml
 from typing import Tuple
 import json
