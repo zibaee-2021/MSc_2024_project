@@ -20,10 +20,12 @@ def load_dataset():
     sum_d = 0
     nn = 0
 
-    with open('rnacif_train.lst', 'r') as targetfile:
+    # with open('rnacif_train.lst', 'r') as targetfile:
+    with open('../data/rnacif_train.lst', 'r') as targetfile:
+
         for line in targetfile:
             target = line.rstrip()
-
+            # target = ''
             ntcodes = []
             ntindices = []
             bbindices = []
@@ -33,7 +35,9 @@ def load_dataset():
             atomindex = 0
             lastnid = None
 
-            with open('data/cif/' + target + '.cif', 'r') as pdbfile:
+            with open('../data/' + target + '.cif', 'r') as pdbfile:
+            # with open('data/cif/' + target + '.cif', 'r') as pdbfile:
+            # with open('../data/' + target + '4gxy.cif', 'r') as pdbfile:
                 for line in pdbfile:
                     if line[:4] == 'ATOM':
                         fields = line.split()
@@ -102,3 +106,7 @@ def load_dataset():
     print("Data unit var scaling = ", 1/sigma_data)
 
     return train_list, validation_list
+
+
+if __name__ == '__main__':
+    load_dataset()
