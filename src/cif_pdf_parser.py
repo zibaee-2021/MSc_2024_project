@@ -19,6 +19,7 @@ Align atom sequence to PDB sequence.
 Ignore any atoms with occupancy less than 0.5. Interpret this as a "missing" atom.
 """
 from enum import Enum
+import numpy as np
 import pandas as pd
 from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 
@@ -31,7 +32,6 @@ class CIF(Enum):
     S_seq_id = 'S_seq_id'
     S_mon_id = 'S_mon_id'
     S_pdb_seq_num = 'S_pdb_seq_num'
-    S_pdb_mon_id = 'S_pdb_mon_id'  # not used as seems to be identical to `A_label_comp_id` (but ? instead of <NA>)
     A_group_PDB = 'A_group_PDB'
 
     A_id = 'A_id'
