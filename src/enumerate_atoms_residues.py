@@ -52,12 +52,12 @@ if __name__ == '__main__':
     residues_, residues_atoms_ = read_atom()
     aas_enumerated_, aas_atoms_enumerated_, atoms_only_enumerated_ = enumerate_atoms_residues(residues_, residues_atoms_)
 
-    with open('../data/aas_enumerated.json', 'w') as json_f:
+    with open('../data/jsons/aas_enumerated.json', 'w') as json_f:
         json.dump(aas_enumerated_, json_f, indent=4)
 
     aas_atoms_enumerated_ = {str(k): v for k, v in aas_atoms_enumerated_.items()}
-    with open('../data/aas_atoms_enumerated.json', 'w') as json_f:
+    with open('../data/jsons/aas_atoms_enumerated.json', 'w') as json_f:
         json.dump(aas_atoms_enumerated_, json_f, indent=4)
 
-    with open('../data/unique_atoms_only_enumerated.json', 'w') as json_f:
+    with open('../data/jsons/unique_atoms_only_enumerated.json', 'w') as json_f:
         json.dump(atoms_only_enumerated_, json_f, indent=4)
