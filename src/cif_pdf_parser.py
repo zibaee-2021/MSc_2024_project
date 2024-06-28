@@ -125,14 +125,14 @@ def parse_cif(local_cif_file: str) -> pd.DataFrame:
         how='outer'
     )
 
-    # Cast strings (of floats) to numeric
+    # Cast strings (of floats) to numeric:
     for col in [CIF.A_Cartn_x.value,
                 CIF.A_Cartn_y.value,
                 CIF.A_Cartn_z.value,
                 CIF.A_occupancy.value]:
         pdf_merged[col] = pd.to_numeric(pdf_merged[col], errors='coerce')
 
-    # Cast strings (of ints) to numeric and then to integers
+    # Cast strings (of ints) to numeric and then to integers:
     for col in [CIF.S_seq_id.value,
                 CIF.S_pdb_seq_num.value,
                 CIF.A_id.value,
@@ -140,9 +140,7 @@ def parse_cif(local_cif_file: str) -> pd.DataFrame:
         pdf_merged[col] = pd.to_numeric(pdf_merged[col], errors='coerce')
         pdf_merged[col] = pdf_merged[col].astype('Int64')
 
-    # pdf2.loc[pdf[CIF.occupancy.value] >= 0.5]
-
-    # RE-ORDER COLUMNS
+    # RE-ORDER
     pdf_merged = pdf_merged[[
         CIF.A_group_PDB.value,      # 'ATOM' or 'HETATM'
         CIF.S_seq_id.value,         # amino acid sequence number
@@ -158,10 +156,8 @@ def parse_cif(local_cif_file: str) -> pd.DataFrame:
         CIF.A_Cartn_z.value,        # atom z-coordinates
         CIF.A_occupancy.value       # occupancy
     ]]
-
     # SORT
     pdf_merged = pdf_merged.sort_values([CIF.S_seq_id.value, CIF.A_id.value])
-
     # FILTER
     # pdf_merged = pdf_merged[pdf_merged.A_group_PDB == 'ATOM']
     pdf_merged = pdf_merged.drop(pdf_merged[pdf_merged['A_group_PDB'] == 'HETATM'].index)
