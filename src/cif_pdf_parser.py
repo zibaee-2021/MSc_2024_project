@@ -44,58 +44,82 @@ class CIF(Enum):
     A_occupancy = 'A_occupancy'
 
 
-def _extract_atom_site_to_pdf(mmcif_dict):
-    group_pdb_list = mmcif_dict[CIF.A.value + CIF.A_group_PDB.value[2:]]
-    id_list = mmcif_dict[CIF.A.value + CIF.A_id.value[2:]]
-    label_atom_id_list = mmcif_dict[CIF.A.value + CIF.A_label_atom_id.value[2:]]  #
-    label_comp_id_list = mmcif_dict[CIF.A.value + CIF.A_label_comp_id.value[2:]]  # aa 3-letter
-    auth_seq_id_list = mmcif_dict[CIF.A.value + CIF.A_auth_seq_id.value[2:]]
-    x_list = mmcif_dict[CIF.A.value + CIF.A_Cartn_x.value[2:]]
-    y_list = mmcif_dict[CIF.A.value + CIF.A_Cartn_y.value[2:]]
-    z_list = mmcif_dict[CIF.A.value + CIF.A_Cartn_z.value[2:]]
-    occupancy_list = mmcif_dict[CIF.A.value + CIF.A_occupancy.value[2:]]
-
-    # 'A_' is `_atom_site`
-    pdf_atom_site = pd.DataFrame(
-        data={
-            CIF.A_group_PDB.value: group_pdb_list,
-            CIF.A_id.value: id_list,
-            CIF.A_label_atom_id.value: label_atom_id_list,
-            CIF.A_label_comp_id.value: label_comp_id_list,
-            CIF.A_auth_seq_id.value: auth_seq_id_list,
-            CIF.A_Cartn_x.value: x_list,
-            CIF.A_Cartn_y.value: y_list,
-            CIF.A_Cartn_z.value: z_list,
-            CIF.A_occupancy.value: occupancy_list
-        })
-    return pdf_atom_site
-
-
-def _extract_poly_seq_to_pdf(mmcif_dict):
-    seq_id_list = mmcif_dict[CIF.S.value + CIF.S_seq_id.value[2:]]
-    mon_id_list = mmcif_dict[CIF.S.value + CIF.S_mon_id.value[2:]]
-    pdb_seq_num_list = mmcif_dict[CIF.S.value + CIF.S_pdb_seq_num.value[2:]]
-    pdb_mon_id_list = mmcif_dict[CIF.S.value + CIF.S_pdb_mon_id.value[2:]]
+def _extract_fields_from_poly_seq(mmcif: dict) -> pd.DataFrame:
+    """
+    Extract necessary fields from `_pdbx_poly_seq_scheme` records from the given mmCIF (expected as dict).
+    (One or more fields might not be necessary for subsequent tokenisation but are not yet removed).
+    :param mmcif:
+    :return: mmCIF fields in tabulated format.
+    """
+    seq_ids = mmcif[CIF.S.value + CIF.S_seq_id.value[2:]]
+    mon_ids = mmcif[CIF.S.value + CIF.S_mon_id.value[2:]]
+    pdb_seq_nums = mmcif[CIF.S.value + CIF.S_pdb_seq_num.value[2:]]
 
     # 'S_' is `_pdbx_poly_seq_scheme`
-    pdf_poly_seq = pd.DataFrame(
+    poly_seq = pd.DataFrame(
         data={
-            CIF.S_seq_id.value: seq_id_list,
-            CIF.S_mon_id.value: mon_id_list,
-            CIF.S_pdb_seq_num.value: pdb_seq_num_list,
-            CIF.S_pdb_mon_id.value: pdb_mon_id_list
+            CIF.S_seq_id.value: seq_ids,
+            CIF.S_mon_id.value: mon_ids,
+            CIF.S_pdb_seq_num.value: pdb_seq_nums,
         })
-    return pdf_poly_seq
+    return poly_seq
 
 
-def parse_cif_to_pdf(cif):
-    mmcif_dict = MMCIF2Dict(cif)
-    pdf_atom_site = _extract_atom_site_to_pdf(mmcif_dict)
-    pdf_poly_seq = _extract_poly_seq_to_pdf(mmcif_dict)
+def _extract_fields_from_atom_site(mmcif: dict) -> pd.DataFrame:
+    """
+    Extract necessary fields from `_atom_site` records from the given mmCIF (expected as dict).
+    (One or more fields might not be necessary for subsequent tokenisation but are not yet removed).
+    :param mmcif:
+    :return: mmCIF fields in tabulated format.
+    """
+    group_pdbs = mmcif[CIF.A.value + CIF.A_group_PDB.value[2:]]
+    ids = mmcif[CIF.A.value + CIF.A_id.value[2:]]
+    label_atom_ids = mmcif[CIF.A.value + CIF.A_label_atom_id.value[2:]]  #
+    label_comp_ids = mmcif[CIF.A.value + CIF.A_label_comp_id.value[2:]]  # aa 3-letter
+    auth_seq_ids = mmcif[CIF.A.value + CIF.A_auth_seq_id.value[2:]]
+    x_coords = mmcif[CIF.A.value + CIF.A_Cartn_x.value[2:]]
+    y_coords = mmcif[CIF.A.value + CIF.A_Cartn_y.value[2:]]
+    z_coords = mmcif[CIF.A.value + CIF.A_Cartn_z.value[2:]]
+    occupancies = mmcif[CIF.A.value + CIF.A_occupancy.value[2:]]
+
+    # 'A_' is `_atom_site`
+    atom_site = pd.DataFrame(
+        data={
+            CIF.A_group_PDB.value: group_pdbs,
+            CIF.A_id.value: ids,
+            CIF.A_label_atom_id.value: label_atom_ids,
+            CIF.A_label_comp_id.value: label_comp_ids,
+            CIF.A_auth_seq_id.value: auth_seq_ids,
+            CIF.A_Cartn_x.value: x_coords,
+            CIF.A_Cartn_y.value: y_coords,
+            CIF.A_Cartn_z.value: z_coords,
+            CIF.A_occupancy.value: occupancies
+        })
+
+    return atom_site
+
+
+def _wipe_low_occupancy_coords(pdf: pd.DataFrame) -> pd.DataFrame:
+    pdf[CIF.A_Cartn_x.value] = np.where(pdf[CIF.A_occupancy.value] <= 0.5, np.NAN, pdf[CIF.A_Cartn_x.value])
+    pdf[CIF.A_Cartn_y.value] = np.where(pdf[CIF.A_occupancy.value] <= 0.5, np.NAN, pdf[CIF.A_Cartn_y.value])
+    pdf[CIF.A_Cartn_z.value] = np.where(pdf[CIF.A_occupancy.value] <= 0.5, np.NAN, pdf[CIF.A_Cartn_z.value])
+    return pdf
+
+
+def parse_cif(local_cif_file: str) -> pd.DataFrame:
+    """
+    Parse given local mmCIF file to extract and tabulate necessary atom and amino acid data fields from
+    `_pdbx_poly_seq_scheme` and `_atom_site`.
+    :param local_cif_file: Path to locally downloaded cif file. (Expected in ../data/cifs directory.)
+    :return: Necessary fields extracted and joined in one table.
+    """
+    mmcif = MMCIF2Dict(local_cif_file)
+    poly_seq_fields = _extract_fields_from_poly_seq(mmcif)
+    atom_site_fields = _extract_fields_from_atom_site(mmcif)
 
     pdf_merged = pd.merge(
-        left=pdf_poly_seq,
-        right=pdf_atom_site,
+        left=poly_seq_fields,
+        right=atom_site_fields,
         left_on=CIF.S_pdb_seq_num.value,
         right_on=CIF.A_auth_seq_id.value,
         how='outer'
@@ -146,4 +170,4 @@ def parse_cif_to_pdf(cif):
 
 
 if __name__ == '__main__':
-    pdf_cif = parse_cif_to_pdf(cif='../data/cifs/4hb1.cif')
+    pdf_cif = parse_cif(local_cif_file='../data/cifs/4hb1.cif')
