@@ -161,7 +161,8 @@ def parse_cif(local_cif_file: str) -> pd.DataFrame:
     # FILTER
     # pdf_merged = pdf_merged[pdf_merged.A_group_PDB == 'ATOM']
     pdf_merged = pdf_merged.drop(pdf_merged[pdf_merged['A_group_PDB'] == 'HETATM'].index)
-
+    # LOW OCCUPANCY
+    pdf_merged = _wipe_low_occupancy_coords(pdf_merged)
     return pdf_merged
 
 
