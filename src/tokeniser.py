@@ -1,4 +1,5 @@
 import cif_parser as parser
+from cif_parser import CIF
 import json
 import numpy as np
 from enum import Enum
@@ -23,40 +24,48 @@ if __name__ == '__main__':
         aas_enumerated = json.load(json_f)
 
     # Amino acid indices
-    aa_index = np.asarray(pdf_cif[parser.CIF.S_seq_id.value].tolist(), dtype=np.uint16)
+    aa_index = np.asarray(pdf_cif[CIF.S_seq_id.value].tolist(), dtype=np.uint16)
 
     # Atom indices
-    pdf_cif[parser.CIF.A_id.value].fillna(0, inplace=True)
-    atom_index = np.asarray(pdf_cif[parser.CIF.A_id.value].tolist(), dtype=np.uint16)
+    pdf_cif[CIF.A_id.value].fillna(0, inplace=True)
+    atom_index = np.asarray(pdf_cif[CIF.A_id.value].tolist(), dtype=np.uint16)
 
     # Amino acid labels enumerated
-    pdf_cif[ColNames.AA_LABEL_NUM.value] = pdf_cif[parser.CIF.A_label_comp_id.value].map(aas_enumerated).astype('Int64')
+    pdf_cif[ColNames.AA_LABEL_NUM.value] = pdf_cif[CIF.A_label_comp_id.value].map(aas_enumerated).astype('Int64')
     pdf_cif[ColNames.AA_LABEL_NUM.value].fillna(255, inplace=True)
     aa_label_num = np.asarray(pdf_cif[ColNames.AA_LABEL_NUM.value].tolist(), dtype=np.uint8)
 
     # Atom labels enumerated
-    pdf_cif[ColNames.ATOM_LABEL_NUM.value] = pdf_cif[parser.CIF.A_label_atom_id.value].map(atoms_enumerated).astype('Int64')
+    pdf_cif[ColNames.ATOM_LABEL_NUM.value] = pdf_cif[CIF.A_label_atom_id.value].map(atoms_enumerated).astype('Int64')
     pdf_cif[ColNames.ATOM_LABEL_NUM.value].fillna(255, inplace=True)
     atom_label_num = np.asarray(pdf_cif[ColNames.ATOM_LABEL_NUM.value].tolist(), dtype=np.uint8)
 
     # Atomic xyz coordinates
-    pdf_cif[ColNames.MEAN_COORDS.value] = pdf_cif[[parser.CIF.A_Cartn_x.value,
-                                                   parser.CIF.A_Cartn_y.value,
-                                                   parser.CIF.A_Cartn_z.value]].mean(axis=1)
-    pdf_cif[ColNames.MEAN_CORR_X.value] = pdf_cif[parser.CIF.A_Cartn_x.value] - pdf_cif[ColNames.MEAN_COORDS.value]
-    pdf_cif[ColNames.MEAN_CORR_Y.value] = pdf_cif[parser.CIF.A_Cartn_y.value] - pdf_cif[ColNames.MEAN_COORDS.value]
-    pdf_cif[ColNames.MEAN_CORR_Z.value] = pdf_cif[parser.CIF.A_Cartn_z.value] - pdf_cif[ColNames.MEAN_COORDS.value]
+    pdf_cif[ColNames.MEAN_COORDS.value] = pdf_cif[[CIF.A_Cartn_x.value,
+                                                   CIF.A_Cartn_y.value,
+                                                   CIF.A_Cartn_z.value]].mean(axis=1)
+    pdf_cif[ColNames.MEAN_CORR_X.value] = pdf_cif[CIF.A_Cartn_x.value] - pdf_cif[ColNames.MEAN_COORDS.value]
+    pdf_cif[ColNames.MEAN_CORR_Y.value] = pdf_cif[CIF.A_Cartn_y.value] - pdf_cif[ColNames.MEAN_COORDS.value]
+    pdf_cif[ColNames.MEAN_CORR_Z.value] = pdf_cif[CIF.A_Cartn_z.value] - pdf_cif[ColNames.MEAN_COORDS.value]
 
     mean_corrected_xyz = pdf_cif[[ColNames.MEAN_CORR_X.value,
                                   ColNames.MEAN_CORR_Y.value,
                                   ColNames.MEAN_CORR_Z.value]]
     mean_corr_xyz_npy = np.array(mean_corrected_xyz, dtype=np.float32)
 
-    bb_indices = np.where(pdf_cif[parser.CIF.A_label_atom_id.value] == 'CA',
-                          pdf_cif[parser.CIF.A_id.value],
-                          np.nan)
-    bb_indices = bb_indices[~np.isnan(bb_indices)]
-    bb_indices = np.asarray(bb_indices, dtype=np.uint16)
-    tokens = (ColNames.AA_LABEL_NUM.value, ColNames.ATOM_LABEL_NUM.value, aa_index, pdb_id, mean_corr_xyz_npy,
-              bb_indices)
+    alpha_carbon_indices = np.where(pdf_cif[CIF.A_label_atom_id.value] == 'CA',
+                                    pdf_cif[CIF.A_id.value], np.nan)
+    alpha_carbon_indices = alpha_carbon_indices[~np.isnan(alpha_carbon_indices)]
+    alpha_carbon_indices = np.asarray(alpha_carbon_indices, dtype=np.uint16)
+
+    tokens = (ColNames.AA_LABEL_NUM.value,
+              ColNames.ATOM_LABEL_NUM.value,
+              aa_index,
+              pdb_id,
+              mean_corr_xyz_npy,
+              alpha_carbon_indices)
     pass
+
+
+# INFERENCE: input is amino acid sequence --> output should be all possible atoms (obviously with no coords).
+# TRAINING: input is amino acid sequence --> output should be xyz coords for atoms that are seen, else nan.
