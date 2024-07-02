@@ -158,14 +158,25 @@ def parse_cif(local_cif_file: str) -> pd.DataFrame:
         CIF.A_Cartn_z.value,        # atom z-coordinates
         CIF.A_occupancy.value       # occupancy
     ]]
-    # SORT
+    # SORT SEQUENCE NUMBERING BY RESIDUE (SEQ ID) THEN BY ATOMS (A ID):
     pdf_merged = pdf_merged.sort_values([CIF.S_seq_id.value, CIF.A_id.value])
     pdf_merged.reset_index(drop=True, inplace=True)
-    # FILTER
+
+    # FILTER OUT `HETATM` ROWS:
     # pdf_merged = pdf_merged[pdf_merged.A_group_PDB == 'ATOM']
     pdf_merged = pdf_merged.drop(pdf_merged[pdf_merged['A_group_PDB'] == 'HETATM'].index)
-    # LOW OCCUPANCY
+
+    # REMOVE LOW-OCCUPANCY COORDS:
     pdf_merged = _wipe_low_occupancy_coords(pdf_merged)
+
+    # ONLY KEEP COLUMNS THAT NEEDED:
+    pdf_merged = pdf_merged[[CIF.S_seq_id.value,
+                             CIF.S_mon_id.value,
+                             CIF.A_id.value,
+                             CIF.A_label_atom_id.value,
+                             CIF.A_Cartn_x.value,
+                             CIF.A_Cartn_y.value,
+                             CIF.A_Cartn_z.value]]
     return pdf_merged
 
 
