@@ -100,9 +100,9 @@ def _extract_fields_from_atom_site(mmcif: dict) -> pd.DataFrame:
 
 
 def _wipe_low_occupancy_coords(pdf: pd.DataFrame) -> pd.DataFrame:
-    pdf[CIF.A_Cartn_x.value] = np.where(pdf[CIF.A_occupancy.value] <= 0.5, np.NAN, pdf[CIF.A_Cartn_x.value])
-    pdf[CIF.A_Cartn_y.value] = np.where(pdf[CIF.A_occupancy.value] <= 0.5, np.NAN, pdf[CIF.A_Cartn_y.value])
-    pdf[CIF.A_Cartn_z.value] = np.where(pdf[CIF.A_occupancy.value] <= 0.5, np.NAN, pdf[CIF.A_Cartn_z.value])
+    pdf[CIF.A_Cartn_x.value] = np.where(pdf[CIF.A_occupancy.value] <= 0.5, np.nan, pdf[CIF.A_Cartn_x.value])
+    pdf[CIF.A_Cartn_y.value] = np.where(pdf[CIF.A_occupancy.value] <= 0.5, np.nan, pdf[CIF.A_Cartn_y.value])
+    pdf[CIF.A_Cartn_z.value] = np.where(pdf[CIF.A_occupancy.value] <= 0.5, np.nan, pdf[CIF.A_Cartn_z.value])
     return pdf
 
 
