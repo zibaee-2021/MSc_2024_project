@@ -20,7 +20,7 @@ if __name__ == '__main__':
 
 
     pdb_id = '4hb1'
-    pdf_cif = parser.parse_cif(local_cif_file=f'../data/cifs/{pdb_id}.cif')
+    pdf_cif = parser.parse_cif(local_cif_file=f'../data/cifs_csvs/{pdb_id}.cif')
     with open('../data/jsons/unique_atoms_only_enumerated.json', 'r') as json_f:
         atoms_enumerated = json.load(json_f)
     with open('../data/jsons/aas_enumerated.json', 'r') as json_f:

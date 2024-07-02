@@ -110,7 +110,7 @@ def parse_cif(local_cif_file: str) -> pd.DataFrame:
     """
     Parse given local mmCIF file to extract and tabulate necessary atom and amino acid data fields from
     `_pdbx_poly_seq_scheme` and `_atom_site`.
-    :param local_cif_file: Path to locally downloaded cif file. (Expected in ../data/cifs directory.)
+    :param local_cif_file: Path to locally downloaded cif file. (Expected in ../data/cifs_csvs directory.)
     :return: Necessary fields extracted and joined in one table.
     """
     mmcif = MMCIF2Dict(local_cif_file)
@@ -124,6 +124,8 @@ def parse_cif(local_cif_file: str) -> pd.DataFrame:
         right_on=CIF.A_auth_seq_id.value,
         how='outer'
     )
+
+    # pdf_merged.reset_index(drop=True, inplace=True)
 
     # Cast strings (of floats) to numeric:
     for col in [CIF.A_Cartn_x.value,
@@ -167,6 +169,6 @@ def parse_cif(local_cif_file: str) -> pd.DataFrame:
 
 
 if __name__ == '__main__':
-    pdf_cif = parse_cif(local_cif_file='../data/cifs/4hb1.cif')
-    pdf_cif.to_csv(path_or_buf='../data/cifs_pdfs/4hb1_cif.csv')
+    pdf_cif = parse_cif(local_cif_file='../data/cifs_csvs/4hb1.cif')
+    pdf_cif.to_csv(path_or_buf='../data/cifs_csvs/4hb1_cif.csv')
 
