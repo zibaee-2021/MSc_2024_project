@@ -160,6 +160,7 @@ def parse_cif(local_cif_file: str) -> pd.DataFrame:
     ]]
     # SORT
     pdf_merged = pdf_merged.sort_values([CIF.S_seq_id.value, CIF.A_id.value])
+    pdf_merged.reset_index(drop=True, inplace=True)
     # FILTER
     # pdf_merged = pdf_merged[pdf_merged.A_group_PDB == 'ATOM']
     pdf_merged = pdf_merged.drop(pdf_merged[pdf_merged['A_group_PDB'] == 'HETATM'].index)
