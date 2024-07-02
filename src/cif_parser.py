@@ -182,5 +182,15 @@ def parse_cif(local_cif_file: str) -> pd.DataFrame:
 
 if __name__ == '__main__':
     pdf_cif = parse_cif(local_cif_file='../data/cifs_csvs/4hb1.cif')
-    pdf_cif.to_csv(path_or_buf='../data/cifs_csvs/4hb1_cif.csv')
+    pdf_cif.to_csv(path_or_buf='../data/cifs_csvs/4hb1_cif.csv', index=False, na_rep='null')
+    pdf_cif.to_csv(path_or_buf='../data/cifs_csvs/4hb1_cif.ssv', sep=' ', index=False, na_rep='null')
+    pdf_cif.to_csv(path_or_buf='../data/cifs_csvs/4hb1_cif.tsv', sep='\t', index=False, na_rep='null')  # tab-separated
+    pdf_easy_read = pdf_cif.rename(columns={CIF.S_seq_id.value: 'SEQ_ID',
+                                            CIF.S_mon_id.value: 'RESIDUES',
+                                            CIF.A_id.value: 'ATOM_ID',
+                                            CIF.A_label_atom_id.value: 'ATOMS',
+                                            CIF.A_Cartn_x.value: 'X',
+                                            CIF.A_Cartn_y.value: 'Y',
+                                            CIF.A_Cartn_z.value: 'Z'})
+    pdf_easy_read.to_csv(path_or_buf='../data/cifs_csvs/easyRead_4hb1_cif.tsv', sep='\t', index=False, na_rep='null')  # tab-separated
 
