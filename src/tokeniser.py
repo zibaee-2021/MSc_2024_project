@@ -30,10 +30,9 @@ if __name__ == '__main__':
     atom_index = np.asarray(pdf_cif[parser.CIF.A_id.value].tolist(), dtype=np.uint16)
 
     # Amino acid labels enumerated
-    pdf_cif[Tokens.AA_LABEL_NUM.value] = pdf_cif[parser.CIF.A_label_comp_id.value].map(aas_enumerated).astype('Int64')
-    pdf_cif[Tokens.AA_LABEL_NUM.value].fillna(255, inplace=True)
-    aa_label_num = np.asarray(pdf_cif[Tokens.AA_LABEL_NUM.value].tolist(), dtype=np.uint8)
     pdf_cif[ColNames.AA_LABEL_NUM.value] = pdf_cif[parser.CIF.A_label_comp_id.value].map(aas_enumerated).astype('Int64')
+    pdf_cif[ColNames.AA_LABEL_NUM.value].fillna(255, inplace=True)
+    aa_label_num = np.asarray(pdf_cif[ColNames.AA_LABEL_NUM.value].tolist(), dtype=np.uint8)
 
     # Atom labels enumerated
     pdf_cif[ColNames.ATOM_LABEL_NUM.value] = pdf_cif[parser.CIF.A_label_atom_id.value].map(atoms_enumerated).astype('Int64')
