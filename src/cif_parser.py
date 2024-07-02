@@ -168,3 +168,5 @@ def parse_cif(local_cif_file: str) -> pd.DataFrame:
 
 if __name__ == '__main__':
     pdf_cif = parse_cif(local_cif_file='../data/cifs/4hb1.cif')
+    pdf_cif.to_csv(path_or_buf='../data/cifs_pdfs/4hb1_cif.csv')
+
