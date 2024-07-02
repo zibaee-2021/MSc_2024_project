@@ -60,5 +60,3 @@ if __name__ == '__main__':
     tokens = (ColNames.AA_LABEL_NUM.value, ColNames.ATOM_LABEL_NUM.value, aa_index, pdb_id, mean_corr_xyz_npy,
               bb_indices)
     pass
-
-    tokens = (Tokens.AA_LABEL_NUM.value, Tokens.ATOM_LABEL_NUM.value, Tokens.AA_INDEX.value, pdb_id, mean_corr_xyz_npy)
