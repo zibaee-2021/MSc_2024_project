@@ -18,11 +18,12 @@ Align atom sequence to PDB sequence.
 
 Ignore any atoms with occupancy less than 0.5. Interpret this as a "missing" atom.
 """
+import os
 from enum import Enum
 import numpy as np
 import pandas as pd
 from Bio.PDB.MMCIF2Dict import MMCIF2Dict
-
+import requests
 
 # NOTE: I'm using prefix `S_` for `_pdbx_poly_seq_scheme` and prefix `A_` for `_atom_site`
 class CIF(Enum):
@@ -106,14 +107,38 @@ def _wipe_low_occupancy_coords(pdf: pd.DataFrame) -> pd.DataFrame:
     return pdf
 
 
-def parse_cif(local_cif_file: str) -> pd.DataFrame:
+def _fetch_mmcif_from_PDB_and_write_locally(pdb_id):
+
+    url = f'https://files.rcsb.org/download/{pdb_id}.cif'
+    response = requests.get(url)
+    response.raise_for_status()
+
+    mmcif_file = f'../data/cifs/{pdb_id}.cif'
+    with open(mmcif_file, 'w') as file:
+        file.write(response.text)
+
+
+def parse_cif(pdb_id: str, local_cif_file: str) -> pd.DataFrame:
     """
     Parse given local mmCIF file to extract and tabulate necessary atom and amino acid data fields from
     `_pdbx_poly_seq_scheme` and `_atom_site`.
-    :param local_cif_file: Path to locally downloaded cif file. (Expected in ../data/cifs_csvs directory.)
+    :param pdb_id: PDB identifier.
+    :param local_cif_file: Path to locally downloaded cif file. (Expected in `../data/cifs` directory.)
     :return: Necessary fields extracted and joined in one table.
     """
-    mmcif = MMCIF2Dict(local_cif_file)
+    mmcif = dict()
+    if os.path.exists(local_cif_file):
+        mmcif = MMCIF2Dict(local_cif_file)
+    else:
+        print(f'Will try to read {pdb_id} directly from PDB site..')
+        try:
+            _fetch_mmcif_from_PDB_and_write_locally(pdb_id)
+            mmcif = MMCIF2Dict(local_cif_file)
+        except requests.exceptions.RequestException as e:
+            print(f'Failed to retrieve data from API: {e}')
+        except Exception:
+            print(f"Undefined error while trying to fetch '{pdb_id}' from PDB.")
+
     poly_seq_fields = _extract_fields_from_poly_seq(mmcif)
     atom_site_fields = _extract_fields_from_atom_site(mmcif)
 
@@ -178,19 +203,3 @@ def parse_cif(local_cif_file: str) -> pd.DataFrame:
                              CIF.A_Cartn_y.value,
                              CIF.A_Cartn_z.value]]
     return pdf_merged
-
-
-if __name__ == '__main__':
-    pdf_cif = parse_cif(local_cif_file='../data/cifs_csvs/4hb1.cif')
-    pdf_cif.to_csv(path_or_buf='../data/cifs_csvs/4hb1_cif.csv', index=False, na_rep='null')
-    pdf_cif.to_csv(path_or_buf='../data/cifs_csvs/4hb1_cif.ssv', sep=' ', index=False, na_rep='null')  # space-separated
-    pdf_cif.to_csv(path_or_buf='../data/cifs_csvs/4hb1_cif.tsv', sep='\t', index=False, na_rep='null')  # tab-separated
-    pdf_easy_read = pdf_cif.rename(columns={CIF.S_seq_id.value: 'SEQ_ID',
-                                            CIF.S_mon_id.value: 'RESIDUES',
-                                            CIF.A_id.value: 'ATOM_ID',
-                                            CIF.A_label_atom_id.value: 'ATOMS',
-                                            CIF.A_Cartn_x.value: 'X',
-                                            CIF.A_Cartn_y.value: 'Y',
-                                            CIF.A_Cartn_z.value: 'Z'})
-    pdf_easy_read.to_csv(path_or_buf='../data/cifs_csvs/easyRead_4hb1_cif.tsv', sep='\t', index=False, na_rep='null')
-
