@@ -175,7 +175,6 @@ def parse_cif(pdb_id: str, local_cif_file: str) -> pd.DataFrame:
         CIF.S_pdb_seq_num.value,    # amino acid sequence number (structure)
         CIF.A_auth_seq_id.value,    # amino acid sequence number (structure)
         CIF.A_label_comp_id.value,  # amino acid sequence (structure)
-        # CIF.S_pdb_mon_id.value,     # amino acid sequence (structure)  # not included (redundant ?)
         CIF.A_id.value,             # atom number
         CIF.A_label_atom_id.value,  # atom codes
         CIF.A_Cartn_x.value,        # atom x-coordinates
@@ -188,13 +187,13 @@ def parse_cif(pdb_id: str, local_cif_file: str) -> pd.DataFrame:
     pdf_merged.reset_index(drop=True, inplace=True)
 
     # FILTER OUT `HETATM` ROWS:
-    # pdf_merged = pdf_merged[pdf_merged.A_group_PDB == 'ATOM']
     pdf_merged = pdf_merged.drop(pdf_merged[pdf_merged['A_group_PDB'] == 'HETATM'].index)
+    # pdf_merged = pdf_merged[pdf_merged.A_group_PDB == 'ATOM']  # Alternative: only keep rows starting 'ATOM'
 
-    # REMOVE LOW-OCCUPANCY COORDS:
+    # REPLACE LOW-OCCUPANCY COORDS WITH NANs:
     pdf_merged = _wipe_low_occupancy_coords(pdf_merged)
 
-    # ONLY KEEP COLUMNS THAT NEEDED:
+    # ONLY KEEP COLUMNS THESE COLUMNS:
     pdf_merged = pdf_merged[[CIF.S_seq_id.value,
                              CIF.S_mon_id.value,
                              CIF.A_id.value,
