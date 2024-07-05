@@ -1,11 +1,17 @@
 """
+Use CATH protein domain web server to extract single domain proteins with high resolution X-ray data.
+I downloaded cath-domain-list.txt locally first (in `../data/dataset/big_files_to_git_ignore`), then parsed it using
+Pandas.
+
+Some explanation of Columns 6 to 10, as I understand it:
+
 The classification is hierarchical. Hence, if Column 6 (`S35`) for 2 proteins is the same they have at least 35%
 sequence identity, if those 2 proteins have same `S60` then they also have at least 60 % identity.
 But if you see 2 proteins that have same  `S60`, but different `S35` then they do not have at least 60% sequence
 identity. (I need to confirm that I have understood this completely correctly though).
 
 ------------------------------------------------------------------------------------------------------------------
-Copy-pasted from `README-cath-list-file-format.txt`
+The following is copy-pasted from `README-cath-list-file-format.txt`
 
 Column 1:  CATH domain name (seven characters)
 Column 2:  Class number
@@ -37,20 +43,18 @@ The domain number is a 2-figure, zero-padded number (e.g. '01', '02' ... '10', '
 a double ZERO ('00') this indicates that the domain is a whole PDB chain with no domain chopping.
 
 ------------------------------------------------------------------------------------------------------------------
-Copy-pasted from header of `cath-domain-list.txt`
+The following is copy-pasted from header of `cath-domain-list.txt`
 
 # FILE DESCRIPTION:
 # Contains all classified protein domains in CATH
-# for class 1 (mainly alpha), class 2 (mainly beta),
-# class 3 (alpha and beta) and class 4 (few secondary structures).
+# for class 1 (mainly alpha), class 2 (mainly beta), class 3 (alpha and beta) and class 4 (few secondary structures).
 
 """
 import pandas as pd
 import os
 
 
-if __name__ == '__main__':
-    print(os.getcwd())
+def read_parse_write_single_domain_prots():
     regex_one_or_more_whitespace_chars = r'\s+'
     pdf = pd.read_csv('../data/dataset/big_files_to_git_ignore/cath-domain-list.txt',
                       skiprows=16,
@@ -90,4 +94,9 @@ if __name__ == '__main__':
     # FILTER IN ROWS WITH UNIQUE ['Architecture', 'Topology', 'HomologousSF'] VALUES:
     pdf_xray = pdf_xray[~pdf_xray[['Architecture', 'Topology', 'HomologousSF']].duplicated(keep=False)]  # 550 proteins
     pdf_xray.to_csv(path_or_buf=f'../data/dataset/cath_single_domain_550prots.csv', index=False)
+
+
+if __name__ == '__main__':
+
+    read_parse_write_single_domain_prots()
 
