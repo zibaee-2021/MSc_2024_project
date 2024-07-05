@@ -107,7 +107,7 @@ def _wipe_low_occupancy_coords(pdf: pd.DataFrame) -> pd.DataFrame:
     return pdf
 
 
-def _fetch_mmcif_from_PDB_and_write_locally(pdb_id):
+def _fetch_mmcif_from_PDB_API_and_write_locally(pdb_id):
 
     url = f'https://files.rcsb.org/download/{pdb_id}.cif'
     response = requests.get(url)
@@ -132,7 +132,7 @@ def parse_cif(pdb_id: str, local_cif_file: str) -> pd.DataFrame:
     else:
         print(f'Will try to read {pdb_id} directly from PDB site..')
         try:
-            _fetch_mmcif_from_PDB_and_write_locally(pdb_id)
+            _fetch_mmcif_from_PDB_API_and_write_locally(pdb_id)
             mmcif = MMCIF2Dict(local_cif_file)
         except requests.exceptions.RequestException as e:
             print(f'Failed to retrieve data from API: {e}')
