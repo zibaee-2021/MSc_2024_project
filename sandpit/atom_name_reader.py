@@ -24,7 +24,7 @@ if __name__ == '__main__':
             return atom_dict  # Path to the locally downloaded CIF file
 
 
-    cif_file_path = '../data/big_data_to_git_ignore/components.cif'  # Extract atom names per residue
+    cif_file_path = '../data/big_files_to_git_ignore/components.cif'  # Extract atom names per residue
     atom_dict = extract_atom_names_per_residue(cif_file_path)  # Write the dictionary to a JSON file
     with open('atom_names_per_residue.json', 'w') as json_file:
         json.dump(atom_dict, json_file, indent=4)
