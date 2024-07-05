@@ -14,16 +14,6 @@ class PathsUrls(Enum):
     Uniprot_API = 'https://www.uniprot.org/uniprot/'
 
 
-# Unique identifiers for proteins
-class UniprotId(Enum):
-    Myoglobin_Human = 'P02144'
-    Myoglobin_Sperm_whale = 'P02185'
-    Serine_Protease_Human = 'Q6UWY2'
-    Low_resolution_structure = ''  # resolution > 4 angstroms ??
-    Cyclic_peptide = ''
-    NMR_structure = ''  # for fun ! (you'd need to skip all the Hydrogens)
-
-
 def read_fasta_sequences(uniprot_ids=None) -> dict:
     """
     Read specified FASTA sequences in.
@@ -83,7 +73,7 @@ def read_fasta_sequences(uniprot_ids=None) -> dict:
 
 
 if __name__ == '__main__':
-
-    fasta_id_seqs_ = read_fasta_sequences(uniprot_ids=UniprotId.Serine_Protease_Human.value)
+    Serine_Protease_Human = 'Q6UWY2'
+    fasta_id_seqs_ = read_fasta_sequences(uniprot_ids=Serine_Protease_Human)
     print(fasta_id_seqs_)
 
