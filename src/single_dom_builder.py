@@ -51,8 +51,11 @@ The following is copy-pasted from header of `cath-domain-list.txt`
 
 """
 import pandas as pd
+import requests
 import os
 
+
+global non_200_count
 
 def read_parse_write_single_domain_prots():
     regex_one_or_more_whitespace_chars = r'\s+'
@@ -96,7 +99,44 @@ def read_parse_write_single_domain_prots():
     pdf_xray.to_csv(path_or_buf=f'../data/dataset/cath_single_domain_550prots.csv', index=False)
 
 
+"""Note this is duplicated code (taken from the cir_parser.py"""
+def fetch_mmcif_from_PDB_API_and_write_locally(pdb_id):
+    global non_200_count
+    url = f'https://files.rcsb.org/download/{pdb_id}.cif'
+    response = requests.get(url)
+    response.raise_for_status()
+    code = response.status_code
+    if code != 200:
+        non_200_count += 1
+        print(f'Response status code for {pdb_id} is {code}, hence could not read the pdb for this id.')
+
+    mmcif_file = f'../data/cifs/{pdb_id}.cif'
+    with open(mmcif_file, 'w') as file:
+        file.write(response.text)
+
+
 if __name__ == '__main__':
-
     read_parse_write_single_domain_prots()
+    non_200_count = 0
+    path_550prots = '../data/dataset/cath_single_domain_550prots.csv'
 
+    if os.path.exists(path_550prots):
+        pdf_550prots = pd.read_csv(path_550prots)
+    dupes = pdf_550prots[pdf_550prots['DomainID'].duplicated(keep=False)]
+    pass
+    # domainIDs_550prots = pdf_550prots['DomainID'].tolist()
+    #
+    # print(f'number of domain ids = {len(domainIDs_550prots)}')
+    # for domainID in domainIDs_550prots:
+    #     fetch_mmcif_from_PDB_API_and_write_locally(domainID[:4])
+    # print(f'Total number of non-200 status codes is {non_200_count}')
+    # # This seems to only return 465 proteins out the 550 domain ids
+    #
+    #
+    # # programmatically count cifs in `../data/cifs`
+    # import glob
+    # files = glob.glob(os.path.join('../data/cifs', '*.cif'))
+    # files = [file for file in files if os.path.isfile(file)]
+    # print(f'There are {len(files)} cifs in that dir')
+    # # There are indeed 464 cifs in there
+    #
