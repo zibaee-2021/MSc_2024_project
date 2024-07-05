@@ -193,7 +193,7 @@ def parse_cif(pdb_id: str, local_cif_file: str) -> pd.DataFrame:
     # REPLACE LOW-OCCUPANCY COORDS WITH NANs:
     pdf_merged = _wipe_low_occupancy_coords(pdf_merged)
 
-    # ONLY KEEP COLUMNS THESE COLUMNS:
+    # ONLY KEEP THESE COLUMNS:
     pdf_merged = pdf_merged[[CIF.S_seq_id.value,
                              CIF.S_mon_id.value,
                              CIF.A_id.value,
