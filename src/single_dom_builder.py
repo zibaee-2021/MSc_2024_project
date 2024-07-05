@@ -66,17 +66,19 @@ if __name__ == '__main__':
                              'S100',
                              'S100_Count',
                              'Domain_len',
-                             'Angstroms'])
-    print(pdf.head())  # 500238 rows by 12 columns
-
+                             'Angstroms'])  # 500238 proteins (12 columns)
     nmr_pdf = pdf.loc[pdf['Angstroms'] == 999.0]  # 9357 proteins
     obsolete_pdf = pdf.loc[pdf['Angstroms'] == 1000.0]  # 28191 proteins
+
     # FILTER OUT NMR and 'obsolete' entries (i.e. Angstroms = 999 or 1000)
     pdf_xray = pdf.loc[pdf['Angstroms'] < 999]  # 462690 proteins
+
     # FILTER OUT LOWER RESOLUTION RECORDS
     pdf_xray = pdf_xray.loc[pdf['Angstroms'] < 4]  # 461083 proteins
+
     # FILTER IN CLASS 1, 2 or 3 only
     pdf_xray = pdf_xray.loc[pdf_xray['Class'].isin([1, 2, 3])]  # 453364 proteins
+
     # FILTER OUT SEQUENCE IDENTITY COLUMNS:
     pdf_xray = pdf_xray[['DomainID',
                          'Architecture',
@@ -84,7 +86,8 @@ if __name__ == '__main__':
                          'HomologousSF',
                          'Domain_len',
                          'Angstroms']]
-    # FILTER IN ROWS WHERE 'Architecture', 'Topology' AND 'HomologousSF' HAVE UNIQUE VALUES:
+
+    # FILTER IN ROWS WITH UNIQUE ['Architecture', 'Topology', 'HomologousSF'] VALUES:
     pdf_xray = pdf_xray[~pdf_xray[['Architecture', 'Topology', 'HomologousSF']].duplicated(keep=False)]  # 550 proteins
     pdf_xray.to_csv(path_or_buf=f'../data/dataset/cath_single_domain_550prots.csv', index=False)
-    pass
+
