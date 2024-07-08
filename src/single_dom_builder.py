@@ -179,16 +179,17 @@ def assert_cif_count_equals_pdb_id_count(pdb_ids_len: int):
     API calls.
     :param pdb_ids_len: Number of PDB ids for single-domain proteins extracted from CATH data resource.
     """
-    files = glob.glob(os.path.join('../data/cifs', '*.cif'))
-    files = [file for file in files if os.path.isfile(file)]
-    print(f'There are {len(files)} cifs in `../data/cifs`. I am expected there to be {pdb_ids_len} cifs in there.')
-    assert len(files) == pdb_ids_len
+    cifs = glob.glob(os.path.join('../data/cifs', '*.cif'))
+    cifs = [cif for cif in cifs if os.path.isfile(cif)]
+    print(f'There are {len(cifs)} cifs in `../data/cifs`. I am expecting there to be {pdb_ids_len} in there.')
+    assert len(cifs) == pdb_ids_len
 
 
 # NOTE - THIS ONLY NEEDS TO BE CALLED ONCE:
 if __name__ == '__main__':
     path_cath_domain_list = '../data/dataset/big_files_to_git_ignore/cath-domain-list.txt'
     path_singl_dom_prots = '../data/dataset/cath_573_single_domain_prots.csv'
-    pdb_ids = parse_single_dom_prots_and_write_csv(path_cath_list=path_cath_domain_list,
+    pdbids = parse_single_dom_prots_and_write_csv(path_cath_list=path_cath_domain_list,
                                                    path_single_dom_prots=path_singl_dom_prots)
-    assert_cif_count_equals_pdb_id_count(len(pdb_ids))
+    fetch_mmcif_from_pdb_api_and_write_locally(pdb_ids=pdbids)
+    assert_cif_count_equals_pdb_id_count(len(pdbids))
