@@ -56,15 +56,17 @@ import pandas as pd
 import requests
 
 
-global non_200_count
-
-
 class Cols(Enum):
     DomainID = 'DomainID'
     C = 'Class'
     A = 'Architecture'
     T = 'Topology'
     H = 'HomologousSF'
+    S35 = 'S35'
+    S60 = 'S60'
+    S95 = 'S95'
+    S100 = 'S100'
+    S100_cnt = 'S100_Count'
     Domain_len = 'Domain_len'
     Angstroms = 'Angstroms'
 
@@ -76,18 +78,18 @@ def parse_single_domain_prots_and_write_to_csv(path_cath_list: str, path_single_
     pdf = pd.read_csv(path_cath_list,
                       skiprows=16,
                       sep=regex_one_or_more_whitespace_chars,
-                      names=['DomainID',
-                             'Class',
-                             'Architecture',
-                             'Topology',
-                             'HomologousSF',
-                             'S35',
-                             'S60',
-                             'S95',
-                             'S100',
-                             'S100_Count',
-                             'Domain_len',
-                             'Angstroms'])  # 500238 proteins (12 columns)
+                      names=[Cols.DomainID.value,
+                             Cols.C.value,
+                             Cols.A.value,
+                             Cols.T.value,
+                             Cols.H.value,
+                             Cols.S35.value,
+                             Cols.S60.value,
+                             Cols.S95.value,
+                             Cols.S100.value,
+                             Cols.S100_cnt.value,
+                             Cols.Domain_len.value,
+                             Cols.Angstroms.value])  # 500238 proteins (12 columns)
     # The following two dataframe are not used. I just wanted to see how many of these other categories there are:
     nmr_pdf = pdf.loc[pdf[Cols.Angstroms.value] == 999.0]  # 9357 proteins
     obsolete_pdf = pdf.loc[pdf[Cols.Angstroms.value] == 1000.0]  # 28191 proteins
@@ -114,17 +116,17 @@ def parse_single_domain_prots_and_write_to_csv(path_cath_list: str, path_single_
 
     # FILTER TO SINGLE-DOMAIN PROTEINS:
 
-    # Add new column with just PDB ids (first 4 characters of `DomainID`) and make it the first column:
+    # 1. Add new column with just PDB ids (first 4 characters of `DomainID`) and make it the first column:
     pdf_xray[Cols.PDB_ID.value] = pdf_xray[Cols.DomainID.value].str[:4]
     first_col = pdf_xray.pop(Cols.PDB_ID.value)
     pdf_xray.insert(0, Cols.PDB_ID.value, first_col)
 
-    # This PDB id will be repeated for multidomain proteins (row represents a domain and a pdb structure record)
+    # 2. This PDB id will be repeated for multidomain proteins (row represents a domain and a pdb structure record)
     domain_counts = pdf_xray[Cols.PDB_ID.value].value_counts().sort_values()
     # I just wanted to scroll through this very large dataframe, which is easier with a csv:
     # domain_counts.to_csv('../data/dataset/domain_counts.csv')
 
-    # Hence, keep only those protein records where the PDB occupies only one row:
+    # 3. Hence, keep only those protein records where the PDB occupies only one row:
     single_domain_prots = domain_counts[domain_counts == 1].index.tolist()
     pdf_single_dom_prots = pdf_xray[pdf_xray[Cols.PDB_ID.value].isin(single_domain_prots)]  # 28496 proteins
 
@@ -133,25 +135,26 @@ def parse_single_domain_prots_and_write_to_csv(path_cath_list: str, path_single_
     # I can afford to do this because I only need a "few hundred" single domain proteins:
     pdf_single_dom_prots = pdf_single_dom_prots[~pdf_single_dom_prots[[Cols.A.value,
                                                                        Cols.T.value,
-                                                                       Cols.H.value]].duplicated(keep=False)]  # 573
-    # proteins
-    pdf_single_dom_prots.to_csv(path_single_dom_prots, index=False)
+                                                                       Cols.H.value]].duplicated(keep=False)]
+    pdf_single_dom_prots.to_csv(path_single_dom_prots, index=False)  # 573 proteins
 
 
 def fetch_mmcif_from_pdb_api_and_write_locally(pdb_id):
+    api_status_code_not_200 = False
 
-    global non_200_count
     url = f'https://files.rcsb.org/download/{pdb_id}.cif'
     response = requests.get(url)
     response.raise_for_status()
     code = response.status_code
     if code != 200:
-        non_200_count += 1
+        api_status_code_not_200 = True
         print(f'Response status code for {pdb_id} is {code}, hence could not read the pdb for this id.')
 
     mmcif_file = f'../data/cifs/{pdb_id}.cif'
     with open(mmcif_file, 'w') as file:
         file.write(response.text)
+
+    return api_status_code_not_200
 
 
 if __name__ == '__main__':
@@ -159,23 +162,23 @@ if __name__ == '__main__':
     path_single_dom_prots = '../data/dataset/cath_573_single_domain_prots.csv'
     parse_single_domain_prots_and_write_to_csv(path_cath_list=path_cath_domain_list,
                                                path_single_dom_prots=path_single_dom_prots)
-    non_200_count = 0
-
     if os.path.exists(path_single_dom_prots):
         pdf_573prots = pd.read_csv(path_single_dom_prots)
 
-    print(f'number of domain ids = {pdf_573prots.shape}')
+    print(f'Number of domain ids = {pdf_573prots.shape[0]}')
     pdb_ids = pdf_573prots[Cols.PDB_ID.value].tolist()
 
+    non_200_count = 0
+
     for pdb_id in pdb_ids:
-        fetch_mmcif_from_pdb_api_and_write_locally(pdb_id)
-    print(f'Total number of non-200 status codes is {non_200_count}')
-    # This seems to only return 465 proteins out the 550 domain ids
+        if fetch_mmcif_from_pdb_api_and_write_locally(pdb_id):
+            non_200_count += 1
+    print(f'{non_200_count} status_code=200 out of {len(pdb_ids)} PDB API calls.')
 
     # programmatically count cifs in `../data/cifs`
     import glob
     files = glob.glob(os.path.join('../data/cifs', '*.cif'))
     files = [file for file in files if os.path.isfile(file)]
-    print(f'There are {len(files)} cifs in that dir')
-    # There are indeed 464 cifs in there
+    print(f'There are {len(files)} cifs in `../data/cifs`. I am expected there to be {len(pdb_ids)} cifs in there.')
+
 
