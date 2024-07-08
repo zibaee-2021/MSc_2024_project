@@ -26,11 +26,11 @@ def _read_enumeration_mappings():
 
 def _write_to_csv(pdb_id: str, pdf: pd.DataFrame):
     # pdf.to_csv(path_or_buf=f'../data/tokenised/{pdb_id}.csv', index=False, na_rep='null')
-    pdf.to_csv(path_or_buf=f'../data/tokenised/{pdb_id}.csv', index=False)
+    # pdf.to_csv(path_or_buf=f'../data/tokenised/{pdb_id}.csv', index=False)
     # pdf.to_csv(path_or_buf=f'../data/tokenised/{pdb_id}.ssv', sep=' ', index=False, na_rep='null')
     pdf.to_csv(path_or_buf=f'../data/tokenised/{pdb_id}.ssv', sep=' ', index=False)
     # pdf.to_csv(path_or_buf=f'../data/tokenised/{pdb_id}.tsv', sep='\t', index=False, na_rep='null')
-    pdf.to_csv(path_or_buf=f'../data/tokenised/{pdb_id}.tsv', sep='\t', index=False)
+    # pdf.to_csv(path_or_buf=f'../data/tokenised/{pdb_id}.tsv', sep='\t', index=False)
     pdf_easy_read = pdf.rename(columns={CIF.S_seq_id.value: 'SEQ_ID',
                                         CIF.S_mon_id.value: 'RESIDUES',
                                         CIF.A_id.value: 'ATOM_ID',
@@ -38,7 +38,7 @@ def _write_to_csv(pdb_id: str, pdf: pd.DataFrame):
                                         ColNames.MEAN_CORR_X.value: 'X',
                                         ColNames.MEAN_CORR_Y.value: 'Y',
                                         ColNames.MEAN_CORR_Z.value: 'Z'})
-    pdf_easy_read.to_csv(path_or_buf=f'../data/tokenised/easyRead_{pdb_id}.tsv', sep='\t', index=False, na_rep='null')
+    # pdf_easy_read.to_csv(path_or_buf=f'../data/tokenised/easyRead_{pdb_id}.tsv', sep='\t', index=False, na_rep='null')
 
 
 def write_tokenised_cif_to_csv(pdb_ids=None) -> None:
