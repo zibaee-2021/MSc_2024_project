@@ -61,6 +61,7 @@ The following is copy-pasted from header of `cath-domain-list.txt`
 
 """
 import os
+import glob
 from enum import Enum
 import pandas as pd
 import requests
@@ -83,7 +84,7 @@ class Cols(Enum):
     PDB_ID = 'PDB_Id'
 
 
-def parse_single_domain_prots_and_write_to_csv(path_cath_list: str, path_single_dom_prots: str):
+def parse_single_dom_prots_and_write_csv(path_cath_list: str, path_single_dom_prots: str) -> list:
     regex_one_or_more_whitespace_chars = r'\s+'
     pdf = pd.read_csv(path_cath_list,
                       skiprows=16,
@@ -148,48 +149,46 @@ def parse_single_domain_prots_and_write_to_csv(path_cath_list: str, path_single_
                                                                        Cols.H.value]].duplicated(keep=False)]
     pdf_single_dom_prots.to_csv(path_single_dom_prots, index=False)  # 573 proteins
 
-
-def fetch_mmcif_from_pdb_api_and_write_locally(pdb_id):
-    api_status_code_not_200 = False
-
-    url = f'https://files.rcsb.org/download/{pdb_id}.cif'
-    response = requests.get(url)
-    response.raise_for_status()
-    code = response.status_code
-    if code != 200:
-        api_status_code_not_200 = True
-        print(f'Response status code for {pdb_id} is {code}, hence could not read the pdb for this id.')
-
-    mmcif_file = f'../data/cifs/{pdb_id}.cif'
-    with open(mmcif_file, 'w') as file:
-        file.write(response.text)
-
-    return api_status_code_not_200
-
-
-# THIS ONLY NEEDS TO BE CALLED ONCE:
-if __name__ == '__main__':
-    path_cath_domain_list = '../data/dataset/big_files_to_git_ignore/cath-domain-list.txt'
-    path_single_dom_prots = '../data/dataset/cath_573_single_domain_prots.csv'
-    parse_single_domain_prots_and_write_to_csv(path_cath_list=path_cath_domain_list,
-                                               path_single_dom_prots=path_single_dom_prots)
     if os.path.exists(path_single_dom_prots):
         pdf_573prots = pd.read_csv(path_single_dom_prots)
 
     print(f'Number of domain ids = {pdf_573prots.shape[0]}')
-    pdb_ids = pdf_573prots[Cols.PDB_ID.value].tolist()
+    return pdf_573prots[Cols.PDB_ID.value].tolist()
 
+
+def fetch_mmcif_from_pdb_api_and_write_locally(pdb_ids: list):
     non_200_count = 0
-
     for pdb_id in pdb_ids:
-        if fetch_mmcif_from_pdb_api_and_write_locally(pdb_id):
+        url = f'https://files.rcsb.org/download/{pdb_id}.cif'
+        response = requests.get(url)
+        response.raise_for_status()
+        code = response.status_code
+        if code != 200:
             non_200_count += 1
-    print(f'{non_200_count} status_code=200 out of {len(pdb_ids)} PDB API calls.')
+            print(f'Response status code for {pdb_id} is {code}, hence could not read the pdb for this id.')
 
-    # programmatically count cifs in `../data/cifs`
-    import glob
+        mmcif_file = f'../data/cifs/{pdb_id}.cif'
+        with open(mmcif_file, 'w') as file:
+            file.write(response.text)
+    print(f'{non_200_count} non-200 status codes out of {len(pdb_ids)} PDB API calls.')
+
+
+def assert_cif_count_equals_pdb_id_count(pdb_ids_len: int):
+    """
+    Programmatically count cifs in `../data/cifs` and assert it is the same as the number of PDB ids used to make the
+    API calls.
+    :param pdb_ids_len: Number of PDB ids for single-domain proteins extracted from CATH data resource.
+    """
     files = glob.glob(os.path.join('../data/cifs', '*.cif'))
     files = [file for file in files if os.path.isfile(file)]
-    print(f'There are {len(files)} cifs in `../data/cifs`. I am expected there to be {len(pdb_ids)} cifs in there.')
+    print(f'There are {len(files)} cifs in `../data/cifs`. I am expected there to be {pdb_ids_len} cifs in there.')
+    assert len(files) == pdb_ids_len
 
 
+# NOTE - THIS ONLY NEEDS TO BE CALLED ONCE:
+if __name__ == '__main__':
+    path_cath_domain_list = '../data/dataset/big_files_to_git_ignore/cath-domain-list.txt'
+    path_singl_dom_prots = '../data/dataset/cath_573_single_domain_prots.csv'
+    pdb_ids = parse_single_dom_prots_and_write_csv(path_cath_list=path_cath_domain_list,
+                                                   path_single_dom_prots=path_singl_dom_prots)
+    assert_cif_count_equals_pdb_id_count(len(pdb_ids))
