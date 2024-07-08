@@ -1,4 +1,14 @@
 """
+This module needs to only be run once. It writes out 573 cifs using the PDB ids that are identified by CATH to be for
+single-domain proteins.
+I have filtered these down further:
+ - only class 1, 2 or 3 proteins
+ - only with X-ray structures, resolutions < 4 angstroms
+As this left me with 28496 proteins, and I only need a "few hundred", I went on to further filter by selecting those
+with unique Architecture, Topology, Homologous Superfamily numbers, which left me with 573 single-domain proteins which
+now represent greater diversity of proteins in terms of these attributes.. which might be beneficial or have no impact..
+I'm not sure yet.
+
 Use CATH protein domain web server to extract single domain proteins with high resolution X-ray data.
 I downloaded cath-domain-list.txt locally first (in `../data/dataset/big_files_to_git_ignore`), then parsed it using
 Pandas.
@@ -121,9 +131,9 @@ def parse_single_domain_prots_and_write_to_csv(path_cath_list: str, path_single_
     first_col = pdf_xray.pop(Cols.PDB_ID.value)
     pdf_xray.insert(0, Cols.PDB_ID.value, first_col)
 
-    # 2. This PDB id will be repeated for multidomain proteins (row represents a domain and a pdb structure record)
+    # 2. This PDB id will be repeated for multi-domain proteins (row represents a domain and a pdb structure record)
     domain_counts = pdf_xray[Cols.PDB_ID.value].value_counts().sort_values()
-    # I just wanted to scroll through this very large dataframe, which is easier with a csv:
+    # (I just wanted to scroll through this very large dataframe, which I find easier to do manually with a csv)
     # domain_counts.to_csv('../data/dataset/domain_counts.csv')
 
     # 3. Hence, keep only those protein records where the PDB occupies only one row:
@@ -157,6 +167,7 @@ def fetch_mmcif_from_pdb_api_and_write_locally(pdb_id):
     return api_status_code_not_200
 
 
+# THIS ONLY NEEDS TO BE CALLED ONCE:
 if __name__ == '__main__':
     path_cath_domain_list = '../data/dataset/big_files_to_git_ignore/cath-domain-list.txt'
     path_single_dom_prots = '../data/dataset/cath_573_single_domain_prots.csv'
