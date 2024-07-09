@@ -12,11 +12,9 @@ from data_layer import data_handler as dh
 
 if __name__ == '__main__':
 
-    pdb_ids = dh.get_list_of_locally_downloaded_pdb_ids()
-    pdbids_string = ' '.join(pdb_ids)
-
-    with open('../data/pdb_ids_list/pdbs_ids.txt', 'w') as f:
-        f.write(pdbids_string)
+    pdb_ids = dh.get_list_of_pdbids_of_locally_downloaded_cifs()
+    dh.write_list_to_space_separated_txt_file(list_to_write=pdb_ids,
+                                              file_name='pdb_ids_list/pdbs_ids.txt')
 
     # tk.write_tokenised_cif_to_csv(pdb_ids)
 
