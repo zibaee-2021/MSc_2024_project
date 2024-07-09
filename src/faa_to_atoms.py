@@ -15,6 +15,11 @@ def _get_aa_to_atom_map() -> dict:
 
 
 def manually_write_aa_atoms_to_data_dir(path: str) -> None:
+    """
+    This function only needs to be done once.
+    :param path:
+    :return:
+    """
     aa_atoms = {
         'A': ['N', 'CA', 'C', 'O', 'CB'],
         'C': ['N', 'CA', 'C', 'O', 'CB', 'SG'],
@@ -44,7 +49,7 @@ def manually_write_aa_atoms_to_data_dir(path: str) -> None:
 def translate_aa_to_atoms(uniprot_ids=None) -> dict:
     """
     Translate the given amino acid sequence to its corresponding atomic sequence using the PDB atom naming convention.
-    :param uniprot_ids: Single uniprot id, list of uniprot_ids, or None by default.
+    :param uniprot_ids: Single uniprot id, list of uniprot_ids, or None by default. Most likely is a list of ids.
     :return: The atomic sequence, of amino acid sequence, mapped to its Uniprot id.
     """
     fasta_id_seqs = reader.read_fasta_sequences(uniprot_ids=uniprot_ids)
@@ -64,5 +69,7 @@ def translate_aa_to_atoms(uniprot_ids=None) -> dict:
 
 
 if __name__ == '__main__':
-    # This only needs to be done once:
-    manually_write_aa_atoms_to_data_dir(path='../data/jsons/aa_atoms.json')
+
+    # manually_write_aa_atoms_to_data_dir(path='../data/jsons/aa_atoms.json')  # This only needs to be done once.
+
+    translate_aa_to_atoms(uniprot_ids=None)
