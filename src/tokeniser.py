@@ -1,7 +1,6 @@
 import cif_parser as parser
 from cif_parser import CIF
 import json
-import numpy as np
 import pandas as pd
 from enum import Enum
 
@@ -52,6 +51,7 @@ def write_tokenised_cif_to_csv(pdb_ids=None) -> None:
 
     for pdb_id in pdb_ids:
         pdf_cif = parser.parse_cif(pdb_id=pdb_id, local_cif_file=f'../data/cifs/{pdb_id}.cif')
+
         atoms_enumerated, aas_enumerated = _read_enumeration_mappings()
 
         # Amino acid labels enumerated
@@ -79,3 +79,6 @@ def write_tokenised_cif_to_csv(pdb_ids=None) -> None:
         _write_to_csv(pdb_id, pdf_cif)
 
 
+if __name__ == '__main__':
+
+    write_tokenised_cif_to_csv(pdb_ids='4itq')
