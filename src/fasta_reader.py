@@ -7,11 +7,11 @@ from enum import Enum
 from Bio import SeqIO
 import requests
 from io import StringIO
+import api_caller as api
 
 
 class PathsUrls(Enum):
     fastas_path = '../data/FASTA'
-    Uniprot_API = 'https://www.uniprot.org/uniprot/'
 
 
 def read_fasta_sequences(uniprot_ids=None) -> dict:
@@ -50,21 +50,11 @@ def read_fasta_sequences(uniprot_ids=None) -> dict:
         except FileNotFoundError:
 
             print(f"File '{fasta_path_faa}' not found")
-
             print(f'Will try to read {fasta_id} directly from Uniprot site..')
-            try:
-                url = f'{PathsUrls.Uniprot_API.value}{fasta_id}.fasta'
-                response = requests.get(url)
-                response.raise_for_status()
-                fasta_data = StringIO(response.text)
-                record = SeqIO.read(fasta_data, 'fasta')
-                fasta_id_seqs[fasta_id] = str(record.seq)
-
-            except requests.exceptions.RequestException as e:
-                print(f'Failed to retrieve data from API: {e}')
-
-            except Exception:
-                print(f"Undefined error while trying to read in {fasta_path_faa}'.")
+            response = api.call_for_fasta_with_fasta_id(fasta_id)
+            fasta_data = StringIO(response.text)
+            record = SeqIO.read(fasta_data, 'fasta')
+            fasta_id_seqs[fasta_id] = str(record.seq)
 
         except Exception:
             print(f"Undefined error while trying to read in {fasta_path_faa}'.")

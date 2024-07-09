@@ -24,6 +24,7 @@ import numpy as np
 import pandas as pd
 from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 import requests
+import api_caller as api
 
 # NOTE: I'm using prefix `S_` for `_pdbx_poly_seq_scheme` and prefix `A_` for `_atom_site`
 class CIF(Enum):
@@ -107,12 +108,8 @@ def _wipe_low_occupancy_coords(pdf: pd.DataFrame) -> pd.DataFrame:
     return pdf
 
 
-def _fetch_mmcif_from_PDB_API_and_write_locally(pdb_id):
-
-    url = f'https://files.rcsb.org/download/{pdb_id}.cif'
-    response = requests.get(url)
-    response.raise_for_status()
-
+def _fetch_mmcif_from_pdb_api_and_write_locally(pdb_id: str) -> None:
+    response = api.call_for_cif_with_pdb_id(pdb_id)
     mmcif_file = f'../data/cifs/{pdb_id}.cif'
     with open(mmcif_file, 'w') as file:
         file.write(response.text)
@@ -131,13 +128,8 @@ def parse_cif(pdb_id: str, local_cif_file: str) -> pd.DataFrame:
         mmcif = MMCIF2Dict(local_cif_file)
     else:
         print(f'Will try to read {pdb_id} directly from PDB site..')
-        try:
-            _fetch_mmcif_from_PDB_API_and_write_locally(pdb_id)
-            mmcif = MMCIF2Dict(local_cif_file)
-        except requests.exceptions.RequestException as e:
-            print(f'Failed to retrieve data from API: {e}')
-        except Exception:
-            print(f"Undefined error while trying to fetch '{pdb_id}' from PDB.")
+        _fetch_mmcif_from_pdb_api_and_write_locally(pdb_id)
+        mmcif = MMCIF2Dict(local_cif_file)
 
     poly_seq_fields = _extract_fields_from_poly_seq(mmcif)
     atom_site_fields = _extract_fields_from_atom_site(mmcif)

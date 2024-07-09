@@ -65,6 +65,7 @@ import glob
 from enum import Enum
 import pandas as pd
 import requests
+import api_caller as api
 
 
 class Cols(Enum):
@@ -159,9 +160,7 @@ def parse_single_dom_prots_and_write_csv(path_cath_list: str, path_single_dom_pr
 def fetch_mmcif_from_pdb_api_and_write_locally(pdb_ids: list):
     non_200_count = 0
     for pdb_id in pdb_ids:
-        url = f'https://files.rcsb.org/download/{pdb_id}.cif'
-        response = requests.get(url)
-        response.raise_for_status()
+        response = api.call_for_cif_with_pdb_id(pdb_id)
         code = response.status_code
         if code != 200:
             non_200_count += 1
@@ -190,6 +189,6 @@ if __name__ == '__main__':
     path_cath_domain_list = '../data/dataset/big_files_to_git_ignore/cath-domain-list.txt'
     path_singl_dom_prots = '../data/dataset/cath_573_single_domain_prots.csv'
     pdbids = parse_single_dom_prots_and_write_csv(path_cath_list=path_cath_domain_list,
-                                                   path_single_dom_prots=path_singl_dom_prots)
+                                                  path_single_dom_prots=path_singl_dom_prots)
     fetch_mmcif_from_pdb_api_and_write_locally(pdb_ids=pdbids)
     assert_cif_count_equals_pdb_id_count(len(pdbids))
