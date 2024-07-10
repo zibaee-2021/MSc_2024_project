@@ -5,7 +5,6 @@ import os
 import glob
 from enum import Enum
 from Bio import SeqIO
-import requests
 from io import StringIO
 import api_caller as api
 

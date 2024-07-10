@@ -64,7 +64,6 @@ import os
 import glob
 from enum import Enum
 import pandas as pd
-import requests
 import api_caller as api
 
 

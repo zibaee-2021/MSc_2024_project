@@ -1,8 +1,8 @@
 import cif_parser as parser
 from cif_parser import CIF
-import json
 import pandas as pd
 from enum import Enum
+from data_layer import data_handler as dh
 
 
 class ColNames(Enum):
@@ -13,14 +13,6 @@ class ColNames(Enum):
     MEAN_CORR_X = 'mean_corrected_x'  # x coordinates for each atom subtracted by the mean of xyz coordinates
     MEAN_CORR_Y = 'mean_corrected_y'  # (as above) but for y coordinates
     MEAN_CORR_Z = 'mean_corrected_z'  # (as above) but for z coordinates
-
-
-def _read_enumeration_mappings():
-    with open('../data/jsons/unique_atoms_only_enumerated.json', 'r') as json_f:
-        atoms_enumerated = json.load(json_f)
-    with open('../data/jsons/aas_enumerated.json', 'r') as json_f:
-        aas_enumerated = json.load(json_f)
-    return atoms_enumerated, aas_enumerated
 
 
 def _write_to_csv(pdb_id: str, pdf: pd.DataFrame):
@@ -52,7 +44,7 @@ def write_tokenised_cif_to_csv(pdb_ids=None) -> None:
     for pdb_id in pdb_ids:
         pdf_cif = parser.parse_cif(pdb_id=pdb_id, local_cif_file=f'../data/cifs/{pdb_id}.cif')
 
-        atoms_enumerated, aas_enumerated = _read_enumeration_mappings()
+        atoms_enumerated, aas_enumerated = dh.read_enumeration_mappings()
 
         # Amino acid labels enumerated
         pdf_cif[ColNames.AA_LABEL_NUM.value] = pdf_cif[CIF.S_mon_id.value].map(aas_enumerated).astype('Int64')

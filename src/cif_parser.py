@@ -23,8 +23,8 @@ from enum import Enum
 import numpy as np
 import pandas as pd
 from Bio.PDB.MMCIF2Dict import MMCIF2Dict
-import requests
 import api_caller as api
+
 
 # NOTE: I'm using prefix `S_` for `_pdbx_poly_seq_scheme` and prefix `A_` for `_atom_site`
 class CIF(Enum):
