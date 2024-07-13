@@ -1,5 +1,5 @@
 """
-This module needs to only be run once. It writes out 573 cifs using the PDB ids that are identified by CATH to be for
+This module needs to only be run once. It writes out 573 cifs_single_domain_prots using the PDB ids that are identified by CATH to be for
 single-domain proteins.
 I have filtered these down further:
  - only class 1, 2 or 3 proteins
@@ -165,7 +165,7 @@ def fetch_mmcif_from_pdb_api_and_write_locally(pdb_ids: list):
             non_200_count += 1
             print(f'Response status code for {pdb_id} is {code}, hence could not read the pdb for this id.')
 
-        mmcif_file = f'../data/cifs/{pdb_id}.cif'
+        mmcif_file = f'../data/cifs_single_domain_prots/{pdb_id}.cif'
         with open(mmcif_file, 'w') as file:
             file.write(response.text)
     print(f'{non_200_count} non-200 status codes out of {len(pdb_ids)} PDB API calls.')
@@ -173,13 +173,13 @@ def fetch_mmcif_from_pdb_api_and_write_locally(pdb_ids: list):
 
 def assert_cif_count_equals_pdb_id_count(pdb_ids_len: int):
     """
-    Programmatically count cifs in `../data/cifs` and assert it is the same as the number of PDB ids used to make the
+    Programmatically count cifs_single_domain_prots in `../data/cifs_single_domain_prots` and assert it is the same as the number of PDB ids used to make the
     API calls.
     :param pdb_ids_len: Number of PDB ids for single-domain proteins extracted from CATH data resource.
     """
-    cifs = glob.glob(os.path.join('../data/cifs', '*.cif'))
+    cifs = glob.glob(os.path.join('../data/cifs_single_domain_prots', '*.cif'))
     cifs = [cif for cif in cifs if os.path.isfile(cif)]
-    print(f'There are {len(cifs)} cifs in `../data/cifs`. I am expecting there to be {pdb_ids_len} in there.')
+    print(f'There are {len(cifs)} cifs_single_domain_prots in `../data/cifs_single_domain_prots`. I am expecting there to be {pdb_ids_len} in there.')
     assert len(cifs) == pdb_ids_len
 
 

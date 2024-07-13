@@ -170,12 +170,10 @@ class UniprotKey(Enum):
     FASTA = 'fasta'
 
 
-if __name__ == '__main__':
-
-    uniprot_recs = dict()
+def call_uniprot_api_for_acc_ids_and_sp_fasta(pdb_ids):
+    swissprot_recs = dict()
 
     idmpr = IdMapper()
-    pdb_ids = dh.get_list_of_pdbids_of_locally_downloaded_cifs()
     jobid = idmpr.submit_id_mapping(from_db=UniprotKey.FROM_DB.value, to_db=UniprotKey.TO_DB.value, ids=pdb_ids)
 
     if idmpr.check_id_mapping_results_ready(jobid):
@@ -183,8 +181,9 @@ if __name__ == '__main__':
         link = idmpr.get_id_mapping_results_link(jobid)
         results_: dict = idmpr.get_id_mapping_results_search(link)
 
-        failed_pdb_ids = results_[UniprotKey.FAILED.value]
-        print(f'{len(failed_pdb_ids)} failed: {failed_pdb_ids}')
+        failed_pdb_ids = results_[UniprotKey.FAILED.value] if UniprotKey.FAILED.value in results_ else None
+        if failed_pdb_ids:
+            print(f'{len(failed_pdb_ids)} failed: {failed_pdb_ids}')
 
         results = results_[UniprotKey.RESULTS.value]
         print(f'Number of results = {len(results)}')
@@ -192,11 +191,11 @@ if __name__ == '__main__':
         swissprot_count, trembl_count = 0, 0
 
         for result in results:
-            uniprot_rec = dict()
+            swissprot_rec = dict()
             pdb_id = result[UniprotKey.FROM.value]
 
-            if pdb_id in failed_pdb_ids:
-                uniprot_recs[pdb_id] = None
+            if failed_pdb_ids and pdb_id in failed_pdb_ids:
+                swissprot_recs[pdb_id] = None
 
             else:
                 to = result[UniprotKey.TO.value]
@@ -204,19 +203,30 @@ if __name__ == '__main__':
 
                 if UniprotKey.SP.value.lower() in sp_or_tr.lower():
                     swissprot_count += 1
-                    uniprot_rec[UniprotKey.SP_ACC_ID.value] = to[UniprotKey.PRIM_ACC.value]
+                    swissprot_rec[UniprotKey.SP_ACC_ID.value] = to[UniprotKey.PRIM_ACC.value]
                     fasta_seq = to[UniprotKey.SEQ.value]
-                    uniprot_rec[UniprotKey.FASTA.value] = fasta_seq[UniprotKey.VALUE.value]
-                    uniprot_rec[UniprotKey.LEN.value] = fasta_seq[UniprotKey.LEN.value]
+                    swissprot_rec[UniprotKey.FASTA.value] = fasta_seq[UniprotKey.VALUE.value]
+                    swissprot_rec[UniprotKey.LEN.value] = fasta_seq[UniprotKey.LEN.value]
 
-                    uniprot_recs[pdb_id] = uniprot_rec
+                    swissprot_recs[pdb_id] = swissprot_rec
 
                 elif UniprotKey.TR.value.lower() in sp_or_tr.lower():
-                    uniprot_recs[pdb_id] = None
+                    swissprot_recs[pdb_id] = None
                     trembl_count += 1
                     # print(f"'Swiss-prot' is not in this `entryType`. Instead `entryType` is: '{sp_or_tr}'.")
 
-        dh.write_pdb_uniprot_fasta_recs(uniprot_recs)
-        print(f'Number of TrEMBL recs = {trembl_count}. (Expected 250).')
-        print(f'Number of Swiss-Prot recs = {swissprot_count}. (Expecting 363).')
+        print(f'Number of TrEMBL recs = {trembl_count}.')  # (Expecting 250 x TrEMBL from the 573 sd proteins cifs).
+        print(f'Number of Swiss-Prot recs = {swissprot_count}.')  # (Expecting 363 x Swiss-Prot from the 573).
+        return swissprot_recs
 
+
+if __name__ == '__main__':
+
+    # pdbids_single_domain = dh.get_list_of_pdbids_of_locally_downloaded_SD_cifs()
+    # swissprot_records = call_uniprot_api_for_acc_ids_and_sp_fasta(pdbids_single_domain)
+    # dh.write_pdb_uniprot_fasta_recs_to_json(swissprot_records, filename='pdbids_sp_fastas')
+
+    # READ LIST OF PDB IDS OF GLOBINS FROM TEXT FILE:
+    pdbids_sd_globins = dh.read_list_of_pdbids_from_text_file(filename='SD_globins_pdb_ids_5.txt')
+    swissprot_globins = call_uniprot_api_for_acc_ids_and_sp_fasta(pdbids_sd_globins)
+    dh.write_pdb_uniprot_fasta_recs_to_json(swissprot_globins, filename='pdbids_sp_fastas_globins_5')
