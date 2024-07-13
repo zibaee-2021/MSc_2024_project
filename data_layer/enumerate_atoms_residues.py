@@ -8,7 +8,7 @@ from data_layer import data_handler as dh
 
 
 def _enumerate_atoms_and_residues():
-    residues, residues_atoms = dh.read_atom()
+    residues, residues_atoms = dh.read_aa_atoms_yaml()
     aas_enumerated = {aa: i for i, aa in enumerate(residues)}
 
     aa_atom_idx = -1

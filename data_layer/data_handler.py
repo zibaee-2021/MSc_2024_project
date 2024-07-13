@@ -7,8 +7,22 @@ import yaml
 from typing import Tuple
 
 
-def get_list_of_pdbids_of_locally_downloaded_cifs() -> list:
-    cifs = glob.glob(os.path.join('../data/cifs', '*.cif'))
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+print(f'Path from data_handler= {os.getcwd()}')
+
+
+def read_list_of_pdbids_from_text_file(filename: str):
+    path = '../data/pdb_ids_list'
+    path_file = os.path.join(path, filename)
+    with open(path_file, 'r') as f:
+        pdb_ids = f.read()
+    pdbids = pdb_ids.split()
+    return pdbids
+
+
+def get_list_of_pdbids_of_local_single_domain_cifs() -> list:
+    cifs = glob.glob(os.path.join('../data/cifs_single_domain_prots', '*.cif'))
     path_cifs = [cif for cif in cifs if os.path.isfile(cif)]
 
     pdb_ids = []
@@ -32,7 +46,7 @@ def write_list_to_space_separated_txt_file(list_to_write: list, file_name: str) 
 
 def manually_write_aa_atoms_to_data_dir(path: str) -> None:
     """
-    This function only needs to be done once.
+    This function only needs to be run once.
     :param path:
     :return:
     """
@@ -62,7 +76,7 @@ def manually_write_aa_atoms_to_data_dir(path: str) -> None:
         json.dump(aa_atoms, json_f, indent=4)
 
 
-def read_enumeration_mappings():
+def read_enumeration_mappings() -> Tuple[dict, dict]:
     with open('../data/aa_atoms_enumerated/unique_atoms_only_enumerated.json', 'r') as json_f:
         atoms_enumerated = json.load(json_f)
     with open('../data/aa_atoms_enumerated/aas_enumerated.json', 'r') as json_f:
@@ -82,7 +96,7 @@ def write_to_jsons(aas_enumerated, atoms_only_enumerated):
         json.dump(atoms_only_enumerated, json_f, indent=4)
 
 
-def read_atom() -> Tuple[list, dict]:
+def read_aa_atoms_yaml() -> Tuple[list, dict]:
     aas_atoms = dict()
     aas = list()
 
@@ -98,13 +112,18 @@ def read_atom() -> Tuple[list, dict]:
     return aas, aas_atoms
 
 
-def write_pdb_uniprot_fasta_recs(recs: dict) -> None:
-    path = f'../data/FASTA/pdbid_sp_fastas.json'
-
-    with open(path, 'w') as json_f:
+def write_pdb_uniprot_fasta_recs_to_json(recs: dict, filename: str) -> None:
+    with open(f'../data/FASTA/{filename}.json', 'w') as json_f:
         json.dump(recs, json_f, indent=4)
 
 
+def read_fastas_from_json_to_dict(filename: str) -> dict:
+    with open(f'../data/FASTA/{filename}.json', 'r') as json_f:
+        pdbids_fasta_json = json.load(json_f)
+    return pdbids_fasta_json
+
+
 # if __name__ == '__main__':
-#
-#     dh.manually_write_aa_atoms_to_data_dir(path='../data/aa_atoms_enumerated/aa_atoms.json')  # This only needs to be done once.
+# # This only needs to be run once:
+#     dh.manually_write_aa_atoms_to_data_dir(path='../data/aa_atoms_enumerated/aa_atoms.json')
+
