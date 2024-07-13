@@ -2,3 +2,6 @@
 notes
 big_data_to_git_ignore
 big_files_to_git_ignore
+rnatrain.tar.gz
+*.pt
+*rnatrain/data/cif/*
