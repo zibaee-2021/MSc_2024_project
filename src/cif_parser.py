@@ -110,7 +110,7 @@ def _wipe_low_occupancy_coords(pdf: pd.DataFrame) -> pd.DataFrame:
 
 def _fetch_mmcif_from_pdb_api_and_write_locally(pdb_id: str) -> None:
     response = api.call_for_cif_with_pdb_id(pdb_id)
-    mmcif_file = f'../data/cifs/{pdb_id}.cif'
+    mmcif_file = f'../data/cifs_single_domain_prots/{pdb_id}.cif'
     with open(mmcif_file, 'w') as file:
         file.write(response.text)
 
@@ -120,7 +120,7 @@ def parse_cif(pdb_id: str, local_cif_file: str) -> pd.DataFrame:
     Parse given local mmCIF file to extract and tabulate necessary atom and amino acid data fields from
     `_pdbx_poly_seq_scheme` and `_atom_site`.
     :param pdb_id: PDB identifier.
-    :param local_cif_file: Path to locally downloaded cif file. (Expected in `../data/cifs` directory.)
+    :param local_cif_file: Path to locally downloaded cif file. (Expected in `../data/cifs_single_domain_prots` directory.)
     :return: Necessary fields extracted and joined in one table.
     """
     mmcif = dict()
