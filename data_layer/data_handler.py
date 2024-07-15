@@ -117,9 +117,16 @@ def write_pdb_uniprot_fasta_recs_to_json(recs: dict, filename: str) -> None:
         json.dump(recs, json_f, indent=4)
 
 
+def _remove_null_entries(pdbids_fasta_json: dict):
+    pdbids_fasta_json = {k: v for k, v in pdbids_fasta_json.items() if v is not None}
+    return pdbids_fasta_json
+
+
 def read_fastas_from_json_to_dict(filename: str) -> dict:
     with open(f'../data/FASTA/{filename}.json', 'r') as json_f:
         pdbids_fasta_json = json.load(json_f)
+
+    pdbids_fasta_json = _remove_null_entries(pdbids_fasta_json)
     return pdbids_fasta_json
 
 
