@@ -149,10 +149,12 @@ def parse_single_dom_prots_and_write_csv(path_cath_list: str, path_single_dom_pr
                                                                        Cols.H.value]].duplicated(keep=False)]
     pdf_single_dom_prots.to_csv(path_single_dom_prots, index=False)  # 573 proteins
 
+    pdf_573prots = None
     if os.path.exists(path_single_dom_prots):
         pdf_573prots = pd.read_csv(path_single_dom_prots)
 
-    print(f'Number of domain ids = {pdf_573prots.shape[0]}')
+    if pdf_573prots:
+        print(f'Number of domain ids = {pdf_573prots.shape[0]}')
     return pdf_573prots[Cols.PDB_ID.value].tolist()
 
 
@@ -164,7 +166,8 @@ def assert_cif_count_equals_pdb_id_count(pdb_ids_len: int):
     """
     cifs = glob.glob(os.path.join('../data/cifs_single_domain_prots', '*.cif'))
     cifs = [cif for cif in cifs if os.path.isfile(cif)]
-    print(f'There are {len(cifs)} cifs_single_domain_prots in `../data/cifs_single_domain_prots`. I am expecting there to be {pdb_ids_len} in there.')
+    print(f'There are {len(cifs)} cifs_single_domain_prots in `../data/cifs_single_domain_prots`. '
+          f'I am expecting there to be {pdb_ids_len} in there.')
     assert len(cifs) == pdb_ids_len
 
 
