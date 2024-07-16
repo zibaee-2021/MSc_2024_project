@@ -44,10 +44,13 @@ def write_tokenised_cif_to_csv(pdb_ids=None) -> None:
     for pdb_id in pdb_ids:
         pdf_cif = parser.parse_cif(pdb_id=pdb_id, local_cif_file=f'../data/cifs/{pdb_id}.cif')
 
-        atoms_enumerated, aas_enumerated = dh.read_enumeration_mappings()
+        atoms_enumerated, aas_enumerated, fasta_aas_enumerated = dh.read_enumeration_mappings()
 
-        # Amino acid labels enumerated
-        pdf_cif[ColNames.AA_LABEL_NUM.value] = pdf_cif[CIF.S_mon_id.value].map(aas_enumerated).astype('Int64')
+        # # Amino acid labels enumerated
+        # pdf_cif[ColNames.AA_LABEL_NUM.value] = pdf_cif[CIF.S_mon_id.value].map(aas_enumerated).astype('Int64')
+
+        # FASTA Amino acid labels enumerated
+        pdf_cif[ColNames.AA_LABEL_NUM.value] = pdf_cif[CIF.S_mon_id.value].map(fasta_aas_enumerated).astype('Int64')
 
         # Atom labels enumerated
         pdf_cif[ColNames.ATOM_LABEL_NUM.value] = pdf_cif[CIF.A_label_atom_id.value].map(atoms_enumerated).astype('Int64')
@@ -73,4 +76,5 @@ def write_tokenised_cif_to_csv(pdb_ids=None) -> None:
 
 if __name__ == '__main__':
 
-    write_tokenised_cif_to_csv(pdb_ids='4itq')
+    # write_tokenised_cif_to_csv(pdb_ids='4itq')
+    write_tokenised_cif_to_csv(pdb_ids='1oj6')
