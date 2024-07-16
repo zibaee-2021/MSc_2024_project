@@ -20,7 +20,7 @@ class AlibiPositionalBias(nn.Module):
         self.heads = heads
         slopes = torch.Tensor(self._get_slopes(heads))
         slopes = rearrange(slopes, 'h -> () h () ()')
-        self.register_buffer('slopes', slopes, persistent = False)
+        self.register_buffer('slopes', slopes, persistent=False)
 
     @staticmethod
     def _get_slopes(heads):
@@ -33,7 +33,8 @@ class AlibiPositionalBias(nn.Module):
             return get_slopes_power_of_2(heads)
 
         closest_power_of_2 = 2 ** floor(log2(heads))
-        return get_slopes_power_of_2(closest_power_of_2) + get_slopes_power_of_2(2 * closest_power_of_2)[0::2][:heads-closest_power_of_2]
+        return (get_slopes_power_of_2(closest_power_of_2) +
+                get_slopes_power_of_2(2 * closest_power_of_2)[0::2][:heads-closest_power_of_2])
 
     def forward(self, residx):
         relative_position = residx.unsqueeze(0) - residx.unsqueeze(1)
@@ -64,9 +65,9 @@ class MultiheadAttention(nn.Module):
     def forward(self, query, key, value, posbias=None, return_att=False):
         B, L = query.shape[:2]
 
-        q = self.to_query(query).view(B, L, self.heads, self.d_k).permute(0,2,1,3).contiguous() # (B, h, l, k)
-        k = self.to_key(key).view(B, L, self.heads, self.d_k).permute(0,2,3,1).contiguous() # (B, h, k, l)
-        v = self.to_value(value).view(B, L, self.heads, self.d_k).permute(0,2,1,3).contiguous() # (B, h, l, k)
+        q = self.to_query(query).view(B, L, self.heads, self.d_k).permute(0, 2, 1, 3).contiguous()  # (B, h, l, k)
+        k = self.to_key(key).view(B, L, self.heads, self.d_k).permute(0, 2, 3, 1).contiguous()  # (B, h, k, l)
+        v = self.to_value(value).view(B, L, self.heads, self.d_k).permute(0, 2, 1, 3).contiguous()  # (B, h, l, k)
 
         # Scale both Q & K to help avoid fp16 overflows
         q = q * self.scaling
@@ -74,10 +75,10 @@ class MultiheadAttention(nn.Module):
         attention = torch.einsum('bhik,bhkj->bhij', q, k)
         if posbias is not None:
             attention = attention + posbias
-        attention = F.softmax(attention, dim=-1) # (B, h, L, L)
+        attention = F.softmax(attention, dim=-1)  # (B, h, L, L)
         #
-        out = torch.matmul(attention, v) # (B, h, L, d_k)
-        #print(out)
+        out = torch.matmul(attention, v)  # (B, h, L, d_k)
+        #  print(out)
         out = out.permute(0,2,1,3).contiguous().view(B, L, -1)
         return self.to_out(out)
     
@@ -118,7 +119,7 @@ class SeqEncoderLayer(nn.Module):
         # Input shape for multihead attention: (BATCH, NRES, EMB)
         x2 = x
         x = self.norm1(x)
-        x = torch.sigmoid(self.gate(x)) * self.attn(x, x, x, bias) # Tied attention over L (requires 4D input)
+        x = torch.sigmoid(self.gate(x)) * self.attn(x, x, x, bias)  # Tied attention over L (requires 4D input)
         x = x2 + self.dropout(x)
         
         # feed-forward
@@ -168,7 +169,7 @@ class AtomEncoderLayer(nn.Module):
         q = self.to_query(x) * self.scaling
         k = self.to_key(x) * self.scaling
         v = self.to_value(x)
-        attn = F.scaled_dot_product_attention(q, k, v, scale = 1)
+        attn = F.scaled_dot_product_attention(q, k, v, scale=1)
         x = torch.sigmoid(self.gate(x)) * attn
 
         x = x2 + self.dropout(x)
@@ -185,7 +186,7 @@ class PositionalEncoding(torch.nn.Module):
         super().__init__()
         self.d_model = d_model
         div_term = torch.exp(torch.arange(0, self.d_model, 2).float() * (-log(10000.0) / self.d_model))
-        self.register_buffer('div_term', div_term, persistent = False)
+        self.register_buffer('div_term', div_term, persistent=False)
 
     def forward(self, positions):
         positions = positions.unsqueeze(1).float()
@@ -283,14 +284,19 @@ class DiffusionNet(nn.Module):
 
         coordscale = (nlev_in.view(-1,1,1).pow(2) + VARDATA).sqrt()
         
-        atom_x = atom_x + self.nt_embed(ntcodes)[ntindices].unsqueeze(0) + self.atom_embed(atcodes).unsqueeze(0) + self.ntidx_embed(ntindices).unsqueeze(0) + self.nlev_embed(nlev_in).unsqueeze(1) + self.coord_embed(noised_coords_in / coordscale)
+        atom_x = (atom_x + self.nt_embed(ntcodes)[ntindices].unsqueeze(0) +
+                  self.atom_embed(atcodes).unsqueeze(0) +
+                  self.ntidx_embed(ntindices).unsqueeze(0) +
+                  self.nlev_embed(nlev_in).unsqueeze(1) +
+                  self.coord_embed(noised_coords_in / coordscale))
 
         atom_x = self.norm3(atom_x)
 
         with torch.autocast(device_type="cuda", dtype=torch.float16):
             atom_x = checkpoint_sequential(self.atomencoder, 3, atom_x)
 
-        t_h = nlev_in.view(-1,1,1)
-        pred_denoised = self.out_denoise_vecs(atom_x) * SIGDATA * t_h / (VARDATA + t_h ** 2).sqrt() + noised_coords_in * VARDATA / (VARDATA + t_h ** 2)
+        t_h = nlev_in.view(-1, 1, 1)
+        pred_denoised = (self.out_denoise_vecs(atom_x) * SIGDATA * t_h / (VARDATA + t_h ** 2).sqrt() +
+                         noised_coords_in * VARDATA / (VARDATA + t_h ** 2))
 
         return pred_denoised, pred_coords, pred_confs
