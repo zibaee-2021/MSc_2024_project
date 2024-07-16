@@ -64,7 +64,7 @@ import os
 import glob
 from enum import Enum
 import pandas as pd
-import api_caller as api
+from data_layer import data_handler as dh
 
 
 class Cols(Enum):
@@ -156,21 +156,6 @@ def parse_single_dom_prots_and_write_csv(path_cath_list: str, path_single_dom_pr
     return pdf_573prots[Cols.PDB_ID.value].tolist()
 
 
-def fetch_mmcif_from_pdb_api_and_write_locally(pdb_ids: list):
-    non_200_count = 0
-    for pdb_id in pdb_ids:
-        response = api.call_for_cif_with_pdb_id(pdb_id)
-        code = response.status_code
-        if code != 200:
-            non_200_count += 1
-            print(f'Response status code for {pdb_id} is {code}, hence could not read the pdb for this id.')
-
-        mmcif_file = f'../data/cifs_single_domain_prots/{pdb_id}.cif'
-        with open(mmcif_file, 'w') as file:
-            file.write(response.text)
-    print(f'{non_200_count} non-200 status codes out of {len(pdb_ids)} PDB API calls.')
-
-
 def assert_cif_count_equals_pdb_id_count(pdb_ids_len: int):
     """
     Programmatically count cifs_single_domain_prots in `../data/cifs_single_domain_prots` and assert it is the same as the number of PDB ids used to make the
@@ -189,5 +174,5 @@ if __name__ == '__main__':
     path_singl_dom_prots = '../data/dataset/cath_573_single_domain_prots.csv'
     pdbids = parse_single_dom_prots_and_write_csv(path_cath_list=path_cath_domain_list,
                                                   path_single_dom_prots=path_singl_dom_prots)
-    fetch_mmcif_from_pdb_api_and_write_locally(pdb_ids=pdbids)
+    dh.fetch_mmcif_from_pdb_api_and_write_locally(pdb_ids=pdbids, dst_path='../data/cifs_single_domain_prots/')
     assert_cif_count_equals_pdb_id_count(len(pdbids))
