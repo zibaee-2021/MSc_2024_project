@@ -277,7 +277,13 @@ def main():
     global BATCH_SIZE
     
     # Create neural network model
-    network = DiffusionNet(seqwidth=1024, atomwidth=128, seqheads=16, atomheads=8, seqdepth=6, atomdepth=3, cycles=2).cuda()
+    network = DiffusionNet(seqwidth=1024,
+                           atomwidth=128,
+                           seqheads=16,
+                           atomheads=8,
+                           seqdepth=6,
+                           atomdepth=3,
+                           cycles=2).cuda()
 
     # Load the dataset
     print("Loading data...")
@@ -416,7 +422,7 @@ def main():
                     val_samples += 1
 
             val_err /= val_samples
-            #scheduler.step(val_err)
+            #  scheduler.step(val_err)
 
             print(f"Epoch {epoch}, train loss: {train_err:.4f}, val loss: {val_err:.4f}")
             print(f"Time taken = {time.time() - last_time:.2f}", flush=True)
