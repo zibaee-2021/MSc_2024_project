@@ -43,5 +43,5 @@ def generate_embeddings_from_fastas_of_pdbids(tokeniser, eval_model, pdbids_fast
         aa_seq_embedding = embedding.encoder_last_hidden_state
         raw_tok_emb['embedding'] = aa_seq_embedding
         pdbid_raw_tok_emb[pdbid] = raw_tok_emb
-
+        dh.save_torch_tensor(pt=aa_seq_embedding, dst_path=f'../src/diffusion/data/emb/{pdbid}')
     return pdbid_raw_tok_emb
