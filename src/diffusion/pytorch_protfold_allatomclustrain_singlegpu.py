@@ -40,8 +40,8 @@ def load_dataset():
     # atokendict = {"OP3": 0, "P": 1, "OP1": 2, "OP2": 3, "O5'": 4, "C5'": 5, "C4'": 6, "O4'": 7, "C3'": 8, "O3'": 9,
     #               "C2'": 10, "O2'": 11, "C1'": 12, "N9": 13, "C8": 14, "N7": 15, "C5": 16, "C6": 17, "O6": 18,
     #               "N1": 19, "C2": 20, "N2": 21, "N3": 22, "C4": 23, "O2": 24, "N4": 25, "N6": 26, "O4": 27}
-    atokendict = dh.read_atom_enumeration_mapping()
-    ntnumdict = {'A': 0, 'U': 1, 'G': 2, 'C': 3}
+    atokendict = dh.read_atom_enumeration_mapping()  # ../data/aa_atoms_enumerated/unique_atoms_only_enumerated.json
+    # ntnumdict = {'A': 0, 'U': 1, 'G': 2, 'C': 3}
     aanumdict = dh.read_fasta_aa_enumeration_mapping()
 
     sum_d2 = 0
@@ -54,12 +54,12 @@ def load_dataset():
             dh.fetch_mmcif_from_pdb_api_and_write_locally(pdb_ids=targets, dst_path='../src/diffusion/data/cif/')
             sp = []
             for target in targets:
-                aacodes = []  # fka ntcodes
-                aaindices = []  # fka ntindices
+                aacodes = []  # replacing `ntcodes`
+                aaindices = []  # replacing `ntindices`
                 bbindices = []
                 atomcodes = []
                 coords = []
-                aaindex = -1  # ntindex
+                aaindex = -1  # replacing `ntindex`
                 atomindex = 0
                 lastnid = None
 
@@ -130,7 +130,7 @@ def load_dataset():
         
     sigma_data = sqrt((sum_d2 / nn) - (sum_d / nn) ** 2)
     print("Data s.d. = ", sigma_data)
-    print("Data unit var scaling = ", 1/sigma_data)
+    print("Data unit var scaling = ", 1 / sigma_data)
 
     return train_list, validation_list
 
@@ -168,7 +168,7 @@ def lsq_fit(c1, c2):
 def random_rotation_matrices(N):
     """Generates N random rotation matrices."""
     axes = np.random.randn(N, 3)
-    axes /= np.linalg.norm(axes, axis=1)[:, np.newaxis]  # normalize each vector
+    axes /= np.linalg.norm(axes, axis=1)[:, np.newaxis]  # normalise each vector
     angles = np.random.uniform(0, 2 * np.pi, N)
     cos_a = np.cos(angles)
     sin_a = np.sin(angles)
@@ -193,8 +193,8 @@ class DMPDataset(Dataset):
     def __init__(self, sample_list, augment=True):
         self.sample_list = sample_list
         self.augment = augment
-        #self.mse_sum = 0
-        #self.mse_count = 0
+        # self.mse_sum = 0
+        # self.mse_count = 0
         
     def __len__(self):
         return len(self.sample_list)
@@ -237,8 +237,9 @@ class DMPDataset(Dataset):
             bb_coords = target_coords[bbindices]
 
         if target_coords.shape[0] < 10:
-            print(target, length, ntindices)
-            
+            # print(target, length, ntindices)
+            print(target, length, aaindices)
+
         noised_coords = target_coords - target_coords.mean(axis=0)
 
         # Original coordinates and replicating for N sets (N, L, 3)
@@ -250,7 +251,7 @@ class DMPDataset(Dataset):
             translations = np.random.randn(NSAMPLES,1,3)
             # Apply rotations using einsum for batch matrix multiplication
             batched_coords = np.einsum('nij,nkj->nki', rotation_matrices, batched_coords) + translations
-            #distribution = torch.distributions.Beta(1, 8)
+            #  distribution = torch.distributions.Beta(1, 8)
             distribution = torch.distributions.Uniform(0, 1)
             tsteps = distribution.sample((NSAMPLES,))
         else:
@@ -270,7 +271,7 @@ class DMPDataset(Dataset):
         
         noise = torch.randn_like(batched_coords)
 
-        #print(noise_levels.size(), noise.size(), batched_coords.size())
+        # print(noise_levels.size(), noise.size(), batched_coords.size())
         noised_coords = noise_levels.view(NSAMPLES, 1, 1) * noise + batched_coords
 
         sample = (embed, noised_coords, noise_levels, noise, ntcodes, atomcodes, ntindices, bb_coords, target_coords,
