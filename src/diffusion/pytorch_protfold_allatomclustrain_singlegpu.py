@@ -97,7 +97,8 @@ def load_dataset():
 
                 assert length == len(bbindices)
 
-                if len(aaindices) < length * 6:
+                if len(aaindices) < length * 4:
+                    # Assuming at least 4 atoms per amino acid (i.e. Glycine)
                     print("WARNING: Too many missing atoms in ", target, length, len(aaindices))
                     continue
 
