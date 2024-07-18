@@ -77,7 +77,8 @@ def load_dataset():
                                 bbindices.append(atomindex)
                                 aaindex += 1
                                 lastnid = fields[8]
-                            if atid == "C3'" or atid == "P":
+                            # if atid == "C3'" or atid == "P":
+                            if atid == "CA":
                                 # Replace representative reference atom index with preferred type (C3' > P)
                                 bbindices[-1] = atomindex
                             # Split the line
@@ -204,16 +205,19 @@ class DMPDataset(Dataset):
             sample = random.choice(self.sample_list[tn])
         else:
             sample = self.sample_list[tn][0]
-        ntseq = sample[0]
+        # ntseq = sample[0]
+        aaseq = sample[0]
         atomcodes = sample[1]
-        ntindices = sample[2]
+        # ntindices = sample[2]
+        aaindices = sample[2]
         bbindices = sample[3]
         target = sample[4]
         target_coords = sample[5]
 
         embed = torch.load("data/emb/" + target + ".pt")
         
-        length = ntseq.shape[0]
+        # length = ntseq.shape[0]
+        length = aaseq.shape[0]
 
         if FINETUNE_FLAG:
             croplen = 20
@@ -224,13 +228,16 @@ class DMPDataset(Dataset):
 
         if self.augment and length > croplen:
             lcut = random.randint(0, length-croplen)
-            ntseq = ntseq[lcut:lcut+croplen]
-            bbindices = bbindices[lcut:lcut+croplen]
+            # ntseq = ntseq[lcut:lcut+croplen]
+            aaseq = aaseq[lcut:lcut + croplen]
+            bbindices = bbindices[lcut: lcut + croplen]
             bb_coords = target_coords[bbindices]
-            embed = embed[:,lcut:lcut+croplen]
-            mask = np.logical_and(ntindices >= lcut, ntindices < lcut+croplen)
+            embed = embed[:, lcut: lcut + croplen]
+            # mask = np.logical_and(ntindices >= lcut, ntindices < lcut+croplen)
+            mask = np.logical_and(aaindices >= lcut, aaindices < lcut + croplen)
             atomcodes = atomcodes[mask]
-            ntindices = ntindices[mask] - lcut
+            # ntindices = ntindices[mask] - lcut
+            aaindices = aaindices[mask] - lcut
             target_coords = target_coords[mask]
             length = croplen
         else:
@@ -261,9 +268,11 @@ class DMPDataset(Dataset):
         sig_min_r7 = 4e-4 ** (1/7)
         noise_levels = (sig_max_r7 + tsteps * (sig_min_r7 - sig_max_r7)) ** 7
 
-        ntcodes = torch.from_numpy(ntseq.copy()).long()
+        # ntcodes = torch.from_numpy(ntseq.copy()).long()
+        aacodes = torch.from_numpy(aaseq.copy()).long()
         bb_coords = torch.from_numpy(bb_coords).float()
-        ntindices = torch.from_numpy(ntindices.copy()).long()
+        # ntindices = torch.from_numpy(ntindices.copy()).long()
+        aaindices = torch.from_numpy(aaindices.copy()).long()
         atomcodes = torch.from_numpy(atomcodes.copy()).long()
         target_coords = torch.from_numpy(target_coords.copy()).unsqueeze(0)
 
@@ -274,8 +283,8 @@ class DMPDataset(Dataset):
         # print(noise_levels.size(), noise.size(), batched_coords.size())
         noised_coords = noise_levels.view(NSAMPLES, 1, 1) * noise + batched_coords
 
-        sample = (embed, noised_coords, noise_levels, noise, ntcodes, atomcodes, ntindices, bb_coords, target_coords,
-                  target)
+        # sample = (embed, noised_coords, noise_levels, noise, ntcodes, atomcodes, ntindices, bb_coords, target_coords, target)
+        sample = (embed, noised_coords, noise_levels, noise, aacodes, atomcodes, aaindices, bb_coords, target_coords, target)
 
         return sample
 
@@ -360,13 +369,16 @@ def main():
         inputs = sample[0].cuda(non_blocking=True)
         noised_coords = sample[1].cuda(non_blocking=True)
         noise_levels = sample[2].cuda(non_blocking=True)
-        ntcodes = sample[4].cuda(non_blocking=True)
+        # ntcodes = sample[4].cuda(non_blocking=True)
+        aacodes = sample[4].cuda(non_blocking=True)
         atomcodes = sample[5].cuda(non_blocking=True)
-        ntindices = sample[6].cuda(non_blocking=True)
+        # ntindices = sample[6].cuda(non_blocking=True)
+        aaindices = sample[6].cuda(non_blocking=True)
         bb_coords = sample[7].cuda(non_blocking=True)
         target_coords = sample[8].cuda(non_blocking=True)
 
-        pred_denoised, pred_coords, pred_confs = network(inputs, ntcodes, atomcodes, ntindices, noised_coords, noise_levels)
+        # pred_denoised, pred_coords, pred_confs = network(inputs, ntcodes, atomcodes, ntindices, noised_coords, noise_levels)
+        pred_denoised, pred_coords, pred_confs = network(inputs, aacodes, atomcodes, aaindices, noised_coords, noise_levels)
 
         predmap = torch.cdist(pred_coords, pred_coords)
         bb_coords = bb_coords.unsqueeze(0)
