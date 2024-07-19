@@ -74,8 +74,8 @@ def load_dataset():
 
                 if length < 10 or length > 500:
                     continue
-
-                assert torch.load(f'data/emb/{target}.pt').size(1) == length
+                pdb_embed = torch.load(f'data/emb/{target}.pt')
+                assert pdb_embed.size(1) == length
 
                 assert length == len(bbindices)
 
@@ -113,8 +113,8 @@ def load_dataset():
             tnum += 1
         
     sigma_data = sqrt((sum_d2 / nn) - (sum_d / nn) ** 2)
-    print("Data s.d. = ", sigma_data)
-    print("Data unit var scaling = ", 1 / sigma_data)
+    print(f'Data s.d. = , {sigma_data}')
+    print(f'Data unit var scaling = , {1 / sigma_data}')
 
     return train_list, validation_list
 
@@ -197,7 +197,7 @@ class DMPDataset(Dataset):
         target = sample[4]
         target_coords = sample[5]
 
-        embed = torch.load("data/emb/" + target + ".pt")
+        embed = torch.load(f'data/emb/{target}.pt')
         
         # length = ntseq.shape[0]
         length = aaseq.shape[0]
@@ -206,8 +206,6 @@ class DMPDataset(Dataset):
             croplen = 20
         else:
             croplen = random.randint(10, min(20, length))
-
-        print(f'croplen={croplen}')
 
         if self.augment and length > croplen:
             lcut = random.randint(0, length-croplen)
