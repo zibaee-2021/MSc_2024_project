@@ -3,17 +3,7 @@ from cif_parser import CIF
 import pandas as pd
 from enum import Enum
 from data_layer import data_handler as dh
-
-
-class ColNames(Enum):
-    AA_LABEL_NUM = 'aa_label_num'  # `A_label_comp_id` enumerated (the amino acid)
-    ATOM_LABEL_NUM = 'atom_label_num'  # `A_label_atom_id` enumerated (the atom)
-    BB_INDEX = 'bb_index'  # NOT CLEAR WHAT THIS IS .. BACKBONE ATOMS ?  ?  ?
-    MEAN_COORDS = 'mean_xyz'  # mean of x y z coordinates for each atom
-    MEAN_CORR_X = 'mean_corrected_x'  # x coordinates for each atom subtracted by the mean of xyz coordinates
-    MEAN_CORR_Y = 'mean_corrected_y'  # (as above) but for y coordinates
-    MEAN_CORR_Z = 'mean_corrected_z'  # (as above) but for z coordinates
-
+from enums.colnames import ColNames
 
 def _write_to_csv(pdb_id: str, pdf: pd.DataFrame):
     # pdf.to_csv(path_or_buf=f'../data/tokenised/{pdb_id}.csv', index=False, na_rep='null')

@@ -8,6 +8,8 @@ import torch
 import yaml
 from typing import Tuple
 from src import api_caller as api
+from src.cif_parser import CIF
+from enums.colnames import ColNames
 
 
 def _chdir_to_dh():
