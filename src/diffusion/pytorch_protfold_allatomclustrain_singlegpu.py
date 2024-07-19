@@ -323,7 +323,7 @@ def main():
 
     if RESTART_FLAG:
         try:
-            pretrained_dict = torch.load('rna_e2e_model_train.pt', map_location='cuda')
+            pretrained_dict = torch.load('prot_e2e_model_train.pt', map_location='cuda')
             model_dict = network.state_dict()
             pretrained_dict = {k: v for k, v in pretrained_dict.items() if (k in model_dict) and (model_dict[k].shape == pretrained_dict[k].shape)}
             network.load_state_dict(pretrained_dict, strict=False)
@@ -430,10 +430,10 @@ def main():
 
             if val_err < val_err_min:
                 val_err_min = val_err
-                torch.save(network.state_dict(), 'rna_e2e_model.pt')
+                torch.save(network.state_dict(), 'prot_e2e_model.pt')
                 print("Saving model...", flush=True)
                     
-            torch.save(network.state_dict(), 'rna_e2e_model_train.pt')
+            torch.save(network.state_dict(), 'prot_e2e_model_train.pt')
 
             torch.save({
                 'epoch': epoch,
