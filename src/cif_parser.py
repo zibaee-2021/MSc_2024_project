@@ -123,7 +123,6 @@ def parse_cif(pdb_id: str, local_cif_file: str) -> pd.DataFrame:
     :param local_cif_file: Path to locally downloaded cif file. (Expected in `../data/cifs_single_domain_prots` directory.)
     :return: Necessary fields extracted and joined in one table.
     """
-    mmcif = dict()
     if os.path.exists(local_cif_file):
         mmcif = MMCIF2Dict(local_cif_file)
     else:
