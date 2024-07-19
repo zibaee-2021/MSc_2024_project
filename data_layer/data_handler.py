@@ -185,7 +185,9 @@ def fetch_mmcif_from_pdb_api_and_write_locally(pdb_ids: list, dst_path: str):
     for pdb_id in pdb_ids:
 
         mmcif_file = f'{dst_path}{pdb_id}.cif'
-        if not os.path.exists(mmcif_file):
+        if os.path.exists(mmcif_file):
+            print(f'{mmcif_file} already exists. No api call required.')
+        else:
             response = api.call_for_cif_with_pdb_id(pdb_id)
             code = response.status_code
             if code != 200:
