@@ -1,32 +1,18 @@
-import cif_parser as parser
-from cif_parser import CIF
 import pandas as pd
-from enum import Enum
+from src import cif_parser as parser
+from src.cif_parser import CIF
 from data_layer import data_handler as dh
 from enums.colnames import ColNames
 
-def _write_to_csv(pdb_id: str, pdf: pd.DataFrame):
-    # pdf.to_csv(path_or_buf=f'../data/tokenised/{pdb_id}.csv', index=False, na_rep='null')
-    # pdf.to_csv(path_or_buf=f'../data/tokenised/{pdb_id}.csv', index=False)
-    # pdf.to_csv(path_or_buf=f'../data/tokenised/{pdb_id}.ssv', sep=' ', index=False, na_rep='null')
-    pdf.to_csv(path_or_buf=f'../data/tokenised/{pdb_id}.ssv', sep=' ', index=False)
-    # pdf.to_csv(path_or_buf=f'../data/tokenised/{pdb_id}.tsv', sep='\t', index=False, na_rep='null')
-    # pdf.to_csv(path_or_buf=f'../data/tokenised/{pdb_id}.tsv', sep='\t', index=False)
-    pdf_easy_read = pdf.rename(columns={CIF.S_seq_id.value: 'SEQ_ID',
-                                        CIF.S_mon_id.value: 'RESIDUES',
-                                        CIF.A_id.value: 'ATOM_ID',
-                                        CIF.A_label_atom_id.value: 'ATOMS',
-                                        ColNames.MEAN_CORR_X.value: 'X',
-                                        ColNames.MEAN_CORR_Y.value: 'Y',
-                                        ColNames.MEAN_CORR_Z.value: 'Z'})
-    # pdf_easy_read.to_csv(path_or_buf=f'../data/tokenised/easyRead_{pdb_id}.tsv', sep='\t', index=False, na_rep='null')
 
-
-def write_tokenised_cif_to_csv(pdb_ids=None) -> None:
+def parse_tokenise_cif_and_write_to_csv(pdb_ids=None, use_local_data_subdir=False) -> pd.DataFrame:
     """
     Tokenise the mmCIF files for the specified proteins by PDB entry/entries (which is a unique identifier) and write
     to csv (and/or tsv and/or ssv) files at `../data/tokenised/`.
     :param pdb_ids: PDB identifier(s) for protein(s) to tokenise.
+    :param use_local_data_subdir: True to write the tokenised PDB values to `data` subdir in cwd, otherwise write to the
+    larger, general-use, `data` dir that still at top-level of project structure. False by default.
+    :return parsed and tokenised cif file in dataframe, which is also written to ssv in `data/tokenised`.
     """
     if isinstance(pdb_ids, str):
         pdb_ids = [pdb_ids]
@@ -61,10 +47,11 @@ def write_tokenised_cif_to_csv(pdb_ids=None) -> None:
                            ColNames.MEAN_CORR_X.value,
                            ColNames.MEAN_CORR_Y.value,
                            ColNames.MEAN_CORR_Z.value]]
-        _write_to_csv(pdb_id, pdf_cif)
+        dh.write_to_ssv(pdb_id, pdf_cif, use_local_data_subdir=use_local_data_subdir)
+        return pdf_cif
 
 
 if __name__ == '__main__':
 
     # write_tokenised_cif_to_csv(pdb_ids='4itq')
-    write_tokenised_cif_to_csv(pdb_ids='1oj6')
+    parse_tokenise_cif_and_write_to_csv(pdb_ids='1oj6')

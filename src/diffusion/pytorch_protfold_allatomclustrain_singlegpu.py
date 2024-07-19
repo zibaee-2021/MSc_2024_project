@@ -17,7 +17,7 @@ from torch.utils.data import Dataset, DataLoader
 from nndef_protfold_atompyt2 import DiffusionNet
 
 from data_layer import data_handler as dh
-from torchsummary import summary
+from src import tokeniser as tk
 
 os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 # BATCH_SIZE = 32
@@ -47,13 +47,20 @@ def load_dataset():
     sum_d2 = 0
     sum_d = 0
     nn = 0
-    print(f'cwd is {os.getcwd()}')
     with open('prot_train_clusters.lst', 'r') as targetfile:
         for line in targetfile:
             targets = line.rstrip().split()
+
+            # if you know all these cif files are already in the local data dir, no need to run the following line:
             dh.fetch_mmcif_from_pdb_api_and_write_locally(pdb_ids=targets, dst_path='../src/diffusion/data/cif/')
+
             sp = []
             for target in targets:
+                if os.path.exists(f'data/tokenised/{target}.ssv'):
+                    pdf_target = dh.read_tokenised_cif_ssv(pdb_id=target, use_local_data_subdir=True)
+                else:
+                    pdf_target = tk.parse_tokenise_cif_and_write_to_csv(pdb_ids=target, use_local_data_subdir=True)
+
                 aacodes = []  # replacing `ntcodes`
                 aaindices = []  # replacing `ntindices`
                 bbindices = []
@@ -62,31 +69,6 @@ def load_dataset():
                 aaindex = -1  # replacing `ntindex`
                 atomindex = 0
                 lastnid = None
-
-                # with open('data/cif/' + target + '.cif', 'r') as pdbfile:
-                with open(f'data/cif/{target}.cif', 'r') as pdbfile:
-                    for line in pdbfile:
-                        if line[:4] == 'ATOM':
-                            fields = line.split()
-                            atid = fields[3].replace('"', '')
-                            if atid not in atokendict or float(fields[13]) <= 0.5:
-                                continue
-                            if fields[8] != lastnid:
-                                aa = aanumdict.get(fields[5], 4)
-                                aacodes.append(aa)
-                                bbindices.append(atomindex)
-                                aaindex += 1
-                                lastnid = fields[8]
-                            # if atid == "C3'" or atid == "P":
-                            if atid == "CA":
-                                # Replace representative reference atom index with preferred type (C3' > P)
-                                bbindices[-1] = atomindex
-                            # Split the line
-                            xyz_fields = [fields[10], fields[11], fields[12]]
-                            coords.append(np.array([float(xyz_fields[0]), float(xyz_fields[1]), float(xyz_fields[2])]))
-                            aaindices.append(aaindex)
-                            atomcodes.append(atokendict[atid])
-                            atomindex += 1
 
                 length = aaindex + 1
 
