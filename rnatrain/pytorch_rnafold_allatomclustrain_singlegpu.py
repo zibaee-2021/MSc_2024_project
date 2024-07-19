@@ -1,5 +1,7 @@
 #!/home/jones/miniconda3/bin/python
 
+from torchsummary import summary
+
 # Diffusion method for RNA folding
 
 import sys
@@ -62,16 +64,29 @@ def load_dataset():
                     for line in pdbfile:
                         if line[:4] == 'ATOM':
                             fields = line.split()
-                            atid = fields[3].replace('"', '')
-                            if atid not in atokendict or float(fields[13]) <= 0.5:
+                            #  0   1 2   3   4 5 6 7 8 9 10    11  12    13  14   15  16 17 18   19   20
+                            # ATOM 1 O "O5'" . G A ? 1 ? 21.3 -9.4 18.8  1.0 90.2  ?  1  G   A  "O5'"  1
+                            atom_id = fields[3]  # like O5 or C5 or C3 etc
+                            nucleotide = fields[5]  # the RNA base (A,G, U or C)
+                            nucleotide_index = fields[8]  # the nucleotide index
+                            occupancy = fields[13]
+
+                            # atid = fields[3].replace('"', '')
+                            atid = atom_id.replace('"', '')
+                            # if atid not in atokendict or float(fields[13]) <= 0.5:
+                            if atid not in atokendict or float(occupancy) <= 0.5:
                                 continue
-                            if fields[8] != lastnid:
-                                nt = ntnumdict.get(fields[5], 4)
-                                ntcodes.append(nt)
+                            # if fields[8] != lastnid:
+                            if nucleotide_index != lastnid:  #
+                                # nt = ntnumdict.get(fields[5], 4)
+                                # nt = ntnumdict.get(nucleotide, 4)  # label_comp_id is the nt
+                                # ntcodes.append(nt)
+                                ntcodes.append(ntnumdict.get(nucleotide, 4))
                                 bbindices.append(atomindex)
                                 ntindex += 1
-                                lastnid = fields[8]
-                            if atid == "C3'" or atid == "P":
+                                # lastnid = fields[8]
+                                lastnid = nucleotide_index
+                            if atid == "C3'" or atid == "P":  # Is this a way to determine when moved to next base? Why not just use `label_seq_id` ?
                                 # Replace representative reference atom index with preferred type (C3' > P)
                                 bbindices[-1] = atomindex
                             # Split the line
@@ -80,13 +95,13 @@ def load_dataset():
                             ntindices.append(ntindex)
                             atomcodes.append(atokendict[atid])
                             atomindex += 1
-
-                length = ntindex+1
+                length = ntindex + 1
 
                 if length < 10 or length > 500:
                     continue
 
-                assert torch.load("data/emb/" + target + ".pt").size(1) == length
+                pdb_embed = torch.load("data/emb/" + target + ".pt")
+                assert pdb_embed.size(1) == length
 
                 assert length == len(bbindices)
 
@@ -104,13 +119,15 @@ def load_dataset():
 
                 assert length == target_coords[bbindices].shape[0]
 
+                # For computing standard deviation
                 sum_d2 += (target_coords ** 2).sum()
                 sum_d += np.sqrt((target_coords ** 2).sum(axis=-1)).sum()
                 nn += target_coords.shape[0]
 
                 diff = target_coords[1:] - target_coords[:-1]
                 distances = np.linalg.norm(diff, axis=1)
-
+                # why is distances being calculated? What is diff doing ?
+                # difference between all rows excluding row 0 and all rows excluding last row.
                 print(target_coords.shape, target, length, distances.min(), distances.max())
 
                 sp.append((ntcodes, atomcodes, ntindices, bbindices, target, target_coords))
@@ -326,6 +343,8 @@ def main():
 
     if RESTART_FLAG:
         try:
+            # What is this rna_e2e_model_train.pt?
+            # Is it an empty network ? Untrained weights or has it been trained on something?
             pretrained_dict = torch.load('rna_e2e_model_train.pt', map_location='cuda')
             model_dict = network.state_dict()
             pretrained_dict = {k: v for k, v in pretrained_dict.items() if (k in model_dict) and (model_dict[k].shape == pretrained_dict[k].shape)}
