@@ -51,7 +51,7 @@ def load_dataset():
         for line in targetfile:
             targets = line.rstrip().split()
 
-            # if you know all these cif files are already in the local data dir, no need to run the following line:
+            # if you know all these cif files are already in the local data dir, then no need to run following line:
             dh.fetch_mmcif_from_pdb_api_and_write_locally(pdb_ids=targets, dst_path='../src/diffusion/data/cif/')
 
             sp = []
@@ -61,11 +61,12 @@ def load_dataset():
                 else:
                     pdf_target = tk.parse_tokenise_cif_and_write_to_csv(pdb_ids=target, use_local_data_subdir=True)
 
-                aacodes = []  # replacing `ntcodes`
-                aaindices = []  # replacing `ntindices`
-                bbindices = []
-                atomcodes = []
-                coords = []
+                aacodes = []  # the enumeration of the amino acid (i.e. 0-19)
+                atomcodes = []  # the enumeration of the atoms
+                aaindices = []  # the index of each amino acid (should increase and repeat for several rows, as each aa has several atoms)
+                bbindices = []  # backbone indices. You expect these numbers to always jump, not continuous increase)
+
+                coords = []  #
                 aaindex = -1  # replacing `ntindex`
                 atomindex = 0
                 lastnid = None
