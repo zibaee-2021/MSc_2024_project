@@ -1,7 +1,5 @@
 #!/home/jones/miniconda3/bin/python
 
-from torchsummary import summary
-
 # Diffusion method for RNA folding
 
 import sys
@@ -461,4 +459,5 @@ def main():
 
 
 if __name__ == "__main__":
+    print(f'sys.version = {sys.version}. sys.version_info {sys.version_info}')
     main()
