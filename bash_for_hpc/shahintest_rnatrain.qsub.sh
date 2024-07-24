@@ -14,7 +14,9 @@ hostname
 date
 pwd
 
-which python
+echo 'nvidia-smi:'; nvidia-smi
+echo 'nvcc --version:'; nvcc --version
+echo 'which python: '; which python
 
 #!/usr/bin/env bash
 source ~/.bashrc
