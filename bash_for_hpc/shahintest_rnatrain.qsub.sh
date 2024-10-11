@@ -18,6 +18,7 @@ pwd
 echo 'nvidia-smi:'; nvidia-smi
 echo 'nvcc --version:'; nvcc --version
 echo 'which python: '; which python
+echo 'python --version:'; python --version
 
 conda activate shahin_msc24
 #!/usr/bin/env bash
