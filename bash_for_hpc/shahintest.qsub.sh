@@ -21,5 +21,5 @@ export PYTHONPATH=$PYTHONPATH:~/diffSock
 export PYTHONPATH=$PYTHONPATH:~/miniconda3/envs/diffSock/lib/python3.12/site-packages
 
 #!/usr/bin/env python3
-#python3 ~/diffSock/helloworld.py
+#python3 ~/diffSock/helloworld_for_HPC.py
 python3 ~/diffSock/rnatrain/hello_from_rnatrain.py
