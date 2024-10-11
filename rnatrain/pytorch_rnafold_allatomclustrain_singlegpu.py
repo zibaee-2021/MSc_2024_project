@@ -16,7 +16,9 @@ from torch.cuda.amp import GradScaler
 from torch.utils.data import Dataset, DataLoader
 from nndef_rnafold_atompyt2 import DiffusionNet
 
-os.environ['CUDA_VISIBLE_DEVICES'] = "0"
+# Limit program to only see & use GPU with ID 0 (first GPU on system). Otherwise, program can access all available GPUs.
+# Including this line would seem to restrict the effectiveness of the scheduler to spread workload for different users.
+# os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 # BATCH_SIZE = 32
 BATCH_SIZE = 8
 # NSAMPLES = 24
