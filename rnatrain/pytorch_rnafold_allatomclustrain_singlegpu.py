@@ -231,7 +231,7 @@ class DMPDataset(Dataset):
         else:
             croplen = random.randint(10, min(20, length))
 
-        print(f'croplen={croplen}')
+        # print(f'croplen={croplen}')
 
         if self.augment and length > croplen:
             lcut = random.randint(0, length-croplen)
@@ -261,7 +261,7 @@ class DMPDataset(Dataset):
             translations = np.random.randn(NSAMPLES,1,3)
             # Apply rotations using einsum for batch matrix multiplication
             batched_coords = np.einsum('nij,nkj->nki', rotation_matrices, batched_coords) + translations
-            #distribution = torch.distributions.Beta(1, 8)
+            # distribution = torch.distributions.Beta(1, 8)
             distribution = torch.distributions.Uniform(0, 1)
             tsteps = distribution.sample((NSAMPLES,))
         else:
@@ -281,7 +281,7 @@ class DMPDataset(Dataset):
         
         noise = torch.randn_like(batched_coords)
 
-        #print(noise_levels.size(), noise.size(), batched_coords.size())
+        # print(noise_levels.size(), noise.size(), batched_coords.size())
         noised_coords = noise_levels.view(NSAMPLES, 1, 1) * noise + batched_coords
 
         sample = (embed, noised_coords, noise_levels, noise, ntcodes, atomcodes, ntindices, bb_coords, target_coords,
