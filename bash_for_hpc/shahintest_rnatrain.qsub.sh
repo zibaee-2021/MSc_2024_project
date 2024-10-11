@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#$ -l tmem=8G
-#$ -l h_vmem=8G
+#$ -l tmem=12G
+#$ -l h_vmem=12G
 #$ -l h_rt=3600
 #$ -l gpu=true
 
