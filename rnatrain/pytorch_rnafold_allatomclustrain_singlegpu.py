@@ -473,9 +473,9 @@ if __name__ == "__main__":
         for i in range(torch.cuda.device_count()):
             print(f'Device {i}: {torch.cuda.get_device_name(i)}')
 
-    import subprocess
-    result = subprocess.run(['nvcc', '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    print(f'result.stdout.decode(): {result.stdout.decode()}')
+    # import subprocess
+    # result = subprocess.run(['nvcc', '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    # print(f'result.stdout.decode(): {result.stdout.decode()}')
 
     print(f'torch.__version__={torch.__version__}')
     print(f'pandas.__version__={pandas.__version__}')
