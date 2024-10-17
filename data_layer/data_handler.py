@@ -12,10 +12,11 @@ from src.cif_parser import CIF
 from enums.colnames import ColNames
 
 
-def _chdir_to_dh():
+def _chdir_to_data_layer():
     """
-    Store current working directory, in order to revert back to it after finishing
-    :return: Current working directory *before* changing it to the local dir of data_handler.
+    Change current working dir to data layer.
+    :return: Current working directory *before* changing it to the local dir of data_handler in order to return to it
+    at the end of the operation.
     """
     cwd = os.getcwd()
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -24,7 +25,8 @@ def _chdir_to_dh():
 
 
 def read_list_of_pdbids_from_text_file(filename: str):
-    cwd = _chdir_to_dh()
+    # Store cwd to return to at end. Change current dir to data layer:
+    cwd = _chdir_to_data_layer()
     path = '../data/pdb_ids_list'
     path_file = os.path.join(path, filename)
     with open(path_file, 'r') as f:
@@ -35,7 +37,8 @@ def read_list_of_pdbids_from_text_file(filename: str):
 
 
 def get_list_of_pdbids_of_local_single_domain_cifs() -> list:
-    cwd = _chdir_to_dh()
+    # Store cwd to return to at end. Change current dir to data layer:
+    cwd = _chdir_to_data_layer()
     cifs = glob.glob(os.path.join('../data/cifs_single_domain_prots', '*.cif'))
     path_cifs = [cif for cif in cifs if os.path.isfile(cif)]
     pdb_ids = []
@@ -53,7 +56,8 @@ def get_list_of_pdbids_of_local_single_domain_cifs() -> list:
 
 
 def write_list_to_space_separated_txt_file(list_to_write: list, file_name: str) -> None:
-    cwd = _chdir_to_dh()
+    # Store cwd to return to at end. Change current dir to data layer:
+    cwd = _chdir_to_data_layer()
     space_sep_str = ' '.join(list_to_write)
     with open(f'../data/{file_name}', 'w') as f:
         f.write(space_sep_str)
@@ -66,7 +70,8 @@ def manually_write_aa_atoms_to_data_dir(path: str) -> None:
     :param path:
     :return:
     """
-    cwd = _chdir_to_dh()
+    # Store cwd to return to at end. Change current dir to data layer:
+    cwd = _chdir_to_data_layer()
     aa_atoms = {
         'A': ['N', 'CA', 'C', 'O', 'CB'],
         'C': ['N', 'CA', 'C', 'O', 'CB', 'SG'],
@@ -95,7 +100,8 @@ def manually_write_aa_atoms_to_data_dir(path: str) -> None:
 
 
 def read_fasta_aa_enumeration_mapping() -> dict:
-    cwd = _chdir_to_dh()
+    # Store cwd to return to at end. Change current dir to data layer:
+    cwd = _chdir_to_data_layer()
     with open('../data/aa_atoms_enumerated/FASTA_aas_enumerated.json', 'r') as json_f:
         fasta_aas_enumerated = json.load(json_f)
     os.chdir(cwd)
@@ -103,7 +109,8 @@ def read_fasta_aa_enumeration_mapping() -> dict:
 
 
 def read_3letter_aas_enumerated_mapping() -> dict:
-    cwd = _chdir_to_dh()
+    # Store cwd to return to at end. Change current dir to data layer:
+    cwd = _chdir_to_data_layer()
     with open('../data/aa_atoms_enumerated/aas_enumerated.json', 'r') as json_f:
         aas_enumerated = json.load(json_f)
     os.chdir(cwd)
@@ -111,7 +118,8 @@ def read_3letter_aas_enumerated_mapping() -> dict:
 
 
 def read_atom_enumeration_mapping() -> dict:
-    cwd = _chdir_to_dh()
+    # Store cwd to return to at end. Change current dir to data layer:
+    cwd = _chdir_to_data_layer()
     with open('../data/aa_atoms_enumerated/unique_atoms_only_enumerated.json', 'r') as json_f:
         atoms_enumerated = json.load(json_f)
     os.chdir(cwd)
@@ -119,7 +127,8 @@ def read_atom_enumeration_mapping() -> dict:
 
 
 def read_enumeration_mappings() -> Tuple[dict, dict, dict]:
-    cwd = _chdir_to_dh()
+    # Store cwd to return to at end. Change current dir to data layer:
+    cwd = _chdir_to_data_layer()
     atoms_enumerated = read_atom_enumeration_mapping()
     aas_enumerated = read_3letter_aas_enumerated_mapping()
     fasta_aas_enumerated = read_fasta_aa_enumeration_mapping()
@@ -128,7 +137,8 @@ def read_enumeration_mappings() -> Tuple[dict, dict, dict]:
 
 
 def write_to_jsons(aas_enumerated, atoms_only_enumerated):
-    cwd = _chdir_to_dh()
+    # Store cwd to return to at end. Change current dir to data layer:
+    cwd = _chdir_to_data_layer()
     with open('../data/aa_atoms_enumerated/aas_enumerated.json', 'w') as json_f:
         json.dump(aas_enumerated, json_f, indent=4)
 
@@ -142,7 +152,8 @@ def write_to_jsons(aas_enumerated, atoms_only_enumerated):
 
 
 def read_aa_atoms_yaml() -> Tuple[list, dict]:
-    cwd = _chdir_to_dh()
+    # Store cwd to return to at end. Change current dir to data layer:
+    cwd = _chdir_to_data_layer()
     aas_atoms = dict()
     aas = list()
 
@@ -159,7 +170,8 @@ def read_aa_atoms_yaml() -> Tuple[list, dict]:
 
 
 def write_pdb_uniprot_fasta_recs_to_json(recs: dict, filename: str) -> None:
-    cwd = _chdir_to_dh()
+    # Store cwd to return to at end. Change current dir to data layer:
+    cwd = _chdir_to_data_layer()
     with open(f'../data/FASTA/{filename}.json', 'w') as json_f:
         json.dump(recs, json_f, indent=4)
     os.chdir(cwd)
@@ -171,7 +183,8 @@ def _remove_null_entries(pdbids_fasta_json: dict):
 
 
 def read_nonnull_fastas_from_json_to_dict(filename: str) -> dict:
-    cwd = _chdir_to_dh()
+    # Store cwd to return to at end. Change current dir to data layer:
+    cwd = _chdir_to_data_layer()
     with open(f'../data/FASTA/{filename}.json', 'r') as json_f:
         pdbids_fasta_json = json.load(json_f)
     pdbids_fasta_json = _remove_null_entries(pdbids_fasta_json)
@@ -180,7 +193,8 @@ def read_nonnull_fastas_from_json_to_dict(filename: str) -> dict:
 
 
 def fetch_mmcif_from_pdb_api_and_write_locally(pdb_ids: list, dst_path: str):
-    cwd = _chdir_to_dh()
+    # Store cwd to return to at end. Change current dir to data layer:
+    cwd = _chdir_to_data_layer()
     non_200_count = 0
     for pdb_id in pdb_ids:
 
@@ -202,7 +216,8 @@ def fetch_mmcif_from_pdb_api_and_write_locally(pdb_ids: list, dst_path: str):
 
 
 def save_torch_tensor(pt: torch.Tensor, dst_path: str):
-    cwd = _chdir_to_dh()
+    # Store cwd to return to at end. Change current dir to data layer:
+    cwd = _chdir_to_data_layer()
     torch.save(pt, f'{dst_path}.pt')
     os.chdir(cwd)
 
@@ -227,7 +242,8 @@ def write_tokenised_cif_to_flatfile(pdb_id: str, pdf: pd.DataFrame, use_local_da
     cwd = ''
 
     if not use_local_data_subdir:  # i.e. use the top-level general-use `data` dir & define relpath from data_layer
-        cwd = _chdir_to_dh()
+        # Store cwd to return to at end. Change current dir to data layer:
+        cwd = _chdir_to_data_layer()
         dst_dir = '../' + dst_dir
     else:
         os.makedirs(dst_dir, exist_ok=True)
@@ -261,7 +277,8 @@ def read_tokenised_cif_ssv_to_pdf(pdb_id: str, use_local_data_subdir=False):
     cwd = ''
 
     if not use_local_data_subdir:  # i.e. use the top-level general-use `data` dir & define relpath from data_layer
-        cwd = _chdir_to_dh()
+        # Store cwd to return to at end. Change current dir to data layer:
+        cwd = _chdir_to_data_layer()
         dst_dir = '../' + dst_dir
     else:
         os.makedirs(dst_dir, exist_ok=True)
