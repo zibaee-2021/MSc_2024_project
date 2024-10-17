@@ -19,6 +19,18 @@ from nndef_protfold_atompyt2 import DiffusionNet
 from data_layer import data_handler as dh
 from src import tokeniser as tk
 
+# INPUT FILE NAMES:
+PROT_TRAIN_CLUSTERS_LST = 'prot_train_clusters.lst'
+PATH_TO_CIF_DIR = '../src/diffusion/data/cif/'
+PATH_TO_TOKENISED_DIR = 'data/tokenised/'
+PATH_TO_EMB_DIR = 'data/emb/'
+# OUTPUT FILE NAMES:
+PROT_E2E_MODEL_PT = 'prot_e2e_model.pt'
+# CAN BE INPUT OR OUTPUT:
+PROT_E2E_MODEL_TRAIN_PT = 'prot_e2e_model_train.pt'
+CHECKPOINT_PT = 'checkpoint.pt'
+
+
 os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 # BATCH_SIZE = 32
 BATCH_SIZE = 8
@@ -47,19 +59,21 @@ def load_dataset():
     sum_d2 = 0
     sum_d = 0
     nn = 0
-    with open('prot_train_clusters.lst', 'r') as targetfile:
+    with open(PROT_TRAIN_CLUSTERS_LST, 'r') as targetfile:
         for line in targetfile:
             targets = line.rstrip().split()
 
             # if you know all these cif files are already in the local data dir, then no need to run following line:
-            dh.fetch_mmcif_from_pdb_api_and_write_locally(pdb_ids=targets, dst_path='../src/diffusion/data/cif/')
+            dh.fetch_mmcif_from_pdb_api_and_write_locally(pdb_ids=targets, dst_path=PATH_TO_CIF_DIR)
 
             sp = []
             for target in targets:
-                if os.path.exists(f'data/tokenised/{target}.ssv'):
-                    pdf_target = dh.read_tokenised_cif_ssv(pdb_id=target, use_local_data_subdir=True)
+
+                if os.path.exists(f'{PATH_TO_TOKENISED_DIR}{target}.ssv'):
+                    # `pdf_` is pandas dataframe.
+                    pdf_target = dh.read_tokenised_cif_ssv_to_pdf(pdb_id=target, use_local_data_subdir=True)
                 else:
-                    pdf_target = tk.parse_tokenise_cif_and_write_to_csv(pdb_ids=target, use_local_data_subdir=True)
+                    pdf_target = tk.parse_tokenise_cif_and_write_to_flatfile(pdb_ids=target, use_local_data_subdir=True)
 
                 aacodes = []  # the enumeration of the amino acid (i.e. 0-19)
                 atomcodes = []  # the enumeration of the atoms
@@ -75,7 +89,7 @@ def load_dataset():
 
                 if length < 10 or length > 500:
                     continue
-                pdb_embed = torch.load(f'data/emb/{target}.pt')
+                pdb_embed = torch.load(f'{PATH_TO_EMB_DIR}{target}.pt')
                 assert pdb_embed.size(1) == length
 
                 assert length == len(bbindices)
@@ -198,7 +212,7 @@ class DMPDataset(Dataset):
         target = sample[4]
         target_coords = sample[5]
 
-        embed = torch.load(f'data/emb/{target}.pt')
+        embed = torch.load(f'{PATH_TO_EMB_DIR}{target}.pt')
         
         # length = ntseq.shape[0]
         length = aaseq.shape[0]
@@ -324,7 +338,7 @@ def main():
 
     if RESTART_FLAG:
         try:
-            pretrained_dict = torch.load('prot_e2e_model_train.pt', map_location='cuda')
+            pretrained_dict = torch.load(PROT_E2E_MODEL_TRAIN_PT, map_location='cuda')
             model_dict = network.state_dict()
             pretrained_dict = {k: v for k, v in pretrained_dict.items() if (k in model_dict) and (model_dict[k].shape == pretrained_dict[k].shape)}
             network.load_state_dict(pretrained_dict, strict=False)
@@ -332,7 +346,7 @@ def main():
             pass
 
         try:
-            checkpoint = torch.load('checkpoint.pt')
+            checkpoint = torch.load(CHECKPOINT_PT)
             start_iteration = checkpoint['iteration']
             val_err_min = checkpoint['val_err_min']
             print("Checkpoint file loaded.")
@@ -431,15 +445,15 @@ def main():
 
             if val_err < val_err_min:
                 val_err_min = val_err
-                torch.save(network.state_dict(), 'prot_e2e_model.pt')
+                torch.save(network.state_dict(), PROT_E2E_MODEL_PT)
                 print("Saving model...", flush=True)
                     
-            torch.save(network.state_dict(), 'prot_e2e_model_train.pt')
+            torch.save(network.state_dict(), PROT_E2E_MODEL_TRAIN_PT)
 
             torch.save({
                 'epoch': epoch,
                 'val_err_min': val_err_min,
-            }, 'checkpoint.pt')
+            }, CHECKPOINT_PT)
 
 
 if __name__ == "__main__":
