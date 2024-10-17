@@ -19,7 +19,7 @@ def _chdir_to_dh():
     """
     cwd = os.getcwd()
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    print(f'Path changed from {cwd} temporarily to = {os.getcwd()}')
+    print(f'Path changed from {cwd} to = {os.getcwd()}. (This is intended to be temporary).')
     return cwd
 
 
