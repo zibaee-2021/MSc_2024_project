@@ -207,7 +207,22 @@ def save_torch_tensor(pt: torch.Tensor, dst_path: str):
     os.chdir(cwd)
 
 
-def write_to_ssv(pdb_id: str, pdf: pd.DataFrame, use_local_data_subdir=False):
+def write_tokenised_cif_to_flatfile(pdb_id: str, pdf: pd.DataFrame, use_local_data_subdir=False, flatfiles=None):
+    """
+    Write dataframe of single protein with columns CIF.S_seq_id, CIF.S_mon_id, CIF.A_id, CIF.A_label_atom_id,
+    ColNames.MEAN_CORR_X, ColNames.MEAN_CORR_Y, ColNames.MEAN_CORR_Z to flat file(s) in local relative dir
+    'data/tokenised/' or to the top-level general-use data dir.
+    :param pdb_id: pdb/cif id.
+    :param pdf: Dataframe to write to flat file(s).
+    :param use_local_data_subdir: True to use relative local dir, otherwise top-level dir by default.
+    :param flatfiles: List of file formats (e.g. ['ssv', 'csv', 'tsv'], or string of one format, otherwise ssv by
+    default).
+    """
+    if flatfiles is None:
+        flatfiles = ['ssv']
+    elif isinstance(flatfiles, str):
+        flatfiles = [flatfiles]
+
     dst_dir = 'data/tokenised/'
     cwd = ''
 
@@ -217,25 +232,31 @@ def write_to_ssv(pdb_id: str, pdf: pd.DataFrame, use_local_data_subdir=False):
     else:
         os.makedirs(dst_dir, exist_ok=True)
 
-    # pdf.to_csv(path_or_buf=f'../data/tokenised/{pdb_id}.csv', index=False, na_rep='null')
-    # pdf.to_csv(path_or_buf=f'../data/tokenised/{pdb_id}.csv', index=False)
-    # pdf.to_csv(path_or_buf=f'../data/tokenised/{pdb_id}.ssv', sep=' ', index=False, na_rep='null')
-    pdf.to_csv(path_or_buf=f'{dst_dir}{pdb_id}.ssv', sep=' ', index=False)
-    # pdf.to_csv(path_or_buf=f'../data/tokenised/{pdb_id}.tsv', sep='\t', index=False, na_rep='null')
-    # pdf.to_csv(path_or_buf=f'../data/tokenised/{pdb_id}.tsv', sep='\t', index=False)
-    pdf_easy_read = pdf.rename(columns={CIF.S_seq_id.value: 'SEQ_ID',
-                                        CIF.S_mon_id.value: 'RESIDUES',
-                                        CIF.A_id.value: 'ATOM_ID',
-                                        CIF.A_label_atom_id.value: 'ATOMS',
-                                        ColNames.MEAN_CORR_X.value: 'X',
-                                        ColNames.MEAN_CORR_Y.value: 'Y',
-                                        ColNames.MEAN_CORR_Z.value: 'Z'})
+    for flatfile in flatfiles:
+        sep = ' '
+        if flatfile == 'tsv':
+            sep = '\t'
+        elif flatfile == 'csv':
+            sep = ','
+        # pdf.to_csv(path_or_buf=f'../data/tokenised/{pdb_id}.csv', sep=sep, index=False, na_rep='null')
+        pdf.to_csv(path_or_buf=f'{dst_dir}{pdb_id}.{flatfile}', sep=sep, index=False)
+
+    # # For a more human-readable set of column-names:
+    # pdf_easy_read = pdf.rename(columns={CIF.S_seq_id.value: 'SEQ_ID',
+    #                                     CIF.S_mon_id.value: 'RESIDUES',
+    #                                     CIF.A_id.value: 'ATOM_ID',
+    #                                     CIF.A_label_atom_id.value: 'ATOMS',
+    #                                     ColNames.MEAN_CORR_X.value: 'X',
+    #                                     ColNames.MEAN_CORR_Y.value: 'Y',
+    #                                     ColNames.MEAN_CORR_Z.value: 'Z'})
     # pdf_easy_read.to_csv(path_or_buf=f'../data/tokenised/easyRead_{pdb_id}.tsv', sep='\t', index=False, na_rep='null')
+
+    # Put cwd back:
     if not use_local_data_subdir:
         os.chdir(cwd)
 
 
-def read_tokenised_cif_ssv(pdb_id: str, use_local_data_subdir=False):
+def read_tokenised_cif_ssv_to_pdf(pdb_id: str, use_local_data_subdir=False):
     dst_dir = 'data/tokenised/'
     cwd = ''
 

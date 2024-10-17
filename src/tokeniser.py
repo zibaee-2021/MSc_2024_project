@@ -5,13 +5,14 @@ from data_layer import data_handler as dh
 from enums.colnames import ColNames
 
 
-def parse_tokenise_cif_and_write_to_csv(pdb_ids=None, use_local_data_subdir=False) -> pd.DataFrame:
+def parse_tokenise_cif_and_write_to_flatfile(pdb_ids=None, use_local_data_subdir=False, flatfile: str = 'ssv') -> pd.DataFrame:
     """
     Tokenise the mmCIF files for the specified proteins by PDB entry/entries (which is a unique identifier) and write
     to csv (and/or tsv and/or ssv) files at `../data/tokenised/`.
     :param pdb_ids: PDB identifier(s) for protein(s) to tokenise.
     :param use_local_data_subdir: True to write the tokenised PDB values to `data` subdir in cwd, otherwise write to the
     larger, general-use, `data` dir that still at top-level of project structure. False by default.
+    :param flatfile: Write to ssv, csv or tsv. Use ssv by default.
     :return parsed and tokenised cif file in dataframe, which is also written to ssv in `data/tokenised`.
     """
     if isinstance(pdb_ids, str):
@@ -47,11 +48,13 @@ def parse_tokenise_cif_and_write_to_csv(pdb_ids=None, use_local_data_subdir=Fals
                            ColNames.MEAN_CORR_X.value,
                            ColNames.MEAN_CORR_Y.value,
                            ColNames.MEAN_CORR_Z.value]]
-        dh.write_to_ssv(pdb_id, pdf_cif, use_local_data_subdir=use_local_data_subdir)
+        if flatfile == 'ssv':
+            dh.write_tokenised_cif_to_flatfile(pdb_id, pdf_cif, use_local_data_subdir=use_local_data_subdir,
+                                               flatfiles='ssv')
         return pdf_cif
 
 
 if __name__ == '__main__':
 
     # write_tokenised_cif_to_csv(pdb_ids='4itq')
-    parse_tokenise_cif_and_write_to_csv(pdb_ids='1oj6')
+    parse_tokenise_cif_and_write_to_flatfile(pdb_ids='1oj6')
