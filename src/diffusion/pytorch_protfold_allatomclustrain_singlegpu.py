@@ -65,7 +65,7 @@ def load_dataset():
 
             # if you know all these cif files are already in the local data dir, then no need to run following line:
             # The cwd is 'diffSock/src/diffusion'. Writes to '../src/diffusion/data/cif/' dir.
-            dh.fetch_mmcif_from_pdb_api_and_write_locally(pdb_ids=targets, dst_path=PATH_TO_CIF_DIR)
+            dh.make_api_calls_to_fetch_mmcif_and_write_locally(pdb_ids=targets, dst_path=PATH_TO_CIF_DIR)
 
             sp = []
             for target in targets:

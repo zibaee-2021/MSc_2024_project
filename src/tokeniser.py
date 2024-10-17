@@ -1,3 +1,5 @@
+import os
+
 import pandas as pd
 from src import cif_parser as parser
 from src.cif_parser import CIF
@@ -19,7 +21,10 @@ def parse_tokenise_cif_and_write_to_flatfile(pdb_ids=None, use_local_data_subdir
         pdb_ids = [pdb_ids]
 
     for pdb_id in pdb_ids:
-        pdf_cif = parser.parse_cif(pdb_id=pdb_id, local_cif_file=f'../data/cifs/{pdb_id}.cif')
+        # os.getcwd() gives 'diffSock/src/diffusion'
+        path_to_cif_pdb_ids = f'{os.getcwd()}/data/cif/'
+        assert os.path.exists(path_to_cif_pdb_ids)
+        pdf_cif = parser.parse_cif(pdb_id=pdb_id, local_cif_file=f'data/cif/{pdb_id}.cif')
 
         atoms_enumerated, aas_enumerated, fasta_aas_enumerated = dh.read_enumeration_mappings()
 

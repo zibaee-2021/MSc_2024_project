@@ -177,5 +177,5 @@ if __name__ == '__main__':
     path_singl_dom_prots = '../data/dataset/cath_573_single_domain_prots.csv'
     pdbids = parse_single_dom_prots_and_write_csv(path_cath_list=path_cath_domain_list,
                                                   path_single_dom_prots=path_singl_dom_prots)
-    dh.fetch_mmcif_from_pdb_api_and_write_locally(pdb_ids=pdbids, dst_path='../data/cifs_single_domain_prots/')
+    dh.make_api_calls_to_fetch_mmcif_and_write_locally(pdb_ids=pdbids, dst_path='../data/cifs_single_domain_prots/')
     assert_cif_count_equals_pdb_id_count(len(pdbids))
