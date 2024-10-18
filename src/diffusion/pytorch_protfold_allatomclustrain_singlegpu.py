@@ -91,7 +91,7 @@ def load_dataset():
                 if length < 10 or length > 500:
                     continue
                 pdb_embed = torch.load(f'{PATH_TO_EMB_DIR}{target}.pt')
-                assert pdb_embed.size(1) == length
+                assert pdb_embed.size(1) == length  # This is the length of protein (i.e. number of residues)
 
                 assert length == len(bbindices)
 
