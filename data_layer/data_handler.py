@@ -20,25 +20,27 @@ def _chdir_to_data_layer():
     """
     cwd = os.getcwd()
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    print(f'Path changed from {cwd} to = {os.getcwd()}. (This is intended to be temporary).')
+    # print(f'Path changed from {cwd} to = {os.getcwd()}. (This is intended to be temporary).')
     return cwd
 
 
+def _restore_original_working_dir(cwd: str):
+    os.chdir(cwd)
+
+
 def read_list_of_pdbids_from_text_file(filename: str):
-    # Store cwd to return to at end. Change current dir to data layer:
-    cwd = _chdir_to_data_layer()
+    cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer.
     path = '../data/pdb_ids_list'
     path_file = os.path.join(path, filename)
     with open(path_file, 'r') as f:
         pdb_ids = f.read()
     pdbids = pdb_ids.split()
-    os.chdir(cwd)
+    _restore_original_working_dir(cwd)
     return pdbids
 
 
 def get_list_of_pdbids_of_local_single_domain_cifs() -> list:
-    # Store cwd to return to at end. Change current dir to data layer:
-    cwd = _chdir_to_data_layer()
+    cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
     cifs = glob.glob(os.path.join('../data/cifs_single_domain_prots', '*.cif'))
     path_cifs = [cif for cif in cifs if os.path.isfile(cif)]
     pdb_ids = []
@@ -48,7 +50,7 @@ def get_list_of_pdbids_of_local_single_domain_cifs() -> list:
         pdbid = os.path.splitext(cif_basename)[0]
         pdb_ids.append(pdbid)
 
-    os.chdir(cwd)
+    _restore_original_working_dir(cwd)
     return pdb_ids
 
 
@@ -56,12 +58,11 @@ def get_list_of_pdbids_of_local_single_domain_cifs() -> list:
 
 
 def write_list_to_space_separated_txt_file(list_to_write: list, file_name: str) -> None:
-    # Store cwd to return to at end. Change current dir to data layer:
-    cwd = _chdir_to_data_layer()
+    cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
     space_sep_str = ' '.join(list_to_write)
     with open(f'../data/{file_name}', 'w') as f:
         f.write(space_sep_str)
-    os.chdir(cwd)
+    _restore_original_working_dir(cwd)
 
 
 def manually_write_aa_atoms_to_data_dir(path: str) -> None:
@@ -70,8 +71,7 @@ def manually_write_aa_atoms_to_data_dir(path: str) -> None:
     :param path:
     :return:
     """
-    # Store cwd to return to at end. Change current dir to data layer:
-    cwd = _chdir_to_data_layer()
+    cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
     aa_atoms = {
         'A': ['N', 'CA', 'C', 'O', 'CB'],
         'C': ['N', 'CA', 'C', 'O', 'CB', 'SG'],
@@ -96,64 +96,54 @@ def manually_write_aa_atoms_to_data_dir(path: str) -> None:
     }
     with open(path, 'w') as json_f:
         json.dump(aa_atoms, json_f, indent=4)
-    os.chdir(cwd)
+    _restore_original_working_dir(cwd)
 
 
 def read_fasta_aa_enumeration_mapping() -> dict:
-    # Store cwd to return to at end. Change current dir to data layer:
-    cwd = _chdir_to_data_layer()
+    cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
     with open('../data/aa_atoms_enumerated/FASTA_aas_enumerated.json', 'r') as json_f:
         fasta_aas_enumerated = json.load(json_f)
-    os.chdir(cwd)
+    _restore_original_working_dir(cwd)
     return fasta_aas_enumerated
 
 
 def read_3letter_aas_enumerated_mapping() -> dict:
-    # Store cwd to return to at end. Change current dir to data layer:
-    cwd = _chdir_to_data_layer()
+    cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
     with open('../data/aa_atoms_enumerated/aas_enumerated.json', 'r') as json_f:
         aas_enumerated = json.load(json_f)
-    os.chdir(cwd)
+    _restore_original_working_dir(cwd)
     return aas_enumerated
 
 
 def read_atom_enumeration_mapping() -> dict:
-    # Store cwd to return to at end. Change current dir to data layer:
-    cwd = _chdir_to_data_layer()
+    cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
     with open('../data/aa_atoms_enumerated/unique_atoms_only_enumerated.json', 'r') as json_f:
         atoms_enumerated = json.load(json_f)
-    os.chdir(cwd)
+    _restore_original_working_dir(cwd)
     return atoms_enumerated
 
 
 def read_enumeration_mappings() -> Tuple[dict, dict, dict]:
-    # Store cwd to return to at end. Change current dir to data layer:
-    cwd = _chdir_to_data_layer()
+    cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
     atoms_enumerated = read_atom_enumeration_mapping()
     aas_enumerated = read_3letter_aas_enumerated_mapping()
     fasta_aas_enumerated = read_fasta_aa_enumeration_mapping()
-    os.chdir(cwd)
+    _restore_original_working_dir(cwd)
     return atoms_enumerated, aas_enumerated, fasta_aas_enumerated
 
 
-def write_to_jsons(aas_enumerated, atoms_only_enumerated):
-    # Store cwd to return to at end. Change current dir to data layer:
-    cwd = _chdir_to_data_layer()
-    with open('../data/aa_atoms_enumerated/aas_enumerated.json', 'w') as json_f:
-        json.dump(aas_enumerated, json_f, indent=4)
+def write_to_json_to_data_dir(fname: str, dict_to_write: dict):
+    cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
+    fname = fname.removeprefix('/').removesuffix('.json')
+    relpath_json = f'../data/{fname}.json'
 
-    # aas_atoms_enumerated_ = {str(k): v for k, v in aas_atoms_enumerated.items()}
-    # with open('../data/aa_atoms_enumerated/aas_atoms_enumerated.json', 'w') as json_f:
-    #     json.dump(aas_atoms_enumerated_, json_f, indent=4)
-
-    with open('../data/aa_atoms_enumerated/unique_atoms_only_enumerated.json', 'w') as json_f:
-        json.dump(atoms_only_enumerated, json_f, indent=4)
-    os.chdir(cwd)
+    with open(relpath_json, 'w') as json_f:
+        json.dump(dict_to_write, json_f, indent=4)
+    _restore_original_working_dir(cwd)
 
 
 def read_aa_atoms_yaml() -> Tuple[list, dict]:
-    # Store cwd to return to at end. Change current dir to data layer:
-    cwd = _chdir_to_data_layer()
+    cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
     aas_atoms = dict()
     aas = list()
 
@@ -165,16 +155,15 @@ def read_aa_atoms_yaml() -> Tuple[list, dict]:
 
         except yaml.YAMLError as exc:
             print(exc)
-    os.chdir(cwd)
+    _restore_original_working_dir(cwd)
     return aas, aas_atoms
 
 
 def write_pdb_uniprot_fasta_recs_to_json(recs: dict, filename: str) -> None:
-    # Store cwd to return to at end. Change current dir to data layer:
-    cwd = _chdir_to_data_layer()
+    cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
     with open(f'../data/FASTA/{filename}.json', 'w') as json_f:
         json.dump(recs, json_f, indent=4)
-    os.chdir(cwd)
+    _restore_original_working_dir(cwd)
 
 
 def _remove_null_entries(pdbids_fasta_json: dict):
@@ -183,18 +172,16 @@ def _remove_null_entries(pdbids_fasta_json: dict):
 
 
 def read_nonnull_fastas_from_json_to_dict(filename: str) -> dict:
-    # Store cwd to return to at end. Change current dir to data layer:
-    cwd = _chdir_to_data_layer()
+    cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
     with open(f'../data/FASTA/{filename}.json', 'r') as json_f:
         pdbids_fasta_json = json.load(json_f)
     pdbids_fasta_json = _remove_null_entries(pdbids_fasta_json)
-    os.chdir(cwd)
+    _restore_original_working_dir(cwd)
     return pdbids_fasta_json
 
 
 def make_api_calls_to_fetch_mmcif_and_write_locally(pdb_ids: list, dst_path: str):
-    # Store cwd to return to at end. Change current dir to data layer:
-    cwd = _chdir_to_data_layer()
+    cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
     non_200_count = 0
     for pdb_id in pdb_ids:
 
@@ -212,14 +199,14 @@ def make_api_calls_to_fetch_mmcif_and_write_locally(pdb_ids: list, dst_path: str
                 file.write(response.text)
 
     print(f'{non_200_count} non-200 status codes out of {len(pdb_ids)} PDB API calls.')
-    os.chdir(cwd)
+
+    _restore_original_working_dir(cwd)
 
 
 def save_torch_tensor(pt: torch.Tensor, dst_path: str):
-    # Store cwd to return to at end. Change current dir to data layer:
-    cwd = _chdir_to_data_layer()
+    cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
     torch.save(pt, f'{dst_path}.pt')
-    os.chdir(cwd)
+    _restore_original_working_dir(cwd)
 
 
 def write_tokenised_cif_to_flatfile(pdb_id: str, pdf: pd.DataFrame, use_local_data_subdir=False, flatfiles=None):
@@ -267,9 +254,8 @@ def write_tokenised_cif_to_flatfile(pdb_id: str, pdf: pd.DataFrame, use_local_da
     #                                     ColNames.MEAN_CORR_Z.value: 'Z'})
     # pdf_easy_read.to_csv(path_or_buf=f'../data/tokenised/easyRead_{pdb_id}.tsv', sep='\t', index=False, na_rep='null')
 
-    # Put cwd back:
     if not use_local_data_subdir:
-        os.chdir(cwd)
+        _restore_original_working_dir(cwd)
 
 
 def read_tokenised_cif_ssv_to_pdf(pdb_id: str, use_local_data_subdir=False):
@@ -286,9 +272,49 @@ def read_tokenised_cif_ssv_to_pdf(pdb_id: str, use_local_data_subdir=False):
     pdf = pd.read_csv(f'{dst_dir}{pdb_id}.ssv', sep=' ')
 
     if not use_local_data_subdir:
-        os.chdir(cwd)
+        _restore_original_working_dir(cwd)
 
     return pdf
+
+
+def read_json_from_data_dir(fname: str) -> dict:
+    """
+    Read given json file from diffSock/data/{fname}.
+    :param fname: File name of json file to read. IMPORTANT: Subdir paths are expected to be included.
+    e.g. 'aa_atoms_ennumerated/fname.json' without starting forward slash.
+    :return: The read-in json file, as a Python dict.
+    """
+    cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
+    fname = fname.removeprefix('/').removesuffix('.json')
+    relpath_json = f'../data/{fname}.json'
+    assert os.path.exists(relpath_json)
+    try:
+        with open(relpath_json, 'r') as json_f:
+            f = json.load(json_f)
+    except FileNotFoundError:
+        print(f'{f} does not exist.')
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+    _restore_original_working_dir(cwd)
+    return f
+
+
+def read_lst_file_from_data_dir(fname):
+    cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
+    fname = fname.removeprefix('/').removesuffix('.lst')
+    relpath_lst = f'../data/{fname}.lst'
+    assert os.path.exists(relpath_lst)
+    try:
+        with open(relpath_lst, 'r') as lst_f:
+            f = [line.strip() for line in lst_f]
+    except FileNotFoundError:
+        print(f'{lst_f} does not exist.')
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+    _restore_original_working_dir(cwd)
+    return f
 
 
 # if __name__ == '__main__':
