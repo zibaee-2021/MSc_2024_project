@@ -95,8 +95,8 @@ def load_dataset():
             # The cwd is 'diffSock/src/diffusion'. Writes to '../src/diffusion/data/cif/' dir.
             dh.make_api_calls_to_fetch_mmcif_and_write_locally(pdb_ids=targets, dst_path=PATH_TO_CIF_DIR)
 
-            sp = []
-            for target in targets:
+        sp = []
+        for target in targets:
 
             if os.path.exists(f'{PATH_TO_TOKENISED_DIR}{target}.ssv'):
                 # "pdf_" refers tp pandas dataframe
