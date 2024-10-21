@@ -70,11 +70,11 @@ def load_dataset():
             sp = []
             for target in targets:
 
-                if os.path.exists(f'{PATH_TO_TOKENISED_DIR}{target}.ssv'):
-                    # `pdf_` is pandas dataframe.
-                    pdf_target = dh.read_tokenised_cif_ssv_to_pdf(pdb_id=target, use_local_data_subdir=True)
-                else:
-                    pdf_target = tk.parse_tokenise_cif_and_write_to_flatfile(pdb_ids=target, use_local_data_subdir=True)
+            if os.path.exists(f'{PATH_TO_TOKENISED_DIR}{target}.ssv'):
+                # "pdf_" refers tp pandas dataframe
+                pdf_target = dh.read_tokenised_cif_ssv_to_pdf(pdb_id=target, use_local_data_subdir=True)
+            else:
+                pdf_target = tk.parse_tokenise_cif_write_to_flatfile_to_pdf(pdb_ids=target, use_local_data_subdir=True)
 
                 aacodes = []  # the enumeration of the amino acid (i.e. 0-19)
                 atomcodes = []  # the enumeration of the atoms

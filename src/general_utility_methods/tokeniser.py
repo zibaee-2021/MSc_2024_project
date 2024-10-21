@@ -7,7 +7,7 @@ from data_layer import data_handler as dh
 from enums.colnames import ColNames
 
 
-def parse_tokenise_cif_and_write_to_flatfile(pdb_ids=None, use_local_data_subdir=False, flatfile: str = 'ssv') -> pd.DataFrame:
+def parse_tokenise_cif_write_to_flatfile_to_pdf(pdb_ids=None, use_local_data_subdir=False, flatfile: str = 'ssv') -> pd.DataFrame:
     """
     Tokenise the mmCIF files for the specified proteins by PDB entry/entries (which is a unique identifier) and write
     to csv (and/or tsv and/or ssv) files at `../data/tokenised/`.
@@ -62,4 +62,4 @@ def parse_tokenise_cif_and_write_to_flatfile(pdb_ids=None, use_local_data_subdir
 if __name__ == '__main__':
 
     # write_tokenised_cif_to_csv(pdb_ids='4itq')
-    parse_tokenise_cif_and_write_to_flatfile(pdb_ids='1oj6')
+    parse_tokenise_cif_write_to_flatfile_to_pdf(pdb_ids='1oj6')
