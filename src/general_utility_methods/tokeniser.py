@@ -1,8 +1,8 @@
 import os
 
 import pandas as pd
-from src import cif_parser as parser
-from src.cif_parser import CIF
+from src.general_utility_methods import cif_parser as parser
+from src.general_utility_methods.cif_parser import CIF
 from data_layer import data_handler as dh
 from enums.colnames import ColNames
 

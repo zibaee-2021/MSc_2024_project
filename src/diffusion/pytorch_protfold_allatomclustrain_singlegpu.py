@@ -17,7 +17,7 @@ from torch.utils.data import Dataset, DataLoader
 from nndef_protfold_atompyt2 import DiffusionNet
 
 from data_layer import data_handler as dh
-from src import tokeniser as tk
+from src.general_utility_methods import tokeniser as tk
 
 # INPUT FILE NAMES:
 PROT_TRAIN_CLUSTERS_LST = 'prot_train_clusters.lst'

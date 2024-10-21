@@ -10,7 +10,7 @@ import api_caller as api
 
 
 class PathsUrls(Enum):
-    fastas_path = '../data/FASTA'
+    fastas_path = '../../data/FASTA'
 
 
 def read_fasta_sequences(uniprot_ids=None) -> dict:
