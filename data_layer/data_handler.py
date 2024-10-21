@@ -97,36 +97,22 @@ def manually_write_aa_atoms_to_data_dir(path: str) -> None:
     _restore_original_working_dir(cwd)
 
 
-def read_fasta_aa_enumeration_mapping() -> dict:
-    cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
-    with open('../data/aa_atoms_enumerated/FASTA_aas_enumerated.json', 'r') as json_f:
-        fasta_aas_enumerated = json.load(json_f)
-    _restore_original_working_dir(cwd)
-    return fasta_aas_enumerated
+def read_fasta_aa_enumeration_mapping(fname: str) -> dict:
+    return read_json_from_data_dir(fname=f'aa_atoms_enumerated/{fname}')
 
 
-def read_3letter_aas_enumerated_mapping() -> dict:
-    cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
-    with open('../data/aa_atoms_enumerated/aas_enumerated.json', 'r') as json_f:
-        aas_enumerated = json.load(json_f)
-    _restore_original_working_dir(cwd)
-    return aas_enumerated
+def read_3letter_aas_enumerated_mapping(fname: str) -> dict:
+    return read_json_from_data_dir(fname=f'aa_atoms_enumerated/{fname}')
 
 
-def read_atom_enumeration_mapping() -> dict:
-    cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
-    with open('../data/aa_atoms_enumerated/unique_atoms_only_enumerated.json', 'r') as json_f:
-        atoms_enumerated = json.load(json_f)
-    _restore_original_working_dir(cwd)
-    return atoms_enumerated
+def read_atom_enumeration_mapping(fname: str) -> dict:
+    return read_json_from_data_dir(fname=f'aa_atoms_enumerated/{fname}')
 
 
 def read_enumeration_mappings() -> Tuple[dict, dict, dict]:
-    cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
-    atoms_enumerated = read_atom_enumeration_mapping()
-    aas_enumerated = read_3letter_aas_enumerated_mapping()
-    fasta_aas_enumerated = read_fasta_aa_enumeration_mapping()
-    _restore_original_working_dir(cwd)
+    atoms_enumerated = read_atom_enumeration_mapping(fname='unique_atoms_only_enumerated_no_hydrogens')
+    aas_enumerated = read_3letter_aas_enumerated_mapping(fname='aas_enumerated')
+    fasta_aas_enumerated = read_fasta_aa_enumeration_mapping('FASTA_aas_enumerated')
     return atoms_enumerated, aas_enumerated, fasta_aas_enumerated
 
 
