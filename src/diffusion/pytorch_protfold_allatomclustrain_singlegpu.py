@@ -53,6 +53,20 @@ RESTART_FLAG = True
 FINETUNE_FLAG = False
 
 
+def _read_lst_file_from_src_diff_dir(fname):
+    fname = fname.removeprefix('/').removesuffix('.lst')
+    relpath_lst = f'{fname}.lst'
+    assert os.path.exists(relpath_lst)
+    try:
+        with open(relpath_lst, 'r') as lst_f:
+            f = [line.strip() for line in lst_f]
+    except FileNotFoundError:
+        print(f'{lst_f} does not exist.')
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    return f
+
+
 # Load dataset function remains the same
 def load_dataset():
 
