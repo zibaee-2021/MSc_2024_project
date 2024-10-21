@@ -104,15 +104,17 @@ def load_dataset():
             else:
                 pdf_target = tk.parse_tokenise_cif_write_to_flatfile_to_pdf(pdb_ids=target, use_local_data_subdir=True)
 
-                aacodes = []  # the enumeration of the amino acid (i.e. 0-19)
-                atomcodes = []  # the enumeration of the atoms
-                aaindices = []  # the index of each amino acid (should increase and repeat for several rows, as each aa has several atoms)
-                bbindices = []  # backbone indices. You expect these numbers to always jump, not continuous increase)
+            # TODO: DECIDE WHAT TO DO WITH NAN ATOMS.. currently atokendict[atom] breaks at line 111.
+            bla = CIF.S_mon_id.value
+            aacodes = [aanumdict[aa] for aa in pdf_target[CIF.S_mon_id.value].tolist()]  # the enumeration of the amino acid (i.e. 0-19)
+            atomcodes = [atokendict[atom] for atom in pdf_target[CIF.A_label_atom_id.value].tolist()]  # the enumeration of the atoms
+            aaindices = pdf_target[CIF.S_seq_id.value].tolist()  # the index of each amino acid (should increase and repeat for several rows, as each aa has several atoms)
+            bbindices = pdf_target[CIF.A_id.value].tolist()  # backbone indices. You expect these numbers to always jump, not continuous increase)
 
-                coords = []  #
-                aaindex = -1  # replacing `ntindex`
-                atomindex = 0
-                lastnid = None
+            coords = pdf_target[['mean_corrected_x', 'mean_corrected_y', 'mean_corrected_z']].values.tolist()  #
+            aaindex = -1  # replacing `ntindex`
+            atomindex = 0
+            lastnid = None
 
                 length = aaindex + 1
 
