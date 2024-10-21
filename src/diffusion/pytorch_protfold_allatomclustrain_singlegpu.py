@@ -91,9 +91,9 @@ def load_dataset():
     for line in targetfile:
         targets = line.rstrip().split()
 
-            # if you know all these cif files are already in the local data dir, then no need to run following line:
-            # The cwd is 'diffSock/src/diffusion'. Writes to '../src/diffusion/data/cif/' dir.
-            dh.make_api_calls_to_fetch_mmcif_and_write_locally(pdb_ids=targets, dst_path=PATH_TO_CIF_DIR)
+        # if you know all these cif files are already in the local data dir, then no need to run following line:
+        # The cwd is 'src/diffusion'. Writes to 'src/diffusion/data/cif/' dir.
+        dh.make_api_calls_to_fetch_mmcif_and_write_locally(pdb_ids=targets, dst_path=PATH_TO_CIF_DIR)
 
         sp = []
         for target in targets:
