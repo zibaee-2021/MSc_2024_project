@@ -20,7 +20,18 @@ from data_layer import data_handler as dh
 from src.general_utility_methods import tokeniser as tk
 
 # INPUT FILE NAMES:
-PROT_TRAIN_CLUSTERS_LST = 'prot_train_clusters.lst'
+# json file names:
+AA_ATOMS_CODES = 'aas_atoms_enumerated'
+AA_ATOMS_CODES_NO_H = 'aas_atoms_enumerated_no_hydrogens'
+ATOMS_ONLY_CODES = 'unique_atoms_only_enumerated'
+ATOMS_ONLY_CODES_NO_H = 'unique_atoms_only_enumerated_no_hydrogens'
+AAS_CODES_1_LETTER = 'FASTA_aas_enumerated'
+AAS_CODES_3_LETTER = 'aas_enumerated'
+
+# lst file name:
+PROT_TRAIN_CLUSTERS = 'prot_train_clusters'
+
+# paths:
 PATH_TO_CIF_DIR = '../src/diffusion/data/cif/'
 PATH_TO_TOKENISED_DIR = 'data/tokenised/'
 PATH_TO_EMB_DIR = 'data/emb/'
@@ -52,16 +63,19 @@ def load_dataset():
     # atokendict = {"OP3": 0, "P": 1, "OP1": 2, "OP2": 3, "O5'": 4, "C5'": 5, "C4'": 6, "O4'": 7, "C3'": 8, "O3'": 9,
     #               "C2'": 10, "O2'": 11, "C1'": 12, "N9": 13, "C8": 14, "N7": 15, "C5": 16, "C6": 17, "O6": 18,
     #               "N1": 19, "C2": 20, "N2": 21, "N3": 22, "C4": 23, "O2": 24, "N4": 25, "N6": 26, "O4": 27}
-    atokendict = dh.read_atom_enumeration_mapping()  # ../data/aa_atoms_enumerated/unique_atoms_only_enumerated.json
+    atokendict = dh.read_atom_enumeration_mapping(fname=ATOMS_ONLY_CODES_NO_H)
+    # # Or if using amino-acid-atom pairings:
+    # atokendict = dh.read_atom_enumeration_mapping(fname=AA_ATOMS_CODES_NO_H)
+
     # ntnumdict = {'A': 0, 'U': 1, 'G': 2, 'C': 3}
-    aanumdict = dh.read_fasta_aa_enumeration_mapping()
+    aanumdict = dh.read_fasta_aa_enumeration_mapping(fname=AAS_CODES_3_LETTER)
 
     sum_d2 = 0
     sum_d = 0
     nn = 0
-    with open(PROT_TRAIN_CLUSTERS_LST, 'r') as targetfile:
-        for line in targetfile:
-            targets = line.rstrip().split()
+    targetfile = _read_lst_file_from_src_diff_dir(fname=PROT_TRAIN_CLUSTERS)
+    for line in targetfile:
+        targets = line.rstrip().split()
 
             # if you know all these cif files are already in the local data dir, then no need to run following line:
             # The cwd is 'diffSock/src/diffusion'. Writes to '../src/diffusion/data/cif/' dir.
