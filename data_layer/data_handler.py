@@ -155,12 +155,9 @@ def _remove_null_entries(pdbids_fasta_json: dict):
     return pdbids_fasta_json
 
 
-def read_nonnull_fastas_from_json_to_dict(filename: str) -> dict:
-    cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
-    with open(f'../data/FASTA/{filename}.json', 'r') as json_f:
-        pdbids_fasta_json = json.load(json_f)
+def read_nonnull_fastas_from_json_to_dict(fname: str) -> dict:
+    pdbids_fasta_json = read_json_from_data_dir(fname=f'FASTA/{fname}')
     pdbids_fasta_json = _remove_null_entries(pdbids_fasta_json)
-    _restore_original_working_dir(cwd)
     return pdbids_fasta_json
 
 
