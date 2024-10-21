@@ -18,6 +18,7 @@ from nndef_protfold_atompyt2 import DiffusionNet
 
 from data_layer import data_handler as dh
 from src.general_utility_methods import tokeniser as tk
+from src.general_utility_methods.cif_parser import CIF
 
 # INPUT FILE NAMES:
 # json file names:
