@@ -117,47 +117,47 @@ def load_dataset():
             atomindex = 0
             lastnid = None
 
-                length = aaindex + 1
+            length = aaindex + 1
 
-                if length < 10 or length > 500:
-                    continue
-                pdb_embed = torch.load(f'{PATH_TO_EMB_DIR}{target}.pt')
-                assert pdb_embed.size(1) == length  # This is the length of protein (i.e. number of residues)
+            if length < 10 or length > 500:
+                continue
+            pdb_embed = torch.load(f'{PATH_TO_EMB_DIR}{target}.pt')
+            assert pdb_embed.size(1) == length  # This is the length of protein (i.e. number of residues)
 
-                assert length == len(bbindices)
+            assert length == len(bbindices)
 
-                if len(aaindices) < length * 4:
-                    # Assuming at least 4 atoms per amino acid (i.e. Glycine)
-                    print("WARNING: Too many missing atoms in ", target, length, len(aaindices))
-                    continue
+            if len(aaindices) < length * 4:
+                # Assuming at least 4 atoms per amino acid (i.e. Glycine)
+                print("WARNING: Too many missing atoms in ", target, length, len(aaindices))
+                continue
 
-                aacodes = np.asarray(aacodes, dtype=np.uint8)
-                atomcodes = np.asarray(atomcodes, dtype=np.uint8)
-                bbindices = np.asarray(bbindices, dtype=np.int16)
-                aaindices = np.asarray(aaindices, dtype=np.int16)
+            aacodes = np.asarray(aacodes, dtype=np.uint8)
+            atomcodes = np.asarray(atomcodes, dtype=np.uint8)
+            bbindices = np.asarray(bbindices, dtype=np.int16)
+            aaindices = np.asarray(aaindices, dtype=np.int16)
 
-                target_coords = np.asarray(coords, dtype=np.float32)
-                target_coords -= target_coords.mean(0)
+            target_coords = np.asarray(coords, dtype=np.float32)
+            target_coords -= target_coords.mean(0)
 
-                assert length == target_coords[bbindices].shape[0]
+            assert length == target_coords[bbindices].shape[0]
 
-                sum_d2 += (target_coords ** 2).sum()
-                sum_d += np.sqrt((target_coords ** 2).sum(axis=-1)).sum()
-                nn += target_coords.shape[0]
+            sum_d2 += (target_coords ** 2).sum()
+            sum_d += np.sqrt((target_coords ** 2).sum(axis=-1)).sum()
+            nn += target_coords.shape[0]
 
-                diff = target_coords[1:] - target_coords[:-1]
-                distances = np.linalg.norm(diff, axis=1)
+            diff = target_coords[1:] - target_coords[:-1]
+            distances = np.linalg.norm(diff, axis=1)
 
-                print(target_coords.shape, target, length, distances.min(), distances.max())
+            print(target_coords.shape, target, length, distances.min(), distances.max())
 
-                sp.append((aacodes, atomcodes, aaindices, bbindices, target, target_coords))
+            sp.append((aacodes, atomcodes, aaindices, bbindices, target, target_coords))
 
-            # Choose every 10th sample for validation
-            if tnum % 10 == 0:
-                validation_list.append(sp)
-            else:
-                train_list.append(sp)
-            tnum += 1
+        # Choose every 10th sample for validation
+        if tnum % 10 == 0:
+            validation_list.append(sp)
+        else:
+            train_list.append(sp)
+        tnum += 1
         
     sigma_data = sqrt((sum_d2 / nn) - (sum_d / nn) ** 2)
     print(f'Data s.d. = , {sigma_data}')
