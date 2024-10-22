@@ -20,6 +20,14 @@ from data_layer import data_handler as dh
 from src.general_utility_methods import tokeniser as tk
 from src.general_utility_methods.cif_parser import CIF
 
+bb_atoms = ["C", "CA", "N", "O", "OXT"]
+bb_atoms_two = ["C", "N"]  # the peptide bond carbonyl and amino nitrogen
+sc_atoms = ["CB", "CD", "CD1", "CD2", "CE", "CE1", "CE2", "CE3", "CG", "CG1", "CG2",
+            "CH2", "CZ", "CZ2", "CZ3", "ND1", "ND2", "NE", "NE1", "NE2", "NH1",
+            "NH2", "NZ", "OD1", "OD2", "OE1", "OE2", "OG", "OG1", "OG2", "OH",
+            "SD", "SG"]
+
+
 # INPUT FILE NAMES:
 # json file names:
 AA_ATOMS_CODES = 'aas_atoms_enumerated'
@@ -106,14 +114,19 @@ def load_dataset():
                 pdf_target = tk.parse_tokenise_cif_write_to_flatfile_to_pdf(pdb_ids=target, use_local_data_subdir=True)
 
             # TODO: DECIDE WHAT TO DO WITH NAN ATOMS.. currently atokendict[atom] breaks at line 111.
-            bla = CIF.S_mon_id.value
-            aacodes = [aanumdict[aa] for aa in pdf_target[CIF.S_mon_id.value].tolist()]  # the enumeration of the amino acid (i.e. 0-19)
+            # the mapping might not needed here because tokeniser.py does it earlier and writes it to flatfiles
             atomcodes = [atokendict[atom] for atom in pdf_target[CIF.A_label_atom_id.value].tolist()]  # the enumeration of the atoms
-            aaindices = pdf_target[CIF.S_seq_id.value].tolist()  # the index of each amino acid (should increase and repeat for several rows, as each aa has several atoms)
+            filtered_df = pdf_target[pdf_target['column_name'].isin(['C', 'N'])]
+
             bbindices = pdf_target[CIF.A_id.value].tolist()  # backbone indices. You expect these numbers to always jump, not continuous increase)
 
-            coords = pdf_target[['mean_corrected_x', 'mean_corrected_y', 'mean_corrected_z']].values.tolist()  #
+            coords = pdf_target[['mean_corrected_x', 'mean_corrected_y', 'mean_corrected_z']].values  # should be list of 3-element numpy arrays
             aaindex = -1  # replacing `ntindex`
+
+            pdf_target_deduped = pdf_target.drop_duplicates(subset=CIF.S_seq_id.value, keep='first').reset_index(drop=True)
+            aacodes = [aanumdict[aa] for aa in pdf_target_deduped[CIF.S_mon_id.value].tolist()]  # the enumeration of the amino acid (i.e. 0-19)
+            aaindices = pdf_target_deduped[CIF.S_seq_id.value].tolist()  # the index of each amino acid (should increase and repeat for several rows, as each aa has several atoms)
+
             atomindex = 0
             lastnid = None
 
@@ -124,10 +137,16 @@ def load_dataset():
             pdb_embed = torch.load(f'{PATH_TO_EMB_DIR}{target}.pt')
             assert pdb_embed.size(1) == length  # This is the length of protein (i.e. number of residues)
 
+            # In the RNA diffusion script, the minimum allowed number of atoms per base is 6.
+            # The smallest base, uracil has 12 atoms (cg4), but 40 atoms for a complete uracil nucleotide including the
+            # nitrogenous base, ribose sugar, and phosphate group in RNA. So, does this mean DJ is saying its ok to
+            # include those RNA cifs with up to 34 of 40 atoms of a base missing?
             assert length == len(bbindices)
+            min_num_atoms_expected_per_aa = 4  # i.e. 10 atoms for the smallest amino acid glycine
+            min_num_expected_atoms = len(aaindices) * min_num_atoms_expected_per_aa
+            num_of_atoms_in_cif = len(bbindices)
 
-            if len(aaindices) < length * 4:
-                # Assuming at least 4 atoms per amino acid (i.e. Glycine)
+            if num_of_atoms_in_cif < min_num_expected_atoms:  # I've changed this from the rna version because I think it's the wrong way round. number of aa * 4 should give the minimum number of atoms to be expected. Less than that
                 print("WARNING: Too many missing atoms in ", target, length, len(aaindices))
                 continue
 
