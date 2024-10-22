@@ -126,7 +126,6 @@ def parse_cif(pdb_id: str, local_cif_file: str) -> pd.DataFrame:
     :param local_cif_file: Relative path to locally downloaded cif file, os.path.exists expected no leading fwd slash.
     :return: Necessary fields extracted and joined in one table.
     """
-    cwd = os.getcwd()  # 'diffSock/src/diffusion'
     if os.path.exists(local_cif_file):
         mmcif = MMCIF2Dict(local_cif_file)
     else:
