@@ -31,19 +31,20 @@ class CIF(Enum):
     S = '_pdbx_poly_seq_scheme.'
     A = '_atom_site.'
 
-    S_seq_id = 'S_seq_id'
-    S_mon_id = 'S_mon_id'
-    S_pdb_seq_num = 'S_pdb_seq_num'
-    A_group_PDB = 'A_group_PDB'
+    S_seq_id = 'S_seq_id'  # Pointer to _atom_site.label_seq_id
+    S_mon_id = 'S_mon_id'  # Pointer to _entity_poly_seq.mon_id.
+    S_pdb_seq_num = 'S_pdb_seq_num'  # PDB residue number.
+    A_group_PDB = 'A_group_PDB'  # placeholder for tags used by PDB to identify coordinate records (e.g ATOM or HETATM).
 
-    A_id = 'A_id'
-    A_label_atom_id = 'A_label_atom_id'
-    A_label_comp_id = 'A_label_comp_id'
-    A_auth_seq_id = 'A_auth_seq_id'
-    A_Cartn_x = 'A_Cartn_x'
-    A_Cartn_y = 'A_Cartn_y'
-    A_Cartn_z = 'A_Cartn_z'
-    A_occupancy = 'A_occupancy'
+    A_id = 'A_id'  # A unique identifier for each atom position.
+    A_label_atom_id = 'A_label_atom_id'  # PDB atom name.
+    A_label_comp_id = 'A_label_comp_id'  # PDB 3-letter-code residue names.
+    A_label_asym_id = 'A_label_asym_id'  # PDB chain identifier.
+    A_auth_seq_id = 'A_auth_seq_id'  # PDB residue number. (Author defined alternative to _atom_site.label_seq_id).
+    A_Cartn_x = 'A_Cartn_x'  # Cartesian X coordinate component describing the position of this atom site.
+    A_Cartn_y = 'A_Cartn_y'  # Cartesian Y coordinate component describing the position of this atom site.
+    A_Cartn_z = 'A_Cartn_z'  # Cartesian Z coordinate component describing the position of this atom site.
+    A_occupancy = 'A_occupancy'  # The fraction of the atom present at this atom position.
 
 
 def _extract_fields_from_poly_seq(mmcif: dict) -> pd.DataFrame:
@@ -76,13 +77,14 @@ def _extract_fields_from_atom_site(mmcif: dict) -> pd.DataFrame:
     """
     group_pdbs = mmcif[CIF.A.value + CIF.A_group_PDB.value[2:]]
     ids = mmcif[CIF.A.value + CIF.A_id.value[2:]]
-    label_atom_ids = mmcif[CIF.A.value + CIF.A_label_atom_id.value[2:]]  #
-    label_comp_ids = mmcif[CIF.A.value + CIF.A_label_comp_id.value[2:]]  # aa 3-letter
-    auth_seq_ids = mmcif[CIF.A.value + CIF.A_auth_seq_id.value[2:]]
-    x_coords = mmcif[CIF.A.value + CIF.A_Cartn_x.value[2:]]
-    y_coords = mmcif[CIF.A.value + CIF.A_Cartn_y.value[2:]]
-    z_coords = mmcif[CIF.A.value + CIF.A_Cartn_z.value[2:]]
-    occupancies = mmcif[CIF.A.value + CIF.A_occupancy.value[2:]]
+    label_atom_ids = mmcif[CIF.A.value + CIF.A_label_atom_id.value[2:]]  # PDB atom name.
+    label_comp_ids = mmcif[CIF.A.value + CIF.A_label_comp_id.value[2:]]  # PDB 3-letter-code residue names.
+    label_asym_ids = mmcif[CIF.A.value + CIF.A_label_asym_id.value[2:]]  # PDB chain identifier.
+    auth_seq_ids = mmcif[CIF.A.value + CIF.A_auth_seq_id.value[2:]]  # PDB residue number.
+    x_coords = mmcif[CIF.A.value + CIF.A_Cartn_x.value[2:]]  # Cartesian X coord
+    y_coords = mmcif[CIF.A.value + CIF.A_Cartn_y.value[2:]]  # Cartesian Y coord
+    z_coords = mmcif[CIF.A.value + CIF.A_Cartn_z.value[2:]]  # Cartesian Z coord
+    occupancies = mmcif[CIF.A.value + CIF.A_occupancy.value[2:]]  # Fraction of atom present at this atom position.
 
     # 'A_' is `_atom_site`
     atom_site = pd.DataFrame(
@@ -91,6 +93,7 @@ def _extract_fields_from_atom_site(mmcif: dict) -> pd.DataFrame:
             CIF.A_id.value: ids,
             CIF.A_label_atom_id.value: label_atom_ids,
             CIF.A_label_comp_id.value: label_comp_ids,
+            CIF.A_label_asym_id.value: label_asym_ids,
             CIF.A_auth_seq_id.value: auth_seq_ids,
             CIF.A_Cartn_x.value: x_coords,
             CIF.A_Cartn_y.value: y_coords,
@@ -169,6 +172,7 @@ def parse_cif(pdb_id: str, local_cif_file: str) -> pd.DataFrame:
         CIF.A_label_comp_id.value,  # amino acid sequence (structure)
         CIF.A_id.value,             # atom number
         CIF.A_label_atom_id.value,  # atom codes
+        CIF.A_label_asym_id.value,  # atom chain
         CIF.A_Cartn_x.value,        # atom x-coordinates
         CIF.A_Cartn_y.value,        # atom y-coordinates
         CIF.A_Cartn_z.value,        # atom z-coordinates
@@ -189,6 +193,7 @@ def parse_cif(pdb_id: str, local_cif_file: str) -> pd.DataFrame:
     pdf_merged = pdf_merged[[CIF.S_seq_id.value,
                              CIF.S_mon_id.value,
                              CIF.A_id.value,
+                             CIF.A_label_asym_id.value,
                              CIF.A_label_atom_id.value,
                              CIF.A_Cartn_x.value,
                              CIF.A_Cartn_y.value,
