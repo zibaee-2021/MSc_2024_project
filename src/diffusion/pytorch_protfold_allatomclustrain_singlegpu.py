@@ -117,10 +117,9 @@ def load_dataset():
 
         sp = []
         for target in targets:
-
-            if os.path.exists(f'{PATH_TO_TOKENISED_DIR}{target}.ssv'):
-                # "pdf_" refers tp pandas dataframe
-                pdf_target = dh.read_tokenised_cif_ssv_to_pdf(pdb_id=target, use_local_data_subdir=True)
+            cif_tokenised_ssv = f'{PATH_TO_TOKENISED_DIR}{target}.ssv'
+            if os.path.exists(cif_tokenised_ssv):
+                pdf_target = dh.read_tokenised_cif_ssv_to_pdf(pdb_id=target, use_subdir=True)
             else:
                 pdf_target = tk.parse_tokenise_cif_write_to_flatfile_to_pdf(pdb_ids=target, use_subdir=True)
 
