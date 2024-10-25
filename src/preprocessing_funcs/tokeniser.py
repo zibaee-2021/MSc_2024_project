@@ -60,10 +60,11 @@ def parse_tokenise_cif_write_to_flatfile_to_pdf(pdb_ids=None, use_subdir=False, 
         pdf_cif[ColNames.MEAN_CORR_Z.value] = pdf_cif[CIF.A_Cartn_z.value] - pdf_cif[ColNames.MEAN_COORDS.value]
 
         # ONLY KEEP THESE COLUMNS:
-        pdf_cif = pdf_cif[[CIF.S_seq_id.value,
+        pdf_cif = pdf_cif[[CIF.A_label_asym_id.value,
+                           CIF.S_seq_id.value,
+                           CIF.A_id.value,
                            CIF.S_mon_id.value,  # temporarily keeping this col but mapped to enumerated form below
                            ColNames.AA_LABEL_NUM.value,  # to replace S_mon_id, but check first it gives what you expect before dropping S_mon_id
-                           CIF.A_id.value,
                            CIF.A_label_atom_id.value,  # temporarily keeping this col but mapped to enumerated form below
                            ColNames.ATOM_LABEL_NUM.value,  # to replace A_label_atom_id, but check first it gives what you expect before dropping A_label_atom_id
                            ColNames.MEAN_CORR_X.value,
