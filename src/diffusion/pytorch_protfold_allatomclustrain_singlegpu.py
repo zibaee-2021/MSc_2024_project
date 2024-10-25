@@ -1,6 +1,9 @@
 #!/home/jones/miniconda3/bin/python
 
-# DJ's Diffusion method for RNA folding, adapted for proteins
+General notes:
+- `pdf_` refers to pandas dataframe.
+
+"""
 
 import sys
 import os
