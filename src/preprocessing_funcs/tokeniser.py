@@ -46,7 +46,7 @@ def parse_tokenise_cif_write_to_flatfile_to_pdf(pdb_ids=None, use_subdir=False, 
         # pdf_cif[ColNames.AA_LABEL_NUM.value] = pdf_cif[CIF.S_mon_id.value].map(aas_enumerated).astype('Int64')
 
         # FASTA Amino acid labels enumerated
-        pdf_cif[ColNames.AA_LABEL_NUM.value] = pdf_cif[CIF.S_mon_id.value].map(fasta_aas_enumerated).astype('Int64')
+        pdf_cif[ColNames.AA_LABEL_NUM.value] = pdf_cif[CIF.S_mon_id.value].map(aas_enumerated).astype('Int64')
 
         # Atom labels enumerated
         pdf_cif[ColNames.ATOM_LABEL_NUM.value] = pdf_cif[CIF.A_label_atom_id.value].map(atoms_enumerated).astype('Int64')
