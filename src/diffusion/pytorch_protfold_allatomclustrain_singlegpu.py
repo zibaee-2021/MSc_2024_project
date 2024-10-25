@@ -125,11 +125,9 @@ def load_dataset():
                 pdf_target = tk.parse_tokenise_cif_write_to_flatfile_to_pdf(pdb_ids=target, use_subdir=True)
 
             pdf_target = _impute_missing_coords(pdf_target)
-            # TODO: DECIDE WHAT TO DO WITH NAN ATOMS.. currently atokendict[atom] breaks at line 111.
             # the mapping might not needed here because tokeniser.py does it earlier and writes it to flatfiles
             atomcodes = [atokendict[atom] for atom in pdf_target[CIF.A_label_atom_id.value].tolist()]  # the enumeration of the atoms
-            filtered_df = pdf_target[pdf_target['column_name'].isin(['C', 'N'])]
-
+            # TODO assign CA to bbindices
             bbindices = pdf_target[CIF.A_id.value].tolist()  # backbone indices. You expect these numbers to always jump, not continuous increase)
 
             coords = pdf_target[['mean_corrected_x', 'mean_corrected_y', 'mean_corrected_z']].values  # should be list of 3-element numpy arrays
