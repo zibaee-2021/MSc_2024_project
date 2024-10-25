@@ -7,7 +7,7 @@ import pandas as pd
 import torch
 import yaml
 from typing import Tuple
-from src.general_utility_methods import api_caller as api
+from src.preprocessing_funcs import api_caller as api
 
 
 def _chdir_to_data_layer():

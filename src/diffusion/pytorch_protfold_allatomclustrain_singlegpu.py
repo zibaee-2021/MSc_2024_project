@@ -17,8 +17,9 @@ from torch.utils.data import Dataset, DataLoader
 from nndef_protfold_atompyt2 import DiffusionNet
 
 from data_layer import data_handler as dh
-from src.general_utility_methods import tokeniser as tk
-from src.general_utility_methods.cif_parser import CIF
+from src.preprocessing_funcs import tokeniser as tk
+from src.preprocessing_funcs.tokeniser import ColNames
+from src.preprocessing_funcs.cif_parser import CIF
 
 bb_atoms = ["C", "CA", "N", "O", "OXT"]
 bb_atoms_two = ["C", "N"]  # the peptide bond carbonyl and amino nitrogen

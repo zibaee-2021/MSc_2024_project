@@ -6,7 +6,7 @@ INPUT = amino acid sequence (1-letter FASTA format).
 
 OUTPUT = all possible atoms (obviously with no coordinates).
 """
-from src.general_utility_methods import faa_to_atoms
+from src.preprocessing_funcs import faa_to_atoms
 
 if __name__ == '__main__':
 
