@@ -34,6 +34,7 @@ def parse_tokenise_cif_write_to_flatfile_to_pdf(pdb_ids=None, use_subdir=False, 
         pdb_ids = [pdb_ids]
 
     for pdb_id in pdb_ids:
+        cwd = os.getcwd()
         path_to_cif_pdb_ids = f'../diffusion/data/cif/'
         cif = f'{path_to_cif_pdb_ids}{pdb_id}.cif'
         assert os.path.exists(cif)
