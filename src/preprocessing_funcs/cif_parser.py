@@ -58,20 +58,23 @@ class CIF(Enum):
     S = '_pdbx_poly_seq_scheme.'
     A = '_atom_site.'
 
-    S_seq_id = 'S_seq_id'  # Pointer to _atom_site.label_seq_id
-    S_mon_id = 'S_mon_id'  # Pointer to _entity_poly_seq.mon_id.
-    S_pdb_seq_num = 'S_pdb_seq_num'  # PDB residue number.
-    A_group_PDB = 'A_group_PDB'  # placeholder for tags used by PDB to identify coordinate records (e.g ATOM or HETATM).
+    S_seq_id = 'S_seq_id'
+    S_mon_id = 'S_mon_id'
+    S_pdb_seq_num = 'S_pdb_seq_num'
+    S_asym_id = 'S_asym_id'
+    A_group_PDB = 'A_group_PDB'
 
-    A_id = 'A_id'  # A unique identifier for each atom position.
-    A_label_atom_id = 'A_label_atom_id'  # PDB atom name.
-    A_label_comp_id = 'A_label_comp_id'  # PDB 3-letter-code residue names.
-    A_label_asym_id = 'A_label_asym_id'  # PDB chain identifier.
-    A_auth_seq_id = 'A_auth_seq_id'  # PDB residue number. (Author defined alternative to _atom_site.label_seq_id).
-    A_Cartn_x = 'A_Cartn_x'  # Cartesian X coordinate component describing the position of this atom site.
-    A_Cartn_y = 'A_Cartn_y'  # Cartesian Y coordinate component describing the position of this atom site.
-    A_Cartn_z = 'A_Cartn_z'  # Cartesian Z coordinate component describing the position of this atom site.
-    A_occupancy = 'A_occupancy'  # The fraction of the atom present at this atom position.
+    A_id = 'A_id'
+    A_label_atom_id = 'A_label_atom_id'
+    A_label_comp_id = 'A_label_comp_id'
+    A_label_asym_id = 'A_label_asym_id'
+    A_auth_seq_id = 'A_auth_seq_id'
+    A_Cartn_x = 'A_Cartn_x'
+    A_Cartn_y = 'A_Cartn_y'
+    A_Cartn_z = 'A_Cartn_z'
+    A_occupancy = 'A_occupancy'
+
+    HETATM = 'HETATM'
 
 
 def _extract_fields_from_poly_seq(mmcif: dict) -> pd.DataFrame:
@@ -84,6 +87,7 @@ def _extract_fields_from_poly_seq(mmcif: dict) -> pd.DataFrame:
     seq_ids = mmcif[CIF.S.value + CIF.S_seq_id.value[2:]]
     mon_ids = mmcif[CIF.S.value + CIF.S_mon_id.value[2:]]
     pdb_seq_nums = mmcif[CIF.S.value + CIF.S_pdb_seq_num.value[2:]]
+    asym_ids = mmcif[CIF.S.value + CIF.S_asym_id.value[2:]]
 
     # 'S_' is `_pdbx_poly_seq_scheme`
     poly_seq = pd.DataFrame(
@@ -91,6 +95,7 @@ def _extract_fields_from_poly_seq(mmcif: dict) -> pd.DataFrame:
             CIF.S_seq_id.value: seq_ids,
             CIF.S_mon_id.value: mon_ids,
             CIF.S_pdb_seq_num.value: pdb_seq_nums,
+            CIF.S_asym_id.value: asym_ids
         })
     return poly_seq
 
@@ -163,24 +168,31 @@ def parse_cif(pdb_id: str, local_cif_file: str) -> pd.DataFrame:
     poly_seq_fields = _extract_fields_from_poly_seq(mmcif)
     atom_site_fields = _extract_fields_from_atom_site(mmcif)
 
+    # JOIN _atom_site TO _pdbx_poly_seq_scheme ON PROTEIN SEQUENCE NUMBER AND CHAIN:
     pdf_merged = pd.merge(
         left=poly_seq_fields,
         right=atom_site_fields,
-        left_on=CIF.S_pdb_seq_num.value,
-        right_on=CIF.A_auth_seq_id.value,
+        left_on=[CIF.S_pdb_seq_num.value, CIF.S_asym_id.value],
+        right_on=[CIF.A_auth_seq_id.value, CIF.A_label_asym_id.value],
         how='outer'
     )
 
-    # pdf_merged.reset_index(drop=True, inplace=True)
+    # FILTER OUT `HETATM` ROWS:
+    pdf_merged = pdf_merged.drop(pdf_merged[pdf_merged[CIF.A_group_PDB.value] == CIF.HETATM.value].index)
+    # pdf_merged = pdf_merged[pdf_merged.A_group_PDB == 'ATOM']  # Alternative: only keep rows starting 'ATOM'
 
-    # Cast strings (of floats) to numeric:
+    missing_count = pdf_merged[CIF.A_Cartn_x.value].isna().sum()
+    print(f'{missing_count} rows have missing values in column {CIF.A_Cartn_x.value} after removing HETATM rows.')
+
+    # CAST STRINGS OF FLOATS TO NUMERIC:
+    # (LOW-OCCUPANCY OPERATION BELOW WILL FAIL WITHOUT THIS)
     for col in [CIF.A_Cartn_x.value,
                 CIF.A_Cartn_y.value,
                 CIF.A_Cartn_z.value,
                 CIF.A_occupancy.value]:
         pdf_merged[col] = pd.to_numeric(pdf_merged[col], errors='coerce')
 
-    # Cast strings (of ints) to numeric and then to integers:
+    # CAST STRINGS OF INTS TO NUMERIC AND THEN TO INTEGERS:
     for col in [CIF.S_seq_id.value,
                 CIF.S_pdb_seq_num.value,
                 CIF.A_id.value,
@@ -188,38 +200,52 @@ def parse_cif(pdb_id: str, local_cif_file: str) -> pd.DataFrame:
         pdf_merged[col] = pd.to_numeric(pdf_merged[col], errors='coerce')
         pdf_merged[col] = pdf_merged[col].astype('Int64')
 
-    # RE-ORDER
+    # REPLACE LOW-OCCUPANCY COORDS WITH NANs:
+    pdf_merged = _wipe_low_occupancy_coords(pdf_merged)
+
+    missing_count = pdf_merged[CIF.A_Cartn_x.value].isna().sum()
+    print(f'{missing_count} rows have missing values in column {CIF.A_Cartn_x.value} after replacing those that have low occupancy with nan.')
+
+    # FILTER OUT 'NAN' ROWS
+    pdf_merged = pdf_merged.dropna(subset=[CIF.A_Cartn_x.value], inplace=False)
+
+    missing_count = pdf_merged[CIF.A_Cartn_x.value].isna().sum()
+    print(f'{missing_count} rows have missing values in column {CIF.A_Cartn_x.value} after removing those rows with nan. (Should be 0).')
+
+    # pdf_merged.reset_index(drop=True, inplace=True)
+
+    # READ OUT OF CHAINS (IMPORTANT IF MORE THAN ONE CHAIN) IN SEQUENCE:
+    num_of_chains = pdf_merged[CIF.S_asym_id.value].nunique()
+    chains = pdf_merged[CIF.S_asym_id.value].unique().tolist()
+    print(f'cif with pdb id={pdb_id} has {num_of_chains} chains. \nThey are {chains}.')
+
+    # RE-ORDER COLUMNS
     pdf_merged = pdf_merged[[
         CIF.A_group_PDB.value,      # 'ATOM' or 'HETATM'
         CIF.S_seq_id.value,         # amino acid sequence number
-        CIF.S_mon_id.value,         # amino acid sequence
-        CIF.S_pdb_seq_num.value,    # amino acid sequence number (structure)
-        CIF.A_auth_seq_id.value,    # amino acid sequence number (structure)
-        CIF.A_label_comp_id.value,  # amino acid sequence (structure)
-        CIF.A_id.value,             # atom number
-        CIF.A_label_atom_id.value,  # atom codes
-        CIF.A_label_asym_id.value,  # atom chain
+        CIF.S_mon_id.value,         # amino acid sequence (3-letter)
+        CIF.S_pdb_seq_num.value,    # amino acid sequence number (structure) - duplicating S_seq_id
+        CIF.A_auth_seq_id.value,    # amino acid sequence number (structure) - duplicating S_seq_id
+        CIF.A_label_comp_id.value,  # amino acid sequence (structure) - duplicating S_mon_id
+        CIF.A_id.value,             # atom identifier to indicate position (happens to be a number)
+        CIF.A_label_atom_id.value,  # atom identifier (happens to be a name string)
+        CIF.A_label_asym_id.value,  # atom chain - this is the polypeptide chain
+        CIF.S_asym_id.value,        # polypeptide chain - duplicating A_label_asym_id
         CIF.A_Cartn_x.value,        # atom x-coordinates
         CIF.A_Cartn_y.value,        # atom y-coordinates
         CIF.A_Cartn_z.value,        # atom z-coordinates
         CIF.A_occupancy.value       # occupancy
     ]]
-    # SORT SEQUENCE NUMBERING BY RESIDUE (SEQ ID) THEN BY ATOMS (A ID):
-    pdf_merged = pdf_merged.sort_values([CIF.S_seq_id.value, CIF.A_id.value])
+
+    # SORT ROWS BY SEQUENCE NUMBERING BY RESIDUE (SEQ ID) THEN BY ATOMS (A_ID) AND THEN CHAIN:
     pdf_merged.reset_index(drop=True, inplace=True)
+    pdf_merged = pdf_merged.sort_values([CIF.A_label_asym_id.value, CIF.S_seq_id.value, CIF.A_id.value])
 
-    # FILTER OUT `HETATM` ROWS:
-    pdf_merged = pdf_merged.drop(pdf_merged[pdf_merged['A_group_PDB'] == 'HETATM'].index)
-    # pdf_merged = pdf_merged[pdf_merged.A_group_PDB == 'ATOM']  # Alternative: only keep rows starting 'ATOM'
-
-    # REPLACE LOW-OCCUPANCY COORDS WITH NANs:
-    pdf_merged = _wipe_low_occupancy_coords(pdf_merged)
-
-    # ONLY KEEP THESE COLUMNS:
-    pdf_merged = pdf_merged[[CIF.S_seq_id.value,
-                             CIF.S_mon_id.value,
+    # ONLY KEEP THESE COLUMNS AND IN THIS ORDERING:
+    pdf_merged = pdf_merged[[CIF.A_label_asym_id.value,
+                             CIF.S_seq_id.value,
                              CIF.A_id.value,
-                             CIF.A_label_asym_id.value,
+                             CIF.S_mon_id.value,
                              CIF.A_label_atom_id.value,
                              CIF.A_Cartn_x.value,
                              CIF.A_Cartn_y.value,
