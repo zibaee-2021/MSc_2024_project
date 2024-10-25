@@ -135,7 +135,7 @@ def load_dataset():
             # TODO assign CA to bbindices
             bbindices = pdf_target[CIF.A_id.value].tolist()  # backbone indices. You expect these numbers to always jump, not continuous increase)
 
-            coords = pdf_target[['mean_corrected_x', 'mean_corrected_y', 'mean_corrected_z']].values  # should be list of 3-element numpy arrays
+            coords = pdf_target[[ColNames.MEAN_CORR_X.value, ColNames.MEAN_CORR_Y.value, ColNames.MEAN_CORR_Z.value]].values  # should be list of 3-element numpy arrays
             aaindex = -1  # replacing `ntindex`
 
             pdf_target_deduped = pdf_target.drop_duplicates(subset=CIF.S_seq_id.value, keep='first').reset_index(drop=True)
