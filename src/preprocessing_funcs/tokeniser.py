@@ -6,6 +6,9 @@ from src.general_utility_methods.cif_parser import CIF
 from data_layer import data_handler as dh
 from enum import Enum
 
+# TODO Traceback (most recent call last):
+#   File "/home/shahin/PycharmProjects/MSc_project/diffSock/src/general_utility_methods/tokeniser.py", line 78, in <module>
+#   File "/home/shahin/PycharmProjects/MSc_project/diffSock/src/general_utility_methods/tokeniser.py", line 71, in parse_tokenise_cif_write_to_flatfile_to_pdf
 
 class ColNames(Enum):
     AA_LABEL_NUM = 'aa_label_num'  # `A_label_comp_id` enumerated (the amino acid)
