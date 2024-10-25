@@ -1,4 +1,6 @@
 #!/home/jones/miniconda3/bin/python
+"""
+DJ's diffusion method for training and inference of RNA structures from primary sequence, adapted here for proteins.
 
 General notes:
 - `pdf_` refers to pandas dataframe.
