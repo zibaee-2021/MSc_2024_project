@@ -258,7 +258,9 @@ def read_tokenised_cif_ssv_to_pdf(pdb_id: str, use_subdir=False) -> pd.DataFrame
     else:
         os.makedirs(dst_dir, exist_ok=True)
 
-    pdf = pd.read_csv(f'{dst_dir}{pdb_id}.ssv', sep=' ')
+    cif_ssv = f'{dst_dir}{pdb_id}.ssv'
+    print(f'Attempting to read {cif_ssv}')
+    pdf = pd.read_csv(cif_ssv, sep=' ')
 
     if not use_subdir:
         _restore_original_working_dir(cwd)
