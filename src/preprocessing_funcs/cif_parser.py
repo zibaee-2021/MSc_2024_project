@@ -17,6 +17,33 @@ Tokeniser "should not be fooled by gaps".
 Align atom sequence to PDB sequence.
 
 Ignore any atoms with occupancy less than 0.5. Interpret this as a "missing" atom.
+
+--------------------------------------------------------------------------------------------------
+What some of the sequence labels/properties (https://mmcif.wwpdb.org/dictionaries/mmcif_ma.dic/Items/) are is not
+so obvious from their names, so I list and describe them here:
+
+_pdbx_poly_seq_scheme
+    .seq_id             Pointer to _atom_site.label_seq_id, itself a pointer to _entity_poly_seq.num:
+                                Sequence number, must be unique and increasing.
+    .mon_id             Pointer to _entity_poly_seq.mon_id, itself a pointer to _chem_comp.id:
+                                3-letter amino acid code, or 1-letter nucleic acid base code.
+    .pdb_seq_num        PDB residue number.
+    .asym_id            Pointer to _atom_site.label_asym_id (PDB chain identifier).
+
+_atom_site
+    .group_PDB          Placeholder for tags used by PDB to identify coordinate records (e.g 'ATOM' or 'HETATM').
+    .id                 A unique identifier for each atom position (here is a number).
+    .label_atom_id      PDB atom identifier (here is a name string, 'C', 'CA', etc).
+    .label_comp_id      PDB 3-letter-code residue names.
+    .label_asym_id      PDB chain identifier.
+    .auth_seq_id        PDB residue number. (Author defined alternative to _atom_site.label_seq_id).
+    .Cartn_x            Cartesian X coordinate component describing the position of this atom site.
+    .Cartn_y            Cartesian Y coordinate component describing the position of this atom site.
+    .Cartn_z            Cartesian Z coordinate component describing the position of this atom site.
+    .occupancy          The fraction of the atom present at this atom position.
+
+(Note the CIF enum includes an `S_` or `A_` prefix, this is just for readability/provenance of each property, so the
+strings themselves are always only read as a substring from the third character onwards.)
 """
 import os
 from enum import Enum
