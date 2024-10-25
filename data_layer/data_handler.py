@@ -190,14 +190,14 @@ def save_torch_tensor(pt: torch.Tensor, dst_path: str):
     _restore_original_working_dir(cwd)
 
 
-def write_tokenised_cif_to_flatfile(pdb_id: str, pdf: pd.DataFrame, use_local_data_subdir=False, flatfiles=None):
+def write_tokenised_cif_to_flatfile(pdb_id: str, pdf: pd.DataFrame, use_subdir=False, flatfiles=None):
     """
     Write dataframe of single protein with columns CIF.S_seq_id, CIF.S_mon_id, CIF.A_id, CIF.A_label_atom_id,
     ColNames.MEAN_CORR_X, ColNames.MEAN_CORR_Y, ColNames.MEAN_CORR_Z to flat file(s) in local relative dir
     'data/tokenised/' or to the top-level general-use data dir.
     :param pdb_id: pdb/cif id.
     :param pdf: Dataframe to write to flat file(s).
-    :param use_local_data_subdir: True to use relative local dir, otherwise top-level dir by default.
+    :param use_subdir: True to use relative local dir, otherwise top-level dir by default.
     :param flatfiles: List of file formats (e.g. ['ssv', 'csv', 'tsv'], or string of one format, otherwise ssv by
     default).
     """
@@ -209,7 +209,7 @@ def write_tokenised_cif_to_flatfile(pdb_id: str, pdf: pd.DataFrame, use_local_da
     dst_dir = 'data/tokenised/'
     cwd = ''
 
-    if not use_local_data_subdir:  # i.e. use the top-level general-use `data` dir & define relpath from data_layer
+    if not use_subdir:  # i.e. use the top-level general-use `data` dir & define relpath from data_layer
         # Store cwd to return to at end. Change current dir to data layer:
         cwd = _chdir_to_data_layer()
         dst_dir = '../' + dst_dir
@@ -235,15 +235,23 @@ def write_tokenised_cif_to_flatfile(pdb_id: str, pdf: pd.DataFrame, use_local_da
     #                                     ColNames.MEAN_CORR_Z.value: 'Z'})
     # pdf_easy_read.to_csv(path_or_buf=f'../data/tokenised/easyRead_{pdb_id}.tsv', sep='\t', index=False, na_rep='null')
 
-    if not use_local_data_subdir:
+    if not use_subdir:
         _restore_original_working_dir(cwd)
 
 
-def read_tokenised_cif_ssv_to_pdf(pdb_id: str, use_local_data_subdir=False):
+def read_tokenised_cif_ssv_to_pdf(pdb_id: str, use_subdir=False) -> pd.DataFrame:
+    """
+    Read pre-tokenised flatfile (i.e. ssv) of cif for given pdb id, from either `src/diffusion/data/tokenised`or
+    top-level `data/tokenised`. The reason for having option of data path is simply a workaround to problems when
+    reading from top-level data dir.
+    :param pdb_id: Pdb id of protein.
+    :param use_subdir: True to use `src/diffusion/data/tokenised`, otherwise `data/tokenised`.
+    :return: Pre-tokenised cif
+    """
     dst_dir = 'data/tokenised/'
     cwd = ''
 
-    if not use_local_data_subdir:  # i.e. use the top-level general-use `data` dir & define relpath from data_layer
+    if not use_subdir:
         # Store cwd to return to at end. Change current dir to data layer:
         cwd = _chdir_to_data_layer()
         dst_dir = '../' + dst_dir
@@ -252,7 +260,7 @@ def read_tokenised_cif_ssv_to_pdf(pdb_id: str, use_local_data_subdir=False):
 
     pdf = pd.read_csv(f'{dst_dir}{pdb_id}.ssv', sep=' ')
 
-    if not use_local_data_subdir:
+    if not use_subdir:
         _restore_original_working_dir(cwd)
 
     return pdf
