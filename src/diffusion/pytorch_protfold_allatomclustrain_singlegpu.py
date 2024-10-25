@@ -76,6 +76,17 @@ def _read_lst_file_from_src_diff_dir(fname):
     return f
 
 
+def _impute_missing_coords(pdf_to_impute):
+    """
+    Impute missing values of the mean x, y, z structure coordinates with 0s.
+    :param pdf_to_impute: Dataframe to impute missing data.
+    :return: Imputed dataframe.
+    """
+    pdf_to_impute[['mean_corrected_x', 'mean_corrected_y', 'mean_corrected_z']] = \
+    pdf_to_impute[['mean_corrected_x', 'mean_corrected_y', 'mean_corrected_z']].fillna(0, inplace=False)
+    return pdf_to_impute
+
+
 # Load dataset function remains the same
 def load_dataset():
 
@@ -113,6 +124,7 @@ def load_dataset():
             else:
                 pdf_target = tk.parse_tokenise_cif_write_to_flatfile_to_pdf(pdb_ids=target, use_local_data_subdir=True)
 
+            pdf_target = _impute_missing_coords(pdf_target)
             # TODO: DECIDE WHAT TO DO WITH NAN ATOMS.. currently atokendict[atom] breaks at line 111.
             # the mapping might not needed here because tokeniser.py does it earlier and writes it to flatfiles
             atomcodes = [atokendict[atom] for atom in pdf_target[CIF.A_label_atom_id.value].tolist()]  # the enumeration of the atoms
