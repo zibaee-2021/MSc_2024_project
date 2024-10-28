@@ -202,6 +202,20 @@ def load_dataset():
 
 # Superpose coordinates (superposes c1 on c2)
 def lsq_fit(c1, c2):
+    """
+    To compare two sets of 3D coordinates in a way that is rotation-invariant, this function performs the rotation
+    that minimises any rotational differences, so that subsequent comparisons are
+    A rigid transformation fitting, using least squares method for minimising the distance between two sets of
+    coordinates. Minimisation is achieved using SVD. (This involves aligning points, via rotation, rather than
+    fitting a model to data as in the application of least squares that I am more used to encountering). Note the
+    sum of squared errors does not need to be explicitly calculated because the use of SVD shortcuts to the
+    optimal rotation matrix, so its performed implicitly.
+    :param c1: Set of 3D points.
+    :param c2: Set of 3D points.
+    :return: The set of points from `c1` after they've been rotated to align as closely as possible with `c2`.
+    Best-fit transformation of `c1` coordinates onto `c2` coordinates, where only a rotation (no scaling or
+    reflection) has been applied.
+    """
     with torch.no_grad():
         P = c1.transpose(1, 2)
         Q = c2.transpose(1, 2)
@@ -215,11 +229,13 @@ def lsq_fit(c1, c2):
 
         cov = torch.matmul(P, Q.transpose(1, 2))
 
+        # Find optimal rotation matrix using SVD (which minimises squared distances between corresponding points):
         try:
             U, S, Vh = torch.linalg.svd(cov)
         except RuntimeError:
             return None
 
+        #  Applying the rotation to align c1 with c2:
         V = Vh.transpose(-2, -1)
         d = torch.eye(3, device=P.device).repeat(P.size(0),1,1)
         d[:, 2, 2] = torch.det(torch.matmul(V, U.transpose(-2, -1)))
