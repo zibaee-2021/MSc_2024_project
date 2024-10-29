@@ -12,13 +12,13 @@ from enum import Enum
 
 
 class ColNames(Enum):
-    AA_LABEL_NUM = 'aa_label_num'  # `A_label_comp_id` enumerated (the amino acid)
-    ATOM_LABEL_NUM = 'atom_label_num'  # `A_label_atom_id` enumerated (the atom)
-    BB_INDEX = 'bb_index'  # NOT 100% CERTAIN EXACTLY WHAT THIS IS .. BACKBONE ATOMS .. WHICH PART OF BB ?
-    MEAN_COORDS = 'mean_xyz'  # mean of x y z coordinates for each atom
-    MEAN_CORR_X = 'mean_corrected_x'  # x coordinates for each atom subtracted by the mean of xyz coordinates
-    MEAN_CORR_Y = 'mean_corrected_y'  # (as above) but for y coordinates
-    MEAN_CORR_Z = 'mean_corrected_z'  # (as above) but for z coordinates
+    AA_LABEL_NUM = 'aa_label_num'       # Enumerated residues, mapped from `A_label_comp_id`.
+    ATOM_LABEL_NUM = 'atom_label_num'   # Enumerated atoms, mapped from `A_label_atom_id`.
+    BB_INDEX = 'bb_index'               # The position of one of the backbone atoms. C-alpha ('CA') is chosen here.
+    MEAN_COORDS = 'mean_xyz'            # Mean of x y z coordinates for each atom.
+    MEAN_CORR_X = 'mean_corrected_x'    # x coordinates for each atom subtracted by the mean of xyz coordinates.
+    MEAN_CORR_Y = 'mean_corrected_y'    # (as above) but for y coordinates.
+    MEAN_CORR_Z = 'mean_corrected_z'    # (as above) but for z coordinates.
 
 
 def parse_tokenise_cif_and_write_to_flatfile_to_pdf(pdb_ids=None, use_subdir=False, flatfile: str = 'ssv') -> pd.DataFrame:
@@ -37,6 +37,7 @@ def parse_tokenise_cif_and_write_to_flatfile_to_pdf(pdb_ids=None, use_subdir=Fal
     for pdb_id in pdb_ids:
         cwd = os.getcwd()
         path_to_cif_pdb_ids = f'../diffusion/data/cif/'
+        path_to_cif_pdb_ids = path_to_cif_pdb_ids.removesuffix('.cif')
         cif = f'{path_to_cif_pdb_ids}{pdb_id}.cif'
         assert os.path.exists(cif)
         pdf_cif = parser.parse_cif(pdb_id=pdb_id, local_cif_file=cif)
@@ -46,10 +47,10 @@ def parse_tokenise_cif_and_write_to_flatfile_to_pdf(pdb_ids=None, use_subdir=Fal
         # # Amino acid labels enumerated
         # pdf_cif[ColNames.AA_LABEL_NUM.value] = pdf_cif[CIF.S_mon_id.value].map(aas_enumerated).astype('Int64')
 
-        # FASTA Amino acid labels enumerated
+        # MAPPING FASTA AMINO ACIDS ('ASP', 'ARG', ETC) TO ENUMERATED FORM USING JSON FILE IN `aa_atoms_enumerated`:
         pdf_cif[ColNames.AA_LABEL_NUM.value] = pdf_cif[CIF.S_mon_id.value].map(aas_enumerated).astype('Int64')
 
-        # Atom labels enumerated
+        # MAPPING ATOM ('C', 'CA', ETC) TO ENUMERATED FORM USING JSON FILE IN `aa_atoms_enumerated`:
         pdf_cif[ColNames.ATOM_LABEL_NUM.value] = pdf_cif[CIF.A_label_atom_id.value].map(atoms_enumerated).astype('Int64')
 
         # Atomic xyz coordinates
