@@ -4,12 +4,19 @@ and validation datasets.
 """
 
 import pandas as pd
-from cif_parser import CIF
+from src.preprocessing_funcs.cif_parser import CIF
 
 
-def check_protein_and_atom_numbering_of_parsed_cif(pdb_id: str, pdf_to_profile: pd.DataFrame):
-    print('Dataframe to profile has the following validation values:\n')
-    print(f'Column names: {pdf_to_profile.columns}. shape: {pdf_to_profile.shape}.')
+def check_protein_and_atom_numbering_of_parsed_tokenised_cif_ssv(pdb: dict):
+    """
+
+    :param pdb:
+    :return:
+    """
+    pdb_id, pdf_to_profile = pdb.popitem()
+    # pdf_to_profile = pdb[pdb_id]
+    print(f'Profiling dataframe from flatfile of parsed tokenised cif. \nFor pdb id {pdb_id}.')
+    print(f'Column names: {pdf_to_profile.columns.tolist()}. \nShape: {pdf_to_profile.shape}.')
     rows_with_na = pdf_to_profile.isna().any(axis=1).sum()
     print(f'Number of rows with missing values = {rows_with_na}')
     if rows_with_na != 0:
