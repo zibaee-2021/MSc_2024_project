@@ -39,17 +39,17 @@ def read_list_of_pdbids_from_text_file(filename: str):
 
 def get_list_of_pdbids_of_local_single_domain_cifs() -> list:
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
-    cifs = glob.glob(os.path.join('../data/cifs_single_domain_prots', '*.cif'))
+    cifs = glob.glob(os.path.join('../data/dataset/big_files_to_git_ignore/cifs_single_domain_prots', '*.cif'))
     path_cifs = [cif for cif in cifs if os.path.isfile(cif)]
-    pdb_ids = []
+    pdb_id_list = []
 
     for path_cif in path_cifs:
         cif_basename = os.path.basename(path_cif)
         pdbid = os.path.splitext(cif_basename)[0]
-        pdb_ids.append(pdbid)
+        pdb_id_list.append(pdbid)
 
     _restore_original_working_dir(cwd)
-    return pdb_ids
+    return pdb_id_list
 
 
 # def get_list_of_uniprotids_of_locally_downloaded_cifs():
