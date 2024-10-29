@@ -1,5 +1,10 @@
+import os
 from unittest import TestCase
+
+import pandas as pd
+
 from data_layer import data_handler as dh
+from src.preprocessing_funcs import data_validator as dv
 
 
 class TestDataHandler(TestCase):
@@ -37,3 +42,14 @@ class TestDataHandler(TestCase):
                     'HG3', 'HG11', 'HG12', 'HG13', 'HG21', 'HG22', 'HG23', 'HH', 'HH2', 'HH11', 'HH12', 'HH21', 'HH22',
                     'HXT', 'HZ', 'HZ1', 'HZ2', 'HZ3']
         self.assertListEqual(expected, f)
+
+    import os
+    def test_check_protein_and_atom_numbering_of_parsed_cif(self):
+        print(os.getcwd())
+        pdf_to_profile = pd.read_csv('test_data/1OJ6_test.ssv', sep=' ')
+        pdb = dict()
+        pdb['1OJ6_test'] = pdf_to_profile
+        dv.check_protein_and_atom_numbering_of_parsed_tokenised_cif_ssv(pdb)
+        expected = ''
+        actual = ''
+        self.assertEqual(expected, actual)
