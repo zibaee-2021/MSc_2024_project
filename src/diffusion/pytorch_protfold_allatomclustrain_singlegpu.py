@@ -133,7 +133,7 @@ def load_dataset():
             # the mapping might not needed here because tokeniser.py does it earlier and writes it to flatfiles
             atomcodes = [atokendict[atom] for atom in pdf_target[CIF.A_label_atom_id.value].tolist()]  # the enumeration of the atoms
             # TODO assign CA to bbindices
-            bbindices = pdf_target[CIF.A_id.value].tolist()  # backbone indices. You expect these numbers to always jump, not continuous increase)
+            bbindices = [bb_idx for bb_idx in zip(pdf_target[CIF.A_id.value].tolist(), pdf_target[CIF.label_atom_id.va ]) if ]  # backbone indices. You expect these numbers to always jump, not continuous increase)
 
             coords = pdf_target[[ColNames.MEAN_CORR_X.value, ColNames.MEAN_CORR_Y.value, ColNames.MEAN_CORR_Z.value]].values  # should be list of 3-element numpy arrays
             aaindex = -1  # replacing `ntindex`
