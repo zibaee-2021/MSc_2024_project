@@ -444,21 +444,32 @@ def main():
 
     # Process one sample and return loss
     def calculate_sample_loss(sample):
-        inputs = sample[0].cuda(non_blocking=True)
-        noised_coords = sample[1].cuda(non_blocking=True)
-        noise_levels = sample[2].cuda(non_blocking=True)
+        """
+        Calculate loss for a single sample, combining 3 difference loss components in a weight ed sum of backbone loss,
+        confidence loss and difference loss.
+        :param sample: Tuple of the following 10 elements: `embed`, `noised_coords`, `noise_levels`, `noise`,
+        `aacodes`, `atomcodes`, `aaindices`, `bb_coords`, `target_coords` and `target`. All of which are used except
+        for `noise` (sample[3]) and `target` (sample[9]).
+        :return: the combined loss.
+        """
+        # I'M NOT 100% CLEAR ON THIS NON_BLOCKING ARGUMNET. DOES IT REDUCE COMPUTATION TIME, IN ASYNCHRONOUS CONTEXT ?
+        # (embed, noised_coords, noise_levels, noise, aacodes, atomcodes, aaindices, bb_coords, target_coords, target)
+        inputs = sample[0].cuda(non_blocking=True)  # `embed` (pLM embedding model?)
+        noised_coords = sample[1].cuda(non_blocking=True)  # prediction after noise added ?
+        noise_levels = sample[2].cuda(non_blocking=True)  # how much noise ?
         # ntcodes = sample[4].cuda(non_blocking=True)
-        aacodes = sample[4].cuda(non_blocking=True)
-        atomcodes = sample[5].cuda(non_blocking=True)
+        aacodes = sample[4].cuda(non_blocking=True)  # Enumeration of amino acids (0-19)
+        atomcodes = sample[5].cuda(non_blocking=True)  # Enumeration of atoms (0-37 or 0-186)
         # ntindices = sample[6].cuda(non_blocking=True)
-        aaindices = sample[6].cuda(non_blocking=True)
-        bb_coords = sample[7].cuda(non_blocking=True)
-        target_coords = sample[8].cuda(non_blocking=True)
+        aaindices = sample[6].cuda(non_blocking=True)  # Position of amino acid in protein.
+        bb_coords = sample[7].cuda(non_blocking=True)  # X,Y,Z coordinates of the chosen backbone atoms (`CA`).
+        target_coords = sample[8].cuda(non_blocking=True)  # X,Y,Z coordinates of all of the other atoms ? Or
+        # specifically non-backbone atoms.. Is it possible to know exactly which atoms are definitely from side-chains?
 
         # pred_denoised, pred_coords, pred_confs = network(inputs, ntcodes, atomcodes, ntindices, noised_coords, noise_levels)
         pred_denoised, pred_coords, pred_confs = network(inputs, aacodes, atomcodes, aaindices, noised_coords, noise_levels)
 
-        predmap = torch.cdist(pred_coords, pred_coords)
+        predmap = torch.cdist(pred_coords, pred_coords)  # What does this do. What is this for ?
         bb_coords = bb_coords.unsqueeze(0)
         targmap = torch.cdist(bb_coords, bb_coords)
 
