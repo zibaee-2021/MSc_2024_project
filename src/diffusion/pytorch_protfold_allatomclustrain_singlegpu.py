@@ -127,8 +127,8 @@ def load_dataset():
             if os.path.exists(cif_tokenised_ssv):
                 pdf_target = dh.read_tokenised_cif_ssv_to_pdf(pdb_id=target, use_subdir=True)
             else:
-                pdf_target = tk.parse_tokenise_cif_write_to_flatfile_to_pdf(pdb_ids=target, use_subdir=True)
-
+                pdf_target = tk.parse_tokenise_cif_and_write_to_flatfile_to_pdf(pdb_ids=target, use_subdir=True)
+            print(pdf_target.columns.tolist())  # Keeping track of what columns the df has here.
             pdf_target = _impute_missing_coords(pdf_target)
             # the mapping might not needed here because tokeniser.py does it earlier and writes it to flatfiles
             atomcodes = [atokendict[atom] for atom in pdf_target[CIF.A_label_atom_id.value].tolist()]  # the enumeration of the atoms

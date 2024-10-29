@@ -20,7 +20,7 @@ class ColNames(Enum):
     MEAN_CORR_Z = 'mean_corrected_z'  # (as above) but for z coordinates
 
 
-def parse_tokenise_cif_write_to_flatfile_to_pdf(pdb_ids=None, use_subdir=False, flatfile: str = 'ssv') -> pd.DataFrame:
+def parse_tokenise_cif_and_write_to_flatfile_to_pdf(pdb_ids=None, use_subdir=False, flatfile: str = 'ssv') -> pd.DataFrame:
     """
     Tokenise the mmCIF files for the specified proteins by PDB entry/entries (which is a unique identifier) and write
     to csv (and/or tsv and/or ssv) files at `../data/tokenised/`.
@@ -78,5 +78,5 @@ def parse_tokenise_cif_write_to_flatfile_to_pdf(pdb_ids=None, use_subdir=False, 
 if __name__ == '__main__':
 
     # write_tokenised_cif_to_csv(pdb_ids='4itq')
-    parse_tokenise_cif_write_to_flatfile_to_pdf(pdb_ids='1OJ6')
+    parse_tokenise_cif_and_write_to_flatfile_to_pdf(pdb_ids='1OJ6')
     pass
