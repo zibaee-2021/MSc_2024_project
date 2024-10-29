@@ -158,24 +158,27 @@ def parse_single_dom_prots_and_write_csv(path_cath_list: str, path_single_dom_pr
     return pdf_573prots[Cols.PDB_ID.value].tolist()
 
 
-def assert_cif_count_equals_pdb_id_count(pdb_ids_len: int):
+def _assert_cif_count_equals_pdb_id_count(pdb_ids_len: int):
     """
-    Programmatically count cifs_single_domain_prots in `../data/cifs_single_domain_prots` and assert it is the same as the number of PDB ids used to make the
-    API calls.
+    Assert number of `.cif` files in
+    `diffSock/data/dataset/big_files_to_git_ignore/cifs_single_domain_prots/` is as number of PDB ids used to make the
+    API calls that were used to fetch the mmCIFs.
     :param pdb_ids_len: Number of PDB ids for single-domain proteins extracted from CATH data resource.
     """
-    cifs = glob.glob(os.path.join('../data/cifs_single_domain_prots', '*.cif'))
+    print(f'There were {pdb_ids_len} PDB ids used to fetch mmCIF files.')
+    cifs_path = '../data/dataset/big_files_to_git_ignore/cifs_single_domain_prots/'
+    cifs = glob.glob(os.path.join(cifs_path, '*.cif'))
     cifs = [cif for cif in cifs if os.path.isfile(cif)]
-    print(f'There are {len(cifs)} cifs_single_domain_prots in `../data/cifs_single_domain_prots`. '
-          f'I am expecting there to be {pdb_ids_len} in there.')
+    print(f'There are {len(cifs)} `.cif` files in {cifs_path}.')
     assert len(cifs) == pdb_ids_len
 
 
 # NOTE - THIS ONLY NEEDS TO BE CALLED ONCE:
 if __name__ == '__main__':
-    path_cath_domain_list = '../data/dataset/big_files_to_git_ignore/cath-domain-list.txt'
-    path_singl_dom_prots = '../../data/dataset/cath_573_single_domain_prots.csv'
+    path_cath_domain_list = '../data/dataset/CATH/cath-domain-list.txt'
+    path_singl_dom_prots = '../../data/dataset/CATH/cath_573_single_domain_prots.csv'
     pdbids = parse_single_dom_prots_and_write_csv(path_cath_list=path_cath_domain_list,
                                                   path_single_dom_prots=path_singl_dom_prots)
-    dh.make_api_calls_to_fetch_mmcif_and_write_locally(pdb_ids=pdbids, dst_path='../data/cifs_single_domain_prots/')
-    assert_cif_count_equals_pdb_id_count(len(pdbids))
+    dst_path = '../data/dataset/big_files_to_git_ignore/cifs_single_domain_prots/'
+    dh.make_api_calls_to_fetch_mmcif_and_write_locally(pdb_ids=pdbids, dst_path=dst_path)
+    _assert_cif_count_equals_pdb_id_count(len(pdbids))
