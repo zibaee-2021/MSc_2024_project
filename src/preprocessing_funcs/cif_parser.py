@@ -107,8 +107,8 @@ def _extract_fields_from_atom_site(mmcif: dict) -> pd.DataFrame:
     :param mmcif:
     :return: mmCIF fields in tabulated format.
     """
-    group_pdbs = mmcif[CIF.A.value + CIF.A_group_PDB.value[2:]]
-    ids = mmcif[CIF.A.value + CIF.A_id.value[2:]]
+    group_pdbs = mmcif[CIF.A.value + CIF.A_group_PDB.value[2:]]  # (e.g 'ATOM' or 'HETATM')
+    ids = mmcif[CIF.A.value + CIF.A_id.value[2:]]  # '_atom_site.' + 'A_id'  atom index position
     label_atom_ids = mmcif[CIF.A.value + CIF.A_label_atom_id.value[2:]]  # PDB atom name.
     label_comp_ids = mmcif[CIF.A.value + CIF.A_label_comp_id.value[2:]]  # PDB 3-letter-code residue names.
     label_asym_ids = mmcif[CIF.A.value + CIF.A_label_asym_id.value[2:]]  # PDB chain identifier.
@@ -121,22 +121,28 @@ def _extract_fields_from_atom_site(mmcif: dict) -> pd.DataFrame:
     # 'A_' is `_atom_site`
     atom_site = pd.DataFrame(
         data={
-            CIF.A_group_PDB.value: group_pdbs,
-            CIF.A_id.value: ids,
-            CIF.A_label_atom_id.value: label_atom_ids,
-            CIF.A_label_comp_id.value: label_comp_ids,
-            CIF.A_label_asym_id.value: label_asym_ids,
-            CIF.A_auth_seq_id.value: auth_seq_ids,
-            CIF.A_Cartn_x.value: x_coords,
-            CIF.A_Cartn_y.value: y_coords,
-            CIF.A_Cartn_z.value: z_coords,
-            CIF.A_occupancy.value: occupancies
+            CIF.A_group_PDB.value: group_pdbs,              # 'ATOM' or 'HETATM'
+            CIF.A_id.value: ids,                            # e.g. 0, 1000, 10000
+            CIF.A_label_atom_id.value: label_atom_ids,      # e.g. 'C', 'CA', etc
+            CIF.A_label_comp_id.value: label_comp_ids,      # e.g. 'ASP', 'ARG', etc
+            CIF.A_label_asym_id.value: label_asym_ids,      # e.g. 'A', 'B', etc
+            CIF.A_auth_seq_id.value: auth_seq_ids,          # residue index position
+            CIF.A_Cartn_x.value: x_coords,                  # coords
+            CIF.A_Cartn_y.value: y_coords,                  # coords
+            CIF.A_Cartn_z.value: z_coords,                  # coords
+            CIF.A_occupancy.value: occupancies              # between 0 and 1.0
         })
 
     return atom_site
 
 
 def _wipe_low_occupancy_coords(pdf: pd.DataFrame) -> pd.DataFrame:
+    """
+    'Occupancy' is the fraction of the atom present at this atom position. Replace all atom coords that have occupancy
+    less than or equal to 0.5 with `nan`.
+    :param pdf: Pandas dataframe for cif being parsed.
+    :return: Given dataframe parsed according to occupancy metric.
+    """
     pdf[CIF.A_Cartn_x.value] = np.where(pdf[CIF.A_occupancy.value] <= 0.5, np.nan, pdf[CIF.A_Cartn_x.value])
     pdf[CIF.A_Cartn_y.value] = np.where(pdf[CIF.A_occupancy.value] <= 0.5, np.nan, pdf[CIF.A_Cartn_y.value])
     pdf[CIF.A_Cartn_z.value] = np.where(pdf[CIF.A_occupancy.value] <= 0.5, np.nan, pdf[CIF.A_Cartn_z.value])
@@ -144,6 +150,11 @@ def _wipe_low_occupancy_coords(pdf: pd.DataFrame) -> pd.DataFrame:
 
 
 def _fetch_mmcif_from_pdb_api_and_write_locally(pdb_id: str) -> None:
+    """
+    Fetch raw mmCIF data from API (expected hosted at 'https://files.rcsb.org/download/') using given PDB id, and write
+    out to flat file.
+    :param pdb_id: Alphanumeric 4-character Protein Databank Identifier. e.g. '1oj6'.
+    """
     response = api.call_for_cif_with_pdb_id(pdb_id)
     mmcif_file = f'../data/big_data_to_git_ignore/cifs_single_domain_prots/{pdb_id}.cif'
     with open(mmcif_file, 'w') as file:
@@ -154,10 +165,11 @@ def parse_cif(pdb_id: str, local_cif_file: str) -> pd.DataFrame:
     """
     Parse given local mmCIF file to extract and tabulate necessary atom and amino acid data fields from
     `_pdbx_poly_seq_scheme` and `_atom_site`.
-    :param pdb_id: PDB identifier.
-    :param local_cif_file: Relative path to locally downloaded cif file, os.path.exists expected no leading fwd slash.
-    :return: Necessary fields extracted and joined in one table.
+    :param pdb_id: Alphanumeric 4-character Protein Databank Identifier. e.g. '1OJ6'.
+    :param local_cif_file: Relative path to locally downloaded mmCIF file.
+    :return: Necessary fields extracted from raw mmCIF (from local copy or API) and joined in one table.
     """
+    local_cif_file = local_cif_file.removeprefix('/')  # `os.path.exists` expected no leading fwd slash
     if os.path.exists(local_cif_file):
         mmcif = MMCIF2Dict(local_cif_file)
     else:
@@ -168,7 +180,7 @@ def parse_cif(pdb_id: str, local_cif_file: str) -> pd.DataFrame:
     poly_seq_fields = _extract_fields_from_poly_seq(mmcif)
     atom_site_fields = _extract_fields_from_atom_site(mmcif)
 
-    # JOIN _atom_site TO _pdbx_poly_seq_scheme ON PROTEIN SEQUENCE NUMBER AND CHAIN:
+    # JOIN _atom_site TO `_pdbx_poly_seq_scheme` ON PROTEIN SEQUENCE NUMBER AND CHAIN:
     pdf_merged = pd.merge(
         left=poly_seq_fields,
         right=atom_site_fields,
@@ -204,13 +216,15 @@ def parse_cif(pdb_id: str, local_cif_file: str) -> pd.DataFrame:
     pdf_merged = _wipe_low_occupancy_coords(pdf_merged)
 
     missing_count = pdf_merged[CIF.A_Cartn_x.value].isna().sum()
-    print(f'{missing_count} rows have missing values in column {CIF.A_Cartn_x.value} after replacing those that have low occupancy with nan.')
+    print(f'{missing_count} rows have missing values in column {CIF.A_Cartn_x.value} '
+          f'after replacing those that have low occupancy with nan.')
 
     # FILTER OUT 'NAN' ROWS
     pdf_merged = pdf_merged.dropna(subset=[CIF.A_Cartn_x.value], inplace=False)
 
     missing_count = pdf_merged[CIF.A_Cartn_x.value].isna().sum()
-    print(f'{missing_count} rows have missing values in column {CIF.A_Cartn_x.value} after removing those rows with nan. (Should be 0).')
+    print(f'{missing_count} rows have missing values in column {CIF.A_Cartn_x.value} '
+          f'after removing those rows with nan. (Should be 0).')
 
     # pdf_merged.reset_index(drop=True, inplace=True)
 
