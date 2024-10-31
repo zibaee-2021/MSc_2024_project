@@ -154,14 +154,17 @@ def load_dataset():
 
             # In the RNA diffusion script, the minimum allowed number of atoms per base is 6.
             # The smallest base, uracil has 12 atoms (cg4), but 40 atoms for a complete uracil nucleotide including the
-            # nitrogenous base, ribose sugar, and phosphate group in RNA. So, does this mean DJ is saying its ok to
+            # nitrogenous base, ribose sugar, and phosphate group in RNA. So, does this mean DJ is saying it's ok to
             # include those RNA cifs with up to 34 of 40 atoms of a base missing?
             assert length == len(bbindices)
-            min_num_atoms_expected_per_aa = 4  # i.e. 10 atoms for the smallest amino acid glycine
-            min_num_expected_atoms = len(aaindices) * min_num_atoms_expected_per_aa
-            num_of_atoms_in_cif = len(bbindices)
+            min_num_atoms_expected_per_aa = 5  # i.e. 5 non-H atoms in smallest residue glycine: 2xO, 2xC, 1xN, 5xH.
+            # bbindices should be one backbone atom per residue, so len(bbindices) should be number of residues.
+            # Therefore min number of expected atoms is len(bbindices) * min number of non-H atoms per residue.
+            min_num_expected_atoms = len(bbindices) * min_num_atoms_expected_per_aa
+            num_of_atoms_in_cif = len(aaindices)  # This is number of atoms, due to outer-join, mimicing DJ's RNA code.
 
-            if num_of_atoms_in_cif < min_num_expected_atoms:  # I've changed this from the rna version because I think it's the wrong way round. number of aa * 4 should give the minimum number of atoms to be expected. Less than that
+            # Assuming the protein will never be 100% Glycines (otherwise I would use <= instead of <).
+            if num_of_atoms_in_cif < min_num_expected_atoms:
                 print("WARNING: Too many missing atoms in ", target, length, len(aaindices))
                 continue
 
