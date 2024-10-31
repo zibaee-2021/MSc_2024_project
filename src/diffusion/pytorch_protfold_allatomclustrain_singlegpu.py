@@ -9,6 +9,7 @@ General notes:
 
 import sys
 import os
+from enum import Enum
 import time
 import random
 from math import sqrt, log
@@ -32,6 +33,16 @@ sc_atoms = ["CB", "CD", "CD1", "CD2", "CE", "CE1", "CE2", "CE3", "CG", "CG1", "C
             "CH2", "CZ", "CZ2", "CZ3", "ND1", "ND2", "NE", "NE1", "NE2", "NH1",
             "NH2", "NZ", "OD1", "OD2", "OE1", "OE2", "OG", "OG1", "OG2", "OH",
             "SD", "SG"]
+
+
+class Cols(Enum):
+    AA_LABEL_NUM = 'aa_label_num'       # Enumerated residues, mapped from `A_label_comp_id`.
+    ATOM_LABEL_NUM = 'atom_label_num'   # Enumerated atoms, mapped from `A_label_atom_id`.
+    BB_INDEX = 'bb_index'               # The position of one of the backbone atoms. C-alpha ('CA') is chosen here.
+    MEAN_COORDS = 'mean_xyz'            # Mean of x y z coordinates for each atom.
+    MEAN_CORR_X = 'mean_corrected_x'    # x coordinates for each atom subtracted by the mean of xyz coordinates.
+    MEAN_CORR_Y = 'mean_corrected_y'    # (as above) but for y coordinates.
+    MEAN_CORR_Z = 'mean_corrected_z'    # (as above) but for z coordinates.
 
 
 # INPUT FILE NAMES:
@@ -135,7 +146,9 @@ def load_dataset():
             # TODO assign CA to bbindices
             bbindices = [bb_idx for bb_idx in zip(pdf_target[CIF.A_id.value].tolist(), pdf_target[CIF.label_atom_id.va ]) if ]  # backbone indices. You expect these numbers to always jump, not continuous increase)
 
-            coords = pdf_target[[ColNames.MEAN_CORR_X.value, ColNames.MEAN_CORR_Y.value, ColNames.MEAN_CORR_Z.value]].values  # should be list of 3-element numpy arrays
+            coords = pdf_target[[ColNames.MEAN_CORR_X.value,
+                                 ColNames.MEAN_CORR_Y.value,
+                                 ColNames.MEAN_CORR_Z.value]].values  # should be list of 3-element numpy arrays
             aaindex = -1  # replacing `ntindex`
 
             pdf_target_deduped = pdf_target.drop_duplicates(subset=CIF.S_seq_id.value, keep='first').reset_index(drop=True)
