@@ -1,3 +1,29 @@
+"""
+CALLS THE CIF PARSER TO READ IN AND PARSE THE CIF FILE TO EXTRACT THE FOLLOWING 14 FIELDS
+
+These 14 fields are used and end up in a 14-column dataframe. A description of what they are all used for is given here
+and below (I am happy to repeat myself in an effort to reduce the chance of mistakes due to confusing names).
+
+atom_site:
+    group_PDB,          # 'ATOM' or 'HETATM'    - Filter on this then remove.
+    auth_seq_id,        # residue position      - used to join with S_pdb_seq_num, then remove.
+    label_comp_id,      # residue (3-letter)    - used to sanity-check with S_mon_id, then remove.
+    id,                 # atom position         - sort on this, keep.
+    label_atom_id,      # atom                  - keep
+    label_asym_id,      # chain                 - join on this, sort on this, keep.
+    Cartn_x,            # atom x-coordinates
+    Cartn_y,            # atom y-coordinates
+    Cartn_z,            # atom z-coordinates
+    occupancy           # occupancy
+
+_pdbx_poly_seq_scheme:
+    seq_id,             # residue position      - sort on this, keep.
+    mon_id,             # residue (3-letter)    - used to sanity-check with A_label_comp_id, keep.
+    pdb_seq_num,        # residue position      - join to A_auth_seq_id, then remove.
+    asym_id,            # chain                 - join on this, sort on this, then remove.
+"""
+
+
 import os
 
 import pandas as pd
@@ -12,9 +38,9 @@ from enum import Enum
 
 
 class ColNames(Enum):
-    AA_LABEL_NUM = 'aa_label_num'       # Enumerated residues, mapped from `A_label_comp_id`.
-    ATOM_LABEL_NUM = 'atom_label_num'   # Enumerated atoms, mapped from `A_label_atom_id`.
-    BB_INDEX = 'bb_index'               # The position of one of the backbone atoms. C-alpha ('CA') is chosen here.
+    AA_LABEL_NUM = 'aa_label_num'       # Enumerated residues, mapped from `A_label_comp_id` (3-letter residue).
+    ATOM_LABEL_NUM = 'atom_label_num'   # Enumerated atoms, mapped from `A_label_atom_id` (atom).
+    BB_INDEX = 'bb_index'               # The position of one of the backbone atoms. I've chosen C-alpha ('CA').
     MEAN_COORDS = 'mean_xyz'            # Mean of x y z coordinates for each atom.
     MEAN_CORR_X = 'mean_corrected_x'    # x coordinates for each atom subtracted by the mean of xyz coordinates.
     MEAN_CORR_Y = 'mean_corrected_y'    # (as above) but for y coordinates.
