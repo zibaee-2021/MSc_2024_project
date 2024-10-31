@@ -99,8 +99,11 @@ def _impute_missing_coords(pdf_to_impute):
     :param pdf_to_impute: Dataframe to impute missing data.
     :return: Imputed dataframe.
     """
-    pdf_to_impute[['mean_corrected_x', 'mean_corrected_y', 'mean_corrected_z']] = \
-    pdf_to_impute[['mean_corrected_x', 'mean_corrected_y', 'mean_corrected_z']].fillna(0, inplace=False)
+    pdf_to_impute[[ColNames.MEAN_CORR_X.value,
+                   ColNames.MEAN_CORR_Y.value,
+                   ColNames.MEAN_CORR_Z.value]] = (pdf_to_impute[[ColNames.MEAN_CORR_X.value,
+                                                                  ColNames.MEAN_CORR_Y.value,
+                                                                  ColNames.MEAN_CORR_Z.value]].fillna(0, inplace=False))
     return pdf_to_impute
 
 
