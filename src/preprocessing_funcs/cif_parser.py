@@ -180,7 +180,7 @@ def _fetch_mmcif_from_pdb_api_and_write_locally(pdb_id: str) -> None:
     """
     Fetch raw mmCIF data from API (expected hosted at 'https://files.rcsb.org/download/') using given PDB id, and write
     out to flat file.
-    :param pdb_id: Alphanumeric 4-character Protein Databank Identifier. e.g. '1oj6'.
+    :param pdb_id: Alphanumeric 4-character Protein Databank Identifier. e.g. '1OJ6'.
     """
     response = api.call_for_cif_with_pdb_id(pdb_id)
     mmcif_file = f'../data/big_data_to_git_ignore/cifs_single_domain_prots/{pdb_id}.cif'
@@ -188,24 +188,24 @@ def _fetch_mmcif_from_pdb_api_and_write_locally(pdb_id: str) -> None:
         file.write(response.text)
 
 
-def parse_cif(pdb_id: str, local_cif_file: str) -> pd.DataFrame:
+def parse_cif(pdb_id: str, path_to_raw_cif: str) -> pd.DataFrame:
     """
     Parse given local mmCIF file to extract and tabulate necessary atom and amino acid data fields from
     `_pdbx_poly_seq_scheme` and `_atom_site`.
     :param pdb_id: Alphanumeric 4-character Protein Databank Identifier. e.g. '1OJ6'.
-    :param local_cif_file: Relative path to locally downloaded mmCIF file.
+    :param path_to_raw_cif: Relative path to locally downloaded raw mmCIF file, (should include the pdb id).
     :return: Necessary fields extracted from raw mmCIF (from local copy or API) and joined in one table.
     """
     # `os.path.exists` expected no leading fwd slash
-    local_cif_file = local_cif_file.removesuffix('.cif').removeprefix('/')
-    local_cif_file = f'{local_cif_file}{pdb_id}.cif'
+    path_to_raw_cif = path_to_raw_cif.removesuffix('.cif').removeprefix('/')
+    path_to_raw_cif = f'{path_to_raw_cif}.cif'
 
-    if os.path.exists(local_cif_file):
-        mmcif = MMCIF2Dict(local_cif_file)
+    if os.path.exists(path_to_raw_cif):
+        mmcif = MMCIF2Dict(path_to_raw_cif)
     else:
         print(f'Will try to read {pdb_id} directly from PDB site..')
         _fetch_mmcif_from_pdb_api_and_write_locally(pdb_id)
-        mmcif = MMCIF2Dict(local_cif_file)
+        mmcif = MMCIF2Dict(path_to_raw_cif)
 
     poly_seq_fields = _extract_fields_from_poly_seq(mmcif)
     atom_site_fields = _extract_fields_from_atom_site(mmcif)
@@ -238,10 +238,10 @@ def parse_cif(pdb_id: str, local_cif_file: str) -> pd.DataFrame:
         pdf_merged[col] = pd.to_numeric(pdf_merged[col], errors='coerce')
 
     # CAST STRINGS OF INTS TO NUMERIC AND THEN TO INTEGERS:
-    for col in [CIF.S_seq_id.value,
-                CIF.S_pdb_seq_num.value,
-                CIF.A_id.value,
-                CIF.A_auth_seq_id.value]:
+    for col in [CIF.S_seq_id.value,         # residue position
+                CIF.S_pdb_seq_num.value,    # residue position
+                CIF.A_id.value,             # atom position
+                CIF.A_auth_seq_id.value]:   # residue position
         pdf_merged[col] = pd.to_numeric(pdf_merged[col], errors='coerce')
         pdf_merged[col] = pdf_merged[col].astype('Int64')
 
