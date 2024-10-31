@@ -40,20 +40,18 @@ def parse_tokenise_cif_and_write_to_flatfile_to_pdf(pdb_ids=None, use_subdir=Fal
         path_to_cif_pdb_ids = path_to_cif_pdb_ids.removesuffix('.cif')
         cif = f'{path_to_cif_pdb_ids}{pdb_id}.cif'
         assert os.path.exists(cif)
+        # PARSE mmCIF TO EXTRACT 14 FIELDS, TO FILTER, IMPUTE, SORT AND JOIN ON, RETURNING AN 8-COLUMN DATAFRAME:
         pdf_cif = parser.parse_cif(pdb_id=pdb_id, local_cif_file=cif)
 
         atoms_enumerated, aas_enumerated, fasta_aas_enumerated = dh.read_enumeration_mappings()
 
-        # # Amino acid labels enumerated
-        # pdf_cif[ColNames.AA_LABEL_NUM.value] = pdf_cif[CIF.S_mon_id.value].map(aas_enumerated).astype('Int64')
-
-        # MAPPING FASTA AMINO ACIDS ('ASP', 'ARG', ETC) TO ENUMERATED FORM USING JSON FILE IN `aa_atoms_enumerated`:
+        # ENUMERATE BY MAPPING FASTA AMINO ACIDS ('ASP', 'ARG', ETC), USING JSON->DICT `aa_atoms_enumerated`:
         pdf_cif[ColNames.AA_LABEL_NUM.value] = pdf_cif[CIF.S_mon_id.value].map(aas_enumerated).astype('Int64')
 
-        # MAPPING ATOM ('C', 'CA', ETC) TO ENUMERATED FORM USING JSON FILE IN `aa_atoms_enumerated`:
+        # ENUMERATE BY MAPPING ATOM ('C', 'CA', ETC), USING JSON->DICT `aa_atoms_enumerated`:
         pdf_cif[ColNames.ATOM_LABEL_NUM.value] = pdf_cif[CIF.A_label_atom_id.value].map(atoms_enumerated).astype('Int64')
 
-        # Atomic xyz coordinates
+        # CORRECT ATOMIC X,Y,Z, COORDS BY THEIR MEANS:
         pdf_cif[ColNames.MEAN_COORDS.value] = pdf_cif[[CIF.A_Cartn_x.value,
                                                        CIF.A_Cartn_y.value,
                                                        CIF.A_Cartn_z.value]].mean(axis=1)
@@ -61,7 +59,7 @@ def parse_tokenise_cif_and_write_to_flatfile_to_pdf(pdb_ids=None, use_subdir=Fal
         pdf_cif[ColNames.MEAN_CORR_Y.value] = pdf_cif[CIF.A_Cartn_y.value] - pdf_cif[ColNames.MEAN_COORDS.value]
         pdf_cif[ColNames.MEAN_CORR_Z.value] = pdf_cif[CIF.A_Cartn_z.value] - pdf_cif[ColNames.MEAN_COORDS.value]
 
-        # ONLY KEEP THESE COLUMNS:
+        # REMOVE ORIGINAL NON-ENUMERATED COLUMNS:
         pdf_cif = pdf_cif[[CIF.A_label_asym_id.value,
                            CIF.S_seq_id.value,
                            CIF.A_id.value,
