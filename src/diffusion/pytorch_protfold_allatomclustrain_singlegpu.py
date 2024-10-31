@@ -145,6 +145,11 @@ def load_dataset():
             print(pdf_target.columns.tolist())  # Keeping track of what columns the df has here.
             pdf_target = _impute_missing_coords(pdf_target)
 
+            # TODO: Add new column that indicates whether the atom is main-chain or side-chain, primarily to use for
+            # getting confirmation from DJ/SK that they are correct. Would potentially be useful for making an explicit
+            # filtration or to create two different data subsets, one with only backbones and one with only side-chains
+            # or backbone only vs all, etc.
+
             coords = pdf_target[[ColNames.MEAN_CORR_X.value,
                                  ColNames.MEAN_CORR_Y.value,
                                  ColNames.MEAN_CORR_Z.value]].values  # should be list of 3-element numpy arrays
