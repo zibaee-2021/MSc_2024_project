@@ -141,13 +141,9 @@ def load_dataset():
             if os.path.exists(cif_tokenised_ssv):
                 pdf_target = dh.read_tokenised_cif_ssv_to_pdf(pdb_id=target, use_subdir=True)
             else:
-                pdf_target = tk.parse_tokenise_cif_and_write_to_flatfile_to_pdf(pdb_ids=target, use_subdir=True)
+                pdf_target = tk.parse_tokenise_cif_write_flatfile(pdb_ids=target, dst_path_for_tokenised='data/tokenised')
             print(pdf_target.columns.tolist())  # Keeping track of what columns the df has here.
             pdf_target = _impute_missing_coords(pdf_target)
-            # the mapping might not needed here because tokeniser.py does it earlier and writes it to flatfiles
-            atomcodes = [atokendict[atom] for atom in pdf_target[CIF.A_label_atom_id.value].tolist()]  # the enumeration of the atoms
-            # TODO assign CA to bbindices
-            bbindices = [bb_idx for bb_idx in zip(pdf_target[CIF.A_id.value].tolist(), pdf_target[CIF.label_atom_id.va ]) if ]  # backbone indices. You expect these numbers to always jump, not continuous increase)
 
             coords = pdf_target[[ColNames.MEAN_CORR_X.value,
                                  ColNames.MEAN_CORR_Y.value,
@@ -155,6 +151,7 @@ def load_dataset():
             aaindex = -1  # replacing `ntindex`
 
             pdf_target_deduped = pdf_target.drop_duplicates(subset=CIF.S_seq_id.value, keep='first').reset_index(drop=True)
+
             aacodes = [aanumdict[aa] for aa in pdf_target_deduped[CIF.S_mon_id.value].tolist()]  # the enumeration of the amino acid (i.e. 0-19)
             aaindices = pdf_target_deduped[CIF.S_seq_id.value].tolist()  # the index of each amino acid (should increase and repeat for several rows, as each aa has several atoms)
 

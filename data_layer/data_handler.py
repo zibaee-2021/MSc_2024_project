@@ -190,14 +190,16 @@ def save_torch_tensor(pt: torch.Tensor, dst_path: str):
     _restore_original_working_dir(cwd)
 
 
-def write_tokenised_cif_to_flatfile(pdb_id: str, pdf: pd.DataFrame, use_subdir=False, flatfiles=None):
+def write_tokenised_cif_to_flatfile(pdb_id: str, pdf: pd.DataFrame, dst_data_dir=None, flatfiles=None):
     """
     Write dataframe of single protein with columns CIF.S_seq_id, CIF.S_mon_id, CIF.A_id, CIF.A_label_atom_id,
     ColNames.MEAN_CORR_X, ColNames.MEAN_CORR_Y, ColNames.MEAN_CORR_Z to flat file(s) in local relative dir
     'data/tokenised/' or to the top-level general-use data dir.
     :param pdb_id: pdb/cif id.
     :param pdf: Dataframe to write to flat file(s).
-    :param use_subdir: True to use relative local dir, otherwise top-level dir by default.
+    :param dst_data_dir: Relative path to destination dir of flatfile of tokenised cif. (Will be called from either
+    `diffSock/test`, `diffSock/src/preprocessing_funcs` or `diffSock/src/diffusion`. The responsibility for determining
+    the relative destination path is left to the caller).
     :param flatfiles: List of file formats (e.g. ['ssv', 'csv', 'tsv'], or string of one format, otherwise ssv by
     default).
     """
@@ -206,15 +208,16 @@ def write_tokenised_cif_to_flatfile(pdb_id: str, pdf: pd.DataFrame, use_subdir=F
     elif isinstance(flatfiles, str):
         flatfiles = [flatfiles]
 
-    dst_dir = 'data/tokenised/'
     cwd = ''
 
-    if not use_subdir:  # i.e. use the top-level general-use `data` dir & define relpath from data_layer
+    if not dst_data_dir:  # i.e. use the top-level general-use `data` dir & define relpath from data_layer
         # Store cwd to return to at end. Change current dir to data layer:
+        print(f'You did not pass any destination dir path for writing the tokenised cif flat flatfile to. '
+              f'Therefore it will be written to the top-level data dir at `diffSock/data/tokenised`.')
         cwd = _chdir_to_data_layer()
-        dst_dir = '../' + dst_dir
+        dst_dir = '../data/tokenised/'
     else:
-        os.makedirs(dst_dir, exist_ok=True)
+        os.makedirs(dst_data_dir, exist_ok=True)
 
     for flatfile in flatfiles:
         sep = ' '
@@ -223,7 +226,8 @@ def write_tokenised_cif_to_flatfile(pdb_id: str, pdf: pd.DataFrame, use_subdir=F
         elif flatfile == 'csv':
             sep = ','
         # pdf.to_csv(path_or_buf=f'../data/tokenised/{pdb_id}.csv', sep=sep, index=False, na_rep='null')
-        pdf.to_csv(path_or_buf=f'{dst_dir}{pdb_id}.{flatfile}', sep=sep, index=False)
+        dst_data_dir = dst_data_dir.removesuffix('/')
+        pdf.to_csv(path_or_buf=f'{dst_data_dir}/{pdb_id}.{flatfile}', sep=sep, index=False)
 
     # # For a more human-readable set of column-names:
     # pdf_easy_read = pdf.rename(columns={CIF.S_seq_id.value: 'SEQ_ID',
@@ -235,7 +239,7 @@ def write_tokenised_cif_to_flatfile(pdb_id: str, pdf: pd.DataFrame, use_subdir=F
     #                                     ColNames.MEAN_CORR_Z.value: 'Z'})
     # pdf_easy_read.to_csv(path_or_buf=f'../data/tokenised/easyRead_{pdb_id}.tsv', sep='\t', index=False, na_rep='null')
 
-    if not use_subdir:
+    if not dst_data_dir:
         _restore_original_working_dir(cwd)
 
 
