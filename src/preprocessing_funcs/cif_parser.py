@@ -196,7 +196,10 @@ def parse_cif(pdb_id: str, local_cif_file: str) -> pd.DataFrame:
     :param local_cif_file: Relative path to locally downloaded mmCIF file.
     :return: Necessary fields extracted from raw mmCIF (from local copy or API) and joined in one table.
     """
-    local_cif_file = local_cif_file.removeprefix('/')  # `os.path.exists` expected no leading fwd slash
+    # `os.path.exists` expected no leading fwd slash
+    local_cif_file = local_cif_file.removesuffix('.cif').removeprefix('/')
+    local_cif_file = f'{local_cif_file}{pdb_id}.cif'
+
     if os.path.exists(local_cif_file):
         mmcif = MMCIF2Dict(local_cif_file)
     else:

@@ -61,9 +61,8 @@ def parse_tokenise_cif_and_write_to_flatfile_to_pdf(pdb_ids=None, use_subdir=Fal
         pdb_ids = [pdb_ids]
 
     for pdb_id in pdb_ids:
-        cwd = os.getcwd()
         path_to_cif_pdb_ids = f'../diffusion/data/cif/'
-        path_to_cif_pdb_ids = path_to_cif_pdb_ids.removesuffix('.cif')
+        path_to_cif_pdb_ids = path_to_cif_pdb_ids.removesuffix('.cif').removeprefix('/')
         cif = f'{path_to_cif_pdb_ids}{pdb_id}.cif'
         assert os.path.exists(cif)
         # PARSE mmCIF TO EXTRACT 14 FIELDS, TO FILTER, IMPUTE, SORT AND JOIN ON, RETURNING AN 8-COLUMN DATAFRAME:
