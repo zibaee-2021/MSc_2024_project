@@ -64,18 +64,24 @@ def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfileformat_to_write: str
 
         # PARSE mmCIF TO EXTRACT 14 FIELDS, TO FILTER, IMPUTE, SORT AND JOIN ON, RETURNING AN 8-COLUMN DATAFRAME:
         pdf_cif = parser.parse_cif(pdb_id=pdb_id, path_to_raw_cif=cif)
-        assert len(pdf_cif.columns) == 8, f'Dataframe should have 8 columns. But this has {len(pdf_cif.columns)}'
+        expected_num_of_cols = 8
+        assert len(pdf_cif.columns) == expected_num_of_cols, (f'Dataframe should have {expected_num_of_cols} columns. '
+                                                              f'But this has {len(pdf_cif.columns)}')
 
         # READ ENUMERATION MAPPINGS TO DICTS TO USE FOR CONVERTING RESIDUES AND ATOMS TO NUMBERS:
         atoms_enumerated, aas_enumerated, fasta_aas_enumerated = dh.read_enumeration_mappings()
 
         # ENUMERATE BY MAPPING RESIDUES, USING `aa_atoms_enumerated` JSON->DICT AND CAST TO INT:
         pdf_cif.loc[:, ColNames.AA_LABEL_NUM.value] = pdf_cif[CIF.S_mon_id.value].map(aas_enumerated).astype('Int64')
-        assert len(pdf_cif.columns) == 9, f'Dataframe should have 9 columns. But this has {len(pdf_cif.columns)}'
+        expected_num_of_cols = 9
+        assert len(pdf_cif.columns) == expected_num_of_cols, (f'Dataframe should have {expected_num_of_cols} columns. '
+                                                              f'But this has {len(pdf_cif.columns)}')
 
         # ENUMERATE BY MAPPING ATOM ('C', 'CA', ETC), USING JSON->DICT `aa_atoms_enumerated` AND CAST TO INT:
         pdf_cif[ColNames.ATOM_LABEL_NUM.value] = pdf_cif[CIF.A_label_atom_id.value].map(atoms_enumerated).astype('Int64')
-        assert len(pdf_cif.columns) == 10, f'Dataframe should have 10 columns. But this has {len(pdf_cif.columns)}'
+        expected_num_of_cols = 10
+        assert len(pdf_cif.columns) == expected_num_of_cols, (f'Dataframe should have {expected_num_of_cols} columns. '
+                                                              f'But this has {len(pdf_cif.columns)}')
 
         # SUBTRACT EACH COORDINATE BY THE MEAN OF ALL 3 PER ATOM:
         pdf_cif.loc[:, ColNames.MEAN_COORDS.value] = pdf_cif[[CIF.A_Cartn_x.value,
@@ -85,14 +91,15 @@ def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfileformat_to_write: str
         pdf_cif.loc[:, ColNames.MEAN_CORR_Y.value] = pdf_cif[CIF.A_Cartn_y.value] - pdf_cif[ColNames.MEAN_COORDS.value]
         pdf_cif.loc[:, ColNames.MEAN_CORR_Z.value] = pdf_cif[CIF.A_Cartn_z.value] - pdf_cif[ColNames.MEAN_COORDS.value]
 
-        # REMOVE ORIGINAL NON-ENUMERATED RESIDUE COLUMN:
+        # REMOVE ORIGINAL RESIDUE COLUMN, NOT NEEDED NOW THAT ENUMERATED RESIDUE COLUMN IS CREATED:
         pdf_cif = pdf_cif.drop(columns=[CIF.S_mon_id.value])
-        assert len(pdf_cif.columns) == 13, f'Dataframe should have 13 columns. But this has {len(pdf_cif.columns)}'
+        expected_num_of_cols = 13
+        assert len(pdf_cif.columns) == expected_num_of_cols, (f'Dataframe should have {expected_num_of_cols} columns. '
+                                                              f'But this has {len(pdf_cif.columns)}')
 
         # WRITE OUT THE PARSED CIF TOKENS TO FLAT FILE (.ssv BY DEFAULT):
         dh.write_tokenised_cif_to_flatfile(pdb_id, pdf_cif, dst_data_dir=dst_path_for_tokenised,
                                            flatfiles=flatfileformat_to_write)
-
         return pdf_cif
 
 
