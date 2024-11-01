@@ -5,7 +5,10 @@ CIF_PARSER.PY
     - PARSE:
         - REMOVE HETATM ROWS
         - CAST STRING TYPES TO NUMERIC TYPES
-        - REMOVE LOW OCCUPANCY ROWS
+        - REMOVE LOW OCCUPANCY ROWS, NANs AND/OR IMPUTE MISSING COORD ROWS
+        - SORT BY CERTAIN COLUMNS
+        - RETURN SUBSET OF DATAFRAME ONLY INCLUDING NECESSARY COLUMNS FOR SUBSEQUENT TOKENISATION OPERATIONS
+
 
 --------------------------------------------------------------------------------------------------
 
@@ -222,7 +225,7 @@ def parse_cif(pdb_id: str, path_to_raw_cif: str) -> pd.DataFrame:
     print(f'{missing_count} rows have missing values in column {CIF.A_Cartn_x.value} '
           f'after removing those rows with nan. (Should be 0).')
 
-    # pdf_merged.reset_index(drop=True, inplace=True)
+    # pdf_merged.reset_index(drop=True, inplace=True) TODO Is this needed ???
 
     # READ OUT OF CHAINS (IMPORTANT IF MORE THAN ONE CHAIN) IN SEQUENCE:
     num_of_chains = pdf_merged[CIF.S_asym_id.value].nunique()
