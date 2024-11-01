@@ -34,6 +34,26 @@ sc_atoms = ["CB", "CD", "CD1", "CD2", "CE", "CE1", "CE2", "CE3", "CG", "CG1", "C
             "NH2", "NZ", "OD1", "OD2", "OE1", "OE2", "OG", "OG1", "OG2", "OH",
             "SD", "SG"]
 
+"""
+atom_site:
+    group_PDB,          # 'ATOM' or 'HETATM'    - Filter on this then remove.
+    auth_seq_id,        # residue position      - used to join with S_pdb_seq_num, then remove.
+    label_comp_id,      # residue (3-letter)    - used to sanity-check with S_mon_id, then remove.
+    id,                 # atom position         - sort on this, keep.
+    label_atom_id,      # atom                  - keep
+    label_asym_id,      # chain                 - join on this, sort on this, keep.
+    Cartn_x,            # atom x-coordinates
+    Cartn_y,            # atom y-coordinates
+    Cartn_z,            # atom z-coordinates
+    occupancy           # occupancy
+
+_pdbx_poly_seq_scheme:
+    seq_id,             # residue position      - sort on this, keep.
+    mon_id,             # residue (3-letter)    - used to sanity-check with A_label_comp_id, keep*.
+    pdb_seq_num,        # residue position      - join to A_auth_seq_id, then remove.
+    asym_id,            # chain                 - join on this, sort on this, then remove.
+"""
+
 
 class Cols(Enum):
     AA_LABEL_NUM = 'aa_label_num'       # Enumerated residues, mapped from `A_label_comp_id`.
