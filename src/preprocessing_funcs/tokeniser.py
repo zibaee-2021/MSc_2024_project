@@ -34,10 +34,6 @@ from src.preprocessing_funcs.cif_parser import CIF
 from data_layer import data_handler as dh
 from enum import Enum
 
-# TODO Traceback (most recent call last):
-#   File "/home/shahin/PycharmProjects/MSc_project/diffSock/src/general_utility_methods/tokeniser.py", line 78, in <module>
-#   File "/home/shahin/PycharmProjects/MSc_project/diffSock/src/general_utility_methods/tokeniser.py", line 71, in parse_tokenise_cif_write_to_flatfile_to_pdf
-
 
 class ColNames(Enum):
     AA_LABEL_NUM = 'aa_label_num'       # Enumerated residues. (Equivalent to `ntcodes` in DJ's RNA code.)
@@ -82,11 +78,11 @@ def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfileformat_to_write: str
 
         atoms_enumerated, aas_enumerated, fasta_aas_enumerated = dh.read_enumeration_mappings()
 
-        # ENUMERATE BY MAPPING RESIDUES, USING `aa_atoms_enumerated` JSON->DICT:
+        # ENUMERATE BY MAPPING RESIDUES, USING `aa_atoms_enumerated` JSON->DICT AND CAST TO INT:
         pdf_cif.loc[:, ColNames.AA_LABEL_NUM.value] = pdf_cif[CIF.S_mon_id.value].map(aas_enumerated).astype('Int64')
         assert len(pdf_cif.columns) == 9, f'Dataframe should have 9 columns. But this has {len(pdf_cif.columns)}'
 
-        # ENUMERATE BY MAPPING ATOM ('C', 'CA', ETC), USING JSON->DICT `aa_atoms_enumerated`:
+        # ENUMERATE BY MAPPING ATOM ('C', 'CA', ETC), USING JSON->DICT `aa_atoms_enumerated` AND CAST TO INT:
         pdf_cif[ColNames.ATOM_LABEL_NUM.value] = pdf_cif[CIF.A_label_atom_id.value].map(atoms_enumerated).astype('Int64')
         assert len(pdf_cif.columns) == 10, f'Dataframe should have 10 columns. But this has {len(pdf_cif.columns)}'
 
