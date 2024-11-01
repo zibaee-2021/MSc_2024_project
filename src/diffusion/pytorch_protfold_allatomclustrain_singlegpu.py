@@ -126,23 +126,15 @@ def load_dataset():
     targetfile = _read_lst_file_from_src_diff_dir(fname=PROT_TRAIN_CLUSTERS)
 
     for line in targetfile:
-
         targets = line.rstrip().split()
-
         dh.make_api_calls_to_fetch_mmcif_and_write_locally(pdb_ids=targets, dst_path=PATH_TO_CIF_DIR)
-
         sp = []
-
         for target in targets:
-
             cif_tokenised_ssv = f'{PATH_TO_TOKENISED_DIR}{target}.ssv'
 
             if os.path.exists(cif_tokenised_ssv):
-
                 pdf_target = dh.read_tokenised_cif_ssv_to_pdf(pdb_id=target, use_subdir=True)
-
             else:
-
                 pdf_target = tk.parse_tokenise_cif_write_flatfile(pdb_ids=target, dst_path_for_tokenised='data/tokenised')
 
             # TODO: Add new column that indicates whether the atom is main-chain or side-chain, primarily to use for
