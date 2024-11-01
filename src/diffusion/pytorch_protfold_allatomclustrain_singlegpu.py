@@ -142,11 +142,15 @@ def load_dataset():
             # filtration or to create two different data subsets, one with only backbones and one with only side-chains
             # or backbone only vs all, etc.
 
+            # GET MEAN-CORRECTED COORDINATES VIA 'mean_corrected_x', '_y', '_z' TO 3-ELEMENT LIST:
             coords = pdf_target[[ColNames.MEAN_CORR_X.value,
                                  ColNames.MEAN_CORR_Y.value,
-                                 ColNames.MEAN_CORR_Z.value]].values  # should be list of 3-element numpy arrays
+                                 ColNames.MEAN_CORR_Z.value]].values
 
-            # GET `aaindices`. EXPECTED TO HAVE REPEATED VALUES AS ONE AA HAS 5 OR MORE ATOMS (DO NOT DUPLICATE):
+            # GET `atomcodes` VIA 'atom_label_num' COLUMN, WHICH HOLDS ENUMERATED ATOMS VALUES:
+            atomcodes = pdf_target[ColNames.ATOM_LABEL_NUM.value].tolist()
+
+            # GET `aaindices`. EXPECTED TO HAVE REPEATED VALUES BECAUSE 1 AA HAS 5 OR MORE ATOMS (NOT DUPLICATE ROWS):
             aaindices = pdf_target[CIF.S_seq_id.value].tolist()
 
             # GET `bbindices`, VIA ASSIGNING DUPLICATED VALUES TO NEW COLUMN `BB_INDEX`, (DE-DUPLICATED BELOW):
@@ -155,7 +159,7 @@ def load_dataset():
             # DE-DUPLICATE ROWS ON RESIDUE POSITION (`S_seq_id`) TO GET CORRECT DIMENSION OF `aacodes` and `bbindices`:
             pdf_target_deduped = pdf_target.drop_duplicates(subset=CIF.S_seq_id.value, keep='first').reset_index(drop=True)
 
-            # GET `aacodes`, VIA `AA_LABEL_NUM` COLUMNS WHICH ALREADY HOLDS THE ENUMERATED ATOMS VALUES:
+            # GET `aacodes`, VIA 'aa_label_num' COLUMN, WHICH HOLDS ENUMERATED RESIDUES VALUES:
             aacodes = pdf_target_deduped[ColNames.AA_LABEL_NUM.value].tolist()
 
             # COMPLETE `bbindices`, VIA `BB_INDEX` IN DE-DUPLICATED DF:
