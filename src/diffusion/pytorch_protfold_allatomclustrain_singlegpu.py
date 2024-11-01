@@ -38,12 +38,11 @@ sc_atoms = ["CB", "CD", "CD1", "CD2", "CE", "CE1", "CE2", "CE3", "CG", "CG1", "C
 class Cols(Enum):
     AA_LABEL_NUM = 'aa_label_num'       # Enumerated residues, mapped from `A_label_comp_id`.
     ATOM_LABEL_NUM = 'atom_label_num'   # Enumerated atoms, mapped from `A_label_atom_id`.
-    BB_INDEX = 'bb_index'               # The position of one of the backbone atoms. C-alpha ('CA') is chosen here.
+    BB_INDEX = 'bb_index'               # Position of one of the backbone atoms. C-alpha ('CA') is chosen here.
     MEAN_COORDS = 'mean_xyz'            # Mean of x y z coordinates for each atom.
     MEAN_CORR_X = 'mean_corrected_x'    # x coordinates for each atom subtracted by the mean of xyz coordinates.
     MEAN_CORR_Y = 'mean_corrected_y'    # (as above) but for y coordinates.
     MEAN_CORR_Z = 'mean_corrected_z'    # (as above) but for z coordinates.
-
 
 # INPUT FILE NAMES:
 # json file names:
@@ -153,31 +152,34 @@ def load_dataset():
             coords = pdf_target[[ColNames.MEAN_CORR_X.value,
                                  ColNames.MEAN_CORR_Y.value,
                                  ColNames.MEAN_CORR_Z.value]].values  # should be list of 3-element numpy arrays
-            aaindex = -1  # replacing `ntindex`
 
-            # De-duplicate on residue position (`seq_id`) in prep for transferring to `aacodes`:
+            # GET `aaindices`. EXPECTED TO HAVE REPEATED VALUES AS ONE AA HAS 5 OR MORE ATOMS (DO NOT DUPLICATE):
+            aaindices = pdf_target[CIF.S_seq_id.value].tolist()
+
+            # GET `bbindices`, VIA ASSIGNING DUPLICATED VALUES TO NEW COLUMN `BB_INDEX`, (DE-DUPLICATED BELOW):
+            pdf_target = pdf_target.loc[pdf_target[CIF.A_label_atom_id.value] == 'CA', ColNames.BB_INDEX.value] = pdf_target[CIF.A_id.value]
+
+            # DE-DUPLICATE ROWS ON RESIDUE POSITION (`S_seq_id`) TO GET CORRECT DIMENSION OF `aacodes` and `bbindices`:
             pdf_target_deduped = pdf_target.drop_duplicates(subset=CIF.S_seq_id.value, keep='first').reset_index(drop=True)
+
+            # GET `aacodes`, VIA `AA_LABEL_NUM` COLUMNS WHICH ALREADY HOLDS THE ENUMERATED ATOMS VALUES:
             aacodes = pdf_target_deduped[ColNames.AA_LABEL_NUM.value].tolist()
-            aaindices = pdf_target_deduped[CIF.S_seq_id.value].tolist()  # should this be on non-deduped rather
-            # than deduped the index of each amino acid (should increase and repeat for several rows, as each aa has
-            # several atoms)
-            # bbindices = [row[CIF.A_label_atom_id.value] for row in pdf_target[CIF.A_label_atom_id.value].tolist() if ]
 
-            atomindex = 0  # not needed I think
-            lastnid = None  # not needed I think
+            # COMPLETE `bbindices`, VIA `BB_INDEX` IN DE-DUPLICATED DF:
+            bbindices = pdf_target_deduped[ColNames.BB_INDEX.value].tolist()
 
-            length = aaindex + 1
 
-            if length < 10 or length > 500:
+
+            if len(aacodes) < 10 or len(aacodes) > 500:
                 continue
             pdb_embed = torch.load(f'{PATH_TO_EMB_DIR}{target}.pt')
-            assert pdb_embed.size(1) == length  # This is the length of protein (i.e. number of residues)
+            assert pdb_embed.size(1) == len(aacodes)  # This is the length of protein (i.e. number of residues)
 
             # In the RNA diffusion script, the minimum allowed number of atoms per base is 6.
             # The smallest base, uracil has 12 atoms (cg4), but 40 atoms for a complete uracil nucleotide including the
             # nitrogenous base, ribose sugar, and phosphate group in RNA. So, does this mean DJ is saying it's ok to
             # include those RNA cifs with up to 34 of 40 atoms of a base missing?
-            assert length == len(bbindices)
+            assert len(aacodes) == len(bbindices)
             min_num_atoms_expected_per_aa = 5  # i.e. 5 non-H atoms in smallest residue glycine: 2xO, 2xC, 1xN, 5xH.
             # bbindices should be one backbone atom per residue, so len(bbindices) should be number of residues.
             # Therefore min number of expected atoms is len(bbindices) * min number of non-H atoms per residue.
@@ -186,7 +188,7 @@ def load_dataset():
 
             # Assuming the protein will never be 100% Glycines (otherwise I would use <= instead of <).
             if num_of_atoms_in_cif < min_num_expected_atoms:
-                print("WARNING: Too many missing atoms in ", target, length, len(aaindices))
+                print("WARNING: Too many missing atoms in ", target, len(aacodes), len(aaindices))
                 continue
 
             aacodes = np.asarray(aacodes, dtype=np.uint8)
@@ -197,7 +199,7 @@ def load_dataset():
             target_coords = np.asarray(coords, dtype=np.float32)
             target_coords -= target_coords.mean(0)
 
-            assert length == target_coords[bbindices].shape[0]
+            assert len(aacodes) == target_coords[bbindices].shape[0]
 
             sum_d2 += (target_coords ** 2).sum()
             sum_d += np.sqrt((target_coords ** 2).sum(axis=-1)).sum()
@@ -206,7 +208,7 @@ def load_dataset():
             diff = target_coords[1:] - target_coords[:-1]
             distances = np.linalg.norm(diff, axis=1)
 
-            print(target_coords.shape, target, length, distances.min(), distances.max())
+            print(target_coords.shape, target, len(aacodes), distances.min(), distances.max())
 
             sp.append((aacodes, atomcodes, aaindices, bbindices, target, target_coords))
 
