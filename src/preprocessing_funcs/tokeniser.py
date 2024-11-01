@@ -1,48 +1,37 @@
 """
-CALLS THE CIF PARSER TO READ IN AND PARSE THE CIF FILE TO EXTRACT THE FOLLOWING 14 FIELDS
-
+TOKENISER.PY
+    - CALLS CIF PARSER TO READ IN AND PARSE THE CIF FILE TO EXTRACT THE FOLLOWING 14 FIELDS. WRITE TO .ssv FLATFILE.
+    - ENUMERATES ATOMS AND AMINO ACID RESIDUES.
+    - SUBTRACTS COORDINATES BY THEIR MEAN COORDINATE VALUES PER ATOM.
+----------------------------------------------------------------------------------------------------------------------
 These 14 fields are used and end up in a 14-column dataframe. A description of what they are all used for is given here
 and below (I am happy to repeat myself in an effort to reduce the chance of mistakes due to confusing names).
 
 atom_site:
-    group_PDB,          # 'ATOM' or 'HETATM'    - Filter on this then remove.
-    auth_seq_id,        # residue position      - used to join with S_pdb_seq_num, then remove.
-    label_comp_id,      # residue (3-letter)    - used to sanity-check with S_mon_id, then remove.
-    id,                 # atom position         - sort on this, keep.
-    label_atom_id,      # atom                  - keep
-    label_asym_id,      # chain                 - join on this, sort on this, keep.
-    Cartn_x,            # atom x-coordinates
-    Cartn_y,            # atom y-coordinates
-    Cartn_z,            # atom z-coordinates
-    occupancy           # occupancy
+    group_PDB,          # 'ATOM' or 'HETATM'    - FILTER ON THIS, THEN REMOVE IT.
+    auth_seq_id,        # RESIDUE POSITION      - USED TO JOIN WITH S_pdb_seq_num, THEN REMOVE IT.
+    label_comp_id,      # RESIDUE (3-LETTER)    - USED TO SANITY-CHECK WITH S_mon_id, THEN REMOVE IT.
+    id,                 # ATOM POSITION         - SORT ON THIS, KEEP IN DF.
+    label_atom_id,      # ATOM                  - KEEP IN DF.
+    label_asym_id,      # CHAIN                 - JOIN ON THIS, SORT ON THIS, KEEP IN DF.
+    Cartn_x,            # ATOM COORDS          - X-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN)
+    Cartn_y,            # ATOM COORDS           - Y-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN)
+    Cartn_z,            # ATOM COORDS           - Z-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN)
+    occupancy           # OCCUPANCY             - FILTER ON THIS, THEN REMOVE IT.
 
 _pdbx_poly_seq_scheme:
-    seq_id,             # residue position      - sort on this, keep.
-    mon_id,             # residue (3-letter)    - used to sanity-check with A_label_comp_id, keep*.
-    pdb_seq_num,        # residue position      - join to A_auth_seq_id, then remove.
-    asym_id,            # chain                 - join on this, sort on this, then remove.
-
-* After generating enumeration of residues, there's no use for _pdbx_poly_seq_scheme.mon_id, so it can be dropped.
+    seq_id,             # RESIDUE POSITION      - SORT ON THIS, KEEP IN DATAFRAME.
+    mon_id,             # RESIDUE (3-LETTER)    - USE FOR SANITY-CHECK AGAINST A_label_comp_id, KEEP IN DF.
+    pdb_seq_num,        # RESIDUE POSITION      - JOIN TO A_auth_seq_id, THEN REMOVE IT.
+    asym_id,            # CHAIN                 - JOIN ON THIS, SORT ON THIS, THEN REMOVE IT.
 """
 
 
 import os
-
 import pandas as pd
 from src.preprocessing_funcs import cif_parser as parser
-from src.preprocessing_funcs.cif_parser import CIF
 from data_layer import data_handler as dh
-from enum import Enum
-
-
-class ColNames(Enum):
-    AA_LABEL_NUM = 'aa_label_num'       # Enumerated residues. (Equivalent to `ntcodes` in DJ's RNA code.)
-    ATOM_LABEL_NUM = 'atom_label_num'   # Enumerated atoms. (Equivalent to `atomcodes` in DJ's RNA code.)
-    BB_INDEX = 'bb_index'               # Position of 1 out the 5 backbone atoms. I've chosen C-alpha ('CA').
-    MEAN_COORDS = 'mean_xyz'            # Mean of x y z coordinates for each atom.
-    MEAN_CORR_X = 'mean_corrected_x'    # x coordinates for each atom subtracted by the mean of xyz coordinates.
-    MEAN_CORR_Y = 'mean_corrected_y'    # (as above) but for y coordinates.
-    MEAN_CORR_Z = 'mean_corrected_z'    # (as above) but for z coordinates.
+from src.enums import ColNames, CIF
 
 
 def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfileformat_to_write: str = 'ssv',
@@ -72,10 +61,12 @@ def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfileformat_to_write: str
         path_to_raw_cifs_dir = path_to_raw_cifs_dir.removesuffix('.cif').removeprefix('/')
         cif = f'{path_to_raw_cifs_dir}{pdb_id}.cif'
         assert os.path.exists(cif)
+
         # PARSE mmCIF TO EXTRACT 14 FIELDS, TO FILTER, IMPUTE, SORT AND JOIN ON, RETURNING AN 8-COLUMN DATAFRAME:
         pdf_cif = parser.parse_cif(pdb_id=pdb_id, path_to_raw_cif=cif)
         assert len(pdf_cif.columns) == 8, f'Dataframe should have 8 columns. But this has {len(pdf_cif.columns)}'
 
+        # READ ENUMERATION MAPPINGS TO DICTS TO USE FOR CONVERTING RESIDUES AND ATOMS TO NUMBERS:
         atoms_enumerated, aas_enumerated, fasta_aas_enumerated = dh.read_enumeration_mappings()
 
         # ENUMERATE BY MAPPING RESIDUES, USING `aa_atoms_enumerated` JSON->DICT AND CAST TO INT:
@@ -86,14 +77,10 @@ def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfileformat_to_write: str
         pdf_cif[ColNames.ATOM_LABEL_NUM.value] = pdf_cif[CIF.A_label_atom_id.value].map(atoms_enumerated).astype('Int64')
         assert len(pdf_cif.columns) == 10, f'Dataframe should have 10 columns. But this has {len(pdf_cif.columns)}'
 
-        # CORRECT ATOMIC X,Y,Z, COORDS BY THEIR MEANS:
-        # pdf_cif[ColNames.MEAN_COORDS.value] = pdf_cif[[CIF.A_Cartn_x.value,
-        #                                                CIF.A_Cartn_y.value,
-        #                                                CIF.A_Cartn_z.value]].mean(axis=1)
+        # SUBTRACT EACH COORDINATE BY THE MEAN OF ALL 3 PER ATOM:
         pdf_cif.loc[:, ColNames.MEAN_COORDS.value] = pdf_cif[[CIF.A_Cartn_x.value,
                                                               CIF.A_Cartn_y.value,
                                                               CIF.A_Cartn_z.value]].mean(axis=1)
-
         pdf_cif.loc[:, ColNames.MEAN_CORR_X.value] = pdf_cif[CIF.A_Cartn_x.value] - pdf_cif[ColNames.MEAN_COORDS.value]
         pdf_cif.loc[:, ColNames.MEAN_CORR_Y.value] = pdf_cif[CIF.A_Cartn_y.value] - pdf_cif[ColNames.MEAN_COORDS.value]
         pdf_cif.loc[:, ColNames.MEAN_CORR_Z.value] = pdf_cif[CIF.A_Cartn_z.value] - pdf_cif[ColNames.MEAN_COORDS.value]
@@ -102,6 +89,7 @@ def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfileformat_to_write: str
         pdf_cif = pdf_cif.drop(columns=[CIF.S_mon_id.value])
         assert len(pdf_cif.columns) == 13, f'Dataframe should have 13 columns. But this has {len(pdf_cif.columns)}'
 
+        # WRITE OUT THE PARSED CIF TOKENS TO FLAT FILE (.ssv BY DEFAULT):
         dh.write_tokenised_cif_to_flatfile(pdb_id, pdf_cif, dst_data_dir=dst_path_for_tokenised,
                                            flatfiles=flatfileformat_to_write)
 

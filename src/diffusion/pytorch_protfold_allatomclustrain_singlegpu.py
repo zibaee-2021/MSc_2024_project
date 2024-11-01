@@ -9,7 +9,6 @@ General notes:
 
 import sys
 import os
-from enum import Enum
 import time
 import random
 from math import sqrt, log
@@ -24,8 +23,7 @@ from nndef_protfold_atompyt2 import DiffusionNet
 
 from data_layer import data_handler as dh
 from src.preprocessing_funcs import tokeniser as tk
-from src.preprocessing_funcs.tokeniser import ColNames
-from src.preprocessing_funcs.cif_parser import CIF
+from src.enums import ColNames, CIF
 
 bb_atoms = ["C", "CA", "N", "O", "OXT"]
 bb_atoms_two = ["C", "N"]  # the peptide bond carbonyl and amino nitrogen
@@ -54,15 +52,6 @@ _pdbx_poly_seq_scheme:
     asym_id,            # chain                 - join on this, sort on this, then remove.
 """
 
-
-class Cols(Enum):
-    AA_LABEL_NUM = 'aa_label_num'       # Enumerated residues, mapped from `A_label_comp_id`.
-    ATOM_LABEL_NUM = 'atom_label_num'   # Enumerated atoms, mapped from `A_label_atom_id`.
-    BB_INDEX = 'bb_index'               # Position of one of the backbone atoms. C-alpha ('CA') is chosen here.
-    MEAN_COORDS = 'mean_xyz'            # Mean of x y z coordinates for each atom.
-    MEAN_CORR_X = 'mean_corrected_x'    # x coordinates for each atom subtracted by the mean of xyz coordinates.
-    MEAN_CORR_Y = 'mean_corrected_y'    # (as above) but for y coordinates.
-    MEAN_CORR_Z = 'mean_corrected_z'    # (as above) but for z coordinates.
 
 # INPUT FILE NAMES:
 # json file names:
@@ -112,20 +101,6 @@ def _read_lst_file_from_src_diff_dir(fname):
     return f
 
 
-def _impute_missing_coords(pdf_to_impute):
-    """
-    Impute missing values of the mean x, y, z structure coordinates with 0s.
-    :param pdf_to_impute: Dataframe to impute missing data.
-    :return: Imputed dataframe.
-    """
-    pdf_to_impute[[ColNames.MEAN_CORR_X.value,
-                   ColNames.MEAN_CORR_Y.value,
-                   ColNames.MEAN_CORR_Z.value]] = (pdf_to_impute[[ColNames.MEAN_CORR_X.value,
-                                                                  ColNames.MEAN_CORR_Y.value,
-                                                                  ColNames.MEAN_CORR_Z.value]].fillna(0, inplace=False))
-    return pdf_to_impute
-
-
 # Load dataset function remains the same
 def load_dataset():
 
@@ -146,23 +121,29 @@ def load_dataset():
     sum_d2 = 0
     sum_d = 0
     nn = 0
+
+    # GET THE LIST OF PDB NAMES FOR PROTEINS TO TOKENISE:
     targetfile = _read_lst_file_from_src_diff_dir(fname=PROT_TRAIN_CLUSTERS)
+
     for line in targetfile:
+
         targets = line.rstrip().split()
 
-        # if you know all these cif files are already in the local data dir, then no need to run following line:
-        # The cwd is 'src/diffusion'. Writes to 'src/diffusion/data/cif/' dir.
         dh.make_api_calls_to_fetch_mmcif_and_write_locally(pdb_ids=targets, dst_path=PATH_TO_CIF_DIR)
 
         sp = []
+
         for target in targets:
+
             cif_tokenised_ssv = f'{PATH_TO_TOKENISED_DIR}{target}.ssv'
+
             if os.path.exists(cif_tokenised_ssv):
+
                 pdf_target = dh.read_tokenised_cif_ssv_to_pdf(pdb_id=target, use_subdir=True)
+
             else:
+
                 pdf_target = tk.parse_tokenise_cif_write_flatfile(pdb_ids=target, dst_path_for_tokenised='data/tokenised')
-            print(pdf_target.columns.tolist())  # Keeping track of what columns the df has here.
-            pdf_target = _impute_missing_coords(pdf_target)
 
             # TODO: Add new column that indicates whether the atom is main-chain or side-chain, primarily to use for
             # getting confirmation from DJ/SK that they are correct. Would potentially be useful for making an explicit
@@ -188,10 +169,9 @@ def load_dataset():
             # COMPLETE `bbindices`, VIA `BB_INDEX` IN DE-DUPLICATED DF:
             bbindices = pdf_target_deduped[ColNames.BB_INDEX.value].tolist()
 
-
-
             if len(aacodes) < 10 or len(aacodes) > 500:
                 continue
+
             pdb_embed = torch.load(f'{PATH_TO_EMB_DIR}{target}.pt')
             assert pdb_embed.size(1) == len(aacodes)  # This is the length of protein (i.e. number of residues)
 
@@ -204,7 +184,7 @@ def load_dataset():
             # bbindices should be one backbone atom per residue, so len(bbindices) should be number of residues.
             # Therefore min number of expected atoms is len(bbindices) * min number of non-H atoms per residue.
             min_num_expected_atoms = len(bbindices) * min_num_atoms_expected_per_aa
-            num_of_atoms_in_cif = len(aaindices)  # This is number of atoms, due to outer-join, mimicing DJ's RNA code.
+            num_of_atoms_in_cif = len(aaindices)  # This is number of atoms, due to outer-join, mimicking DJ's RNA code.
 
             # Assuming the protein will never be 100% Glycines (otherwise I would use <= instead of <).
             if num_of_atoms_in_cif < min_num_expected_atoms:
