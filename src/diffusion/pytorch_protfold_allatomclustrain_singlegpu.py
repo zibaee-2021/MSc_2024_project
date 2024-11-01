@@ -155,13 +155,16 @@ def load_dataset():
                                  ColNames.MEAN_CORR_Z.value]].values  # should be list of 3-element numpy arrays
             aaindex = -1  # replacing `ntindex`
 
+            # De-duplicate on residue position (`seq_id`) in prep for transferring to `aacodes`:
             pdf_target_deduped = pdf_target.drop_duplicates(subset=CIF.S_seq_id.value, keep='first').reset_index(drop=True)
+            aacodes = pdf_target_deduped[ColNames.AA_LABEL_NUM.value].tolist()
+            aaindices = pdf_target_deduped[CIF.S_seq_id.value].tolist()  # should this be on non-deduped rather
+            # than deduped the index of each amino acid (should increase and repeat for several rows, as each aa has
+            # several atoms)
+            # bbindices = [row[CIF.A_label_atom_id.value] for row in pdf_target[CIF.A_label_atom_id.value].tolist() if ]
 
-            aacodes = [aanumdict[aa] for aa in pdf_target_deduped[CIF.S_mon_id.value].tolist()]  # the enumeration of the amino acid (i.e. 0-19)
-            aaindices = pdf_target_deduped[CIF.S_seq_id.value].tolist()  # the index of each amino acid (should increase and repeat for several rows, as each aa has several atoms)
-
-            atomindex = 0
-            lastnid = None
+            atomindex = 0  # not needed I think
+            lastnid = None  # not needed I think
 
             length = aaindex + 1
 
