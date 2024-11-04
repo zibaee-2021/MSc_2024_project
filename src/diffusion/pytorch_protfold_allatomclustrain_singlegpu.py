@@ -100,15 +100,12 @@ def load_dataset():
     validation_list = []
     tnum = 0
 
+    # FROM RNA VERSION. PROTEIN MAPPINGS ARE READ INSTEAD FROM JSON FILES VIA
+    # tokeniser.parse_tokenise_cif_write_flatfile():
     # atokendict = {"OP3": 0, "P": 1, "OP1": 2, "OP2": 3, "O5'": 4, "C5'": 5, "C4'": 6, "O4'": 7, "C3'": 8, "O3'": 9,
     #               "C2'": 10, "O2'": 11, "C1'": 12, "N9": 13, "C8": 14, "N7": 15, "C5": 16, "C6": 17, "O6": 18,
     #               "N1": 19, "C2": 20, "N2": 21, "N3": 22, "C4": 23, "O2": 24, "N4": 25, "N6": 26, "O4": 27}
-    atokendict = dh.read_atom_enumeration_mapping(fname=ATOMS_ONLY_CODES_NO_H)
-    # # Or if using amino-acid-atom pairings:
-    # atokendict = dh.read_atom_enumeration_mapping(fname=AA_ATOMS_CODES_NO_H)
-
     # ntnumdict = {'A': 0, 'U': 1, 'G': 2, 'C': 3}
-    aanumdict = dh.read_fasta_aa_enumeration_mapping(fname=AAS_CODES_3_LETTER)
 
     sum_d2 = 0
     sum_d = 0
@@ -129,10 +126,9 @@ def load_dataset():
             else:
                 pdf_target = tk.parse_tokenise_cif_write_flatfile(pdb_ids=target, dst_path_for_tokenised='data/tokenised')
 
-            # TODO: Add new column that indicates whether the atom is main-chain or side-chain, primarily to use for
-            # getting confirmation from DJ/SK that they are correct. Would potentially be useful for making an explicit
-            # filtration or to create two different data subsets, one with only backbones and one with only side-chains
-            # or backbone only vs all, etc.
+            # TODO: Add new column that indicates whether the atom is main-chain or side-chain, useful for being
+            #  more explicit about a filtering step and/or creating two data subsets: backbone only coords
+            #  and side-chain only coords.
 
             # GET MEAN-CORRECTED COORDINATES VIA 'mean_corrected_x', '_y', '_z' TO 3-ELEMENT LIST:
             coords = pdf_target[[ColNames.MEAN_CORR_X.value,
@@ -157,20 +153,18 @@ def load_dataset():
             # COMPLETE `bbindices`, VIA `BB_INDEX` IN DE-DUPLICATED DF:
             bbindices = pdf_target_deduped[ColNames.BB_INDEX.value].tolist()
 
+            # ONLY INCLUDED PROTEINS WITHIN A CERTAIN SIZE RANGE:
             if len(aacodes) < 10 or len(aacodes) > 500:
                 continue
 
             pdb_embed = torch.load(f'{PATH_TO_EMB_DIR}{target}.pt')
             assert pdb_embed.size(1) == len(aacodes)  # This is the length of protein (i.e. number of residues)
 
-            # In the RNA diffusion script, the minimum allowed number of atoms per base is 6.
-            # The smallest base, uracil has 12 atoms (cg4), but 40 atoms for a complete uracil nucleotide including the
-            # nitrogenous base, ribose sugar, and phosphate group in RNA. So, does this mean DJ is saying it's ok to
-            # include those RNA cifs with up to 34 of 40 atoms of a base missing?
+            # One backbone atom per residue, so len(bbindices) should equal number of residues.
             assert len(aacodes) == len(bbindices)
-            min_num_atoms_expected_per_aa = 5  # i.e. 5 non-H atoms in smallest residue glycine: 2xO, 2xC, 1xN, 5xH.
-            # bbindices should be one backbone atom per residue, so len(bbindices) should be number of residues.
-            # Therefore min number of expected atoms is len(bbindices) * min number of non-H atoms per residue.
+
+            min_num_atoms_expected_per_aa = 5  # Glycine has 5 non-H atoms: 2xO, 2xC, 1xN, 5xH.
+            # Min number of expected atoms is len(bbindices) * min number of non-H atoms per residue.
             min_num_expected_atoms = len(bbindices) * min_num_atoms_expected_per_aa
             num_of_atoms_in_cif = len(aaindices)  # This is number of atoms, due to outer-join, mimicking DJ's RNA code.
 
