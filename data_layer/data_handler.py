@@ -63,57 +63,21 @@ def write_list_to_space_separated_txt_file(list_to_write: list, file_name: str) 
     _restore_original_working_dir(cwd)
 
 
-def manually_write_aa_atoms_to_data_dir(path: str) -> None:
-    """
-    This function only needs to be run once.
-    :param path:
-    :return:
-    """
-    cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
-    aa_atoms = {
-        'A': ['N', 'CA', 'C', 'O', 'CB'],
-        'C': ['N', 'CA', 'C', 'O', 'CB', 'SG'],
-        'D': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'OD1', 'OD2'],
-        'E': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'CD', 'OE1', 'OE2'],
-        'F': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'CD1', 'CD2', 'CE1', 'CE2', 'CZ'],
-        'G': ['N', 'CA', 'C', 'O'],
-        'H': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'ND1', 'CD2', 'CE1', 'NE2'],
-        'I': ['N', 'CA', 'C', 'O', 'CB', 'CG1', 'CG2', 'CD1'],
-        'K': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'CD', 'CE', 'NZ'],
-        'L': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'CD1', 'CD2'],
-        'M': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'SD', 'CE'],
-        'N': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'OD1', 'ND2'],
-        'P': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'CD'],
-        'Q': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'CD', 'OE1', 'NE2'],
-        'R': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'CD', 'NE', 'CZ', 'NH1', 'NH2'],
-        'S': ['N', 'CA', 'C', 'O', 'CB', 'OG'],
-        'T': ['N', 'CA', 'C', 'O', 'CB', 'OG1', 'CG2'],
-        'V': ['N', 'CA', 'C', 'O', 'CB', 'CG1', 'CG2'],
-        'W': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'CD1', 'CD2', 'NE1', 'CE2', 'CE3', 'CZ2', 'CZ3', 'CH2'],
-        'Y': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'CD1', 'CD2', 'CE1', 'CE2', 'CZ', 'OH']
-    }
-    with open(path, 'w') as json_f:
-        json.dump(aa_atoms, json_f, indent=4)
-    _restore_original_working_dir(cwd)
+def write_enumerations_json(fname: str, dict_to_write: dict) -> None:
+    fname = fname.removesuffix('.json')
+    write_to_json_to_data_dir(fname=f'enumerations/{fname}.json', dict_to_write=dict_to_write)
 
 
-def read_fasta_aa_enumeration_mapping(fname: str) -> dict:
-    return read_json_from_data_dir(fname=f'aa_atoms_enumerated/{fname}')
-
-
-def read_3letter_aas_enumerated_mapping(fname: str) -> dict:
-    return read_json_from_data_dir(fname=f'aa_atoms_enumerated/{fname}')
-
-
-def read_atom_enumeration_mapping(fname: str) -> dict:
-    return read_json_from_data_dir(fname=f'aa_atoms_enumerated/{fname}')
+def _read_enumerations_json(fname: str) -> dict:
+    fname = fname.removesuffix('.json')
+    return read_json_from_data_dir(fname=f'enumerations/{fname}.json')
 
 
 def read_enumeration_mappings() -> Tuple[dict, dict, dict]:
-    atoms_enumerated = read_atom_enumeration_mapping(fname='unique_atoms_only_enumerated_no_hydrogens')
-    aas_enumerated = read_3letter_aas_enumerated_mapping(fname='aas_enumerated')
-    fasta_aas_enumerated = read_fasta_aa_enumeration_mapping('FASTA_aas_enumerated')
-    return atoms_enumerated, aas_enumerated, fasta_aas_enumerated
+    residues_atoms_enumerated = _read_enumerations_json(fname='residues_atoms_no_hydrogens')
+    atoms_enumerated = _read_enumerations_json(fname='unique_atoms_only_no_hydrogens')
+    residues_enumerated = _read_enumerations_json(fname=f'residues')
+    return residues_atoms_enumerated, atoms_enumerated, residues_enumerated
 
 
 def write_to_json_to_data_dir(fname: str, dict_to_write: dict):
@@ -145,8 +109,9 @@ def read_aa_atoms_yaml() -> Tuple[list, dict]:
 
 def write_pdb_uniprot_fasta_recs_to_json(recs: dict, filename: str) -> None:
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
-    with open(f'../data/FASTA/{filename}.json', 'w') as json_f:
-        json.dump(recs, json_f, indent=4)
+    fname = filename.removesuffix('.json')
+    with open(f'../data/FASTA/{fname}.json', 'w') as json_f:
+        json.dump(recs, json_f, indent=4)  # Works ok (despite warning that it expected SupportsWrite[str], not TextIO).
     _restore_original_working_dir(cwd)
 
 
@@ -245,30 +210,26 @@ def write_tokenised_cif_to_flatfile(pdb_id: str, pdf: pd.DataFrame, dst_data_dir
 
 def read_tokenised_cif_ssv_to_pdf(pdb_id: str, use_subdir=False) -> pd.DataFrame:
     """
-    Read pre-tokenised flatfile (i.e. ssv) of cif for given pdb id, from either `src/diffusion/data/tokenised`or
+    Read pre-tokenised flatfile (i.e. ssv) of cif for given pdb id, from either `src/diffusion/diff_data/tokenised`or
     top-level `data/tokenised`. The reason for having option of data path is simply a workaround to problems when
     reading from top-level data dir.
     :param pdb_id: Pdb id of protein.
-    :param use_subdir: True to use `src/diffusion/data/tokenised`, otherwise `data/tokenised`.
+    :param use_subdir: True to use `src/diffusion/diff_data/tokenised`, otherwise `data/tokenised`.
     :return: Pre-tokenised cif
     """
-    dst_dir = 'data/tokenised/'
     cwd = ''
-
     if not use_subdir:
-        # Store cwd to return to at end. Change current dir to data layer:
+        # STORE `cwd` TO RETURN TO AT END. CHANGE CURRENT DIR TO `data_layer`:
         cwd = _chdir_to_data_layer()
-        dst_dir = '../' + dst_dir
+        dst_dir = '../data/tokenised'
     else:
+        dst_dir = 'diff_data/tokenised'
         os.makedirs(dst_dir, exist_ok=True)
-
-    cif_ssv = f'{dst_dir}{pdb_id}.ssv'
+    cif_ssv = f'{dst_dir}/{pdb_id}.ssv'
     print(f'Attempting to read {cif_ssv}')
     pdf = pd.read_csv(cif_ssv, sep=' ')
-
     if not use_subdir:
         _restore_original_working_dir(cwd)
-
     return pdf
 
 
@@ -312,7 +273,41 @@ def read_lst_file_from_data_dir(fname):
     return f
 
 
+def _manually_write_aa_atoms_to_data_dir(path: str) -> None:
+    """
+    This function only needs to be run once.
+    :param path:
+    :return:
+    """
+    cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
+    aa_atoms = {
+        'A': ['N', 'CA', 'C', 'O', 'CB'],
+        'C': ['N', 'CA', 'C', 'O', 'CB', 'SG'],
+        'D': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'OD1', 'OD2'],
+        'E': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'CD', 'OE1', 'OE2'],
+        'F': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'CD1', 'CD2', 'CE1', 'CE2', 'CZ'],
+        'G': ['N', 'CA', 'C', 'O'],
+        'H': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'ND1', 'CD2', 'CE1', 'NE2'],
+        'I': ['N', 'CA', 'C', 'O', 'CB', 'CG1', 'CG2', 'CD1'],
+        'K': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'CD', 'CE', 'NZ'],
+        'L': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'CD1', 'CD2'],
+        'M': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'SD', 'CE'],
+        'N': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'OD1', 'ND2'],
+        'P': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'CD'],
+        'Q': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'CD', 'OE1', 'NE2'],
+        'R': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'CD', 'NE', 'CZ', 'NH1', 'NH2'],
+        'S': ['N', 'CA', 'C', 'O', 'CB', 'OG'],
+        'T': ['N', 'CA', 'C', 'O', 'CB', 'OG1', 'CG2'],
+        'V': ['N', 'CA', 'C', 'O', 'CB', 'CG1', 'CG2'],
+        'W': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'CD1', 'CD2', 'NE1', 'CE2', 'CE3', 'CZ2', 'CZ3', 'CH2'],
+        'Y': ['N', 'CA', 'C', 'O', 'CB', 'CG', 'CD1', 'CD2', 'CE1', 'CE2', 'CZ', 'OH']
+    }
+    with open(path, 'w') as json_f:
+        json.dump(aa_atoms, json_f, indent=4)
+    _restore_original_working_dir(cwd)
+
+
 # if __name__ == '__main__':
 # # This only needs to be run once:
-#     dh.manually_write_aa_atoms_to_data_dir(path='../data/aa_atoms_enumerated/aa_atoms.json')
+#     dh._manually_write_aa_atoms_to_data_dir(path='../data/aa_atoms_enumerated/aa_atoms.json')
 

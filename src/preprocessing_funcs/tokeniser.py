@@ -31,12 +31,12 @@ import os
 import pandas as pd
 from src.preprocessing_funcs import cif_parser as parser
 from data_layer import data_handler as dh
-from src.enums import ColNames, CIF
+from src.enums import ColNames, CIF, PolypeptideAtoms
 
 
 def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfileformat_to_write: str = 'ssv',
-                                      path_to_raw_cifs_dir='data/cif',
-                                      dst_path_for_tokenised='data/tokenised') -> pd.DataFrame:
+                                      path_to_raw_cifs_dir='diff_data/cif',
+                                      dst_path='diff_data/tokenised') -> pd.DataFrame:
     """
     Tokenise the mmCIF files for the specified proteins by PDB entry/entries (which is a unique identifier) and write
     to csv (and/or tsv and/or ssv) files at `data/tokenised/`.
@@ -44,11 +44,13 @@ def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfileformat_to_write: str
     :param pdb_ids: PDB identifier(s) for protein(s) to tokenise.
     :param flatfileformat_to_write: Write to ssv, csv or tsv. Use ssv by default.
     :param path_to_raw_cifs_dir: Path to source dir of the raw cif files to be parsed and tokenised.
-    Use `diffusion/data/cif` subdir by default. Expectation is that this is mostly called from diffusion dir.
-    :param dst_path_for_tokenised: Path to destination dir for the parsed and tokenised cif as a flat file.
-    Use `diffusion/data/tokenised` subdir by default. Expectation is that this is mostly called from `diffusion` dir.
-    If the caller passes in empty string '', it will be interpreted as instruction to write to `diffusion/data/tokenised`.
-    :return: Parsed and tokenised cif file in dataframe, which is also written to ssv in `data/tokenised`.
+    Use `src/diffusion/diff_data/cif` subdir by default. (Expecting to be called mostly from `src/diffusion` dir).
+    :param dst_path: Path to destination dir for the parsed and tokenised cif as a flat file.
+    Use `src/diffusion/diff_data/tokenised` by default (Expecting to be called mostly from `src/diffusion` dir).
+    If the caller passes in empty string '', it will be interpreted as instruction to write to
+    `src/diffusion/diff_data/tokenised`.
+    :return: Parsed and tokenised cif file in dataframe, which is also written to a flatfile (e.g. ssv) and to
+    `src/diffusion/diff_data/tokenised`.
     Dataframe with 13 Columns: 'A_label_asym_id', 'S_seq_id', 'A_id', 'A_label_atom_id', 'A_Cartn_x', 'A_Cartn_y',
     'A_Cartn_z', 'aa_label_num', 'atom_label_num', 'mean_xyz', 'mean_corrected_x', 'mean_corrected_y',
     'mean_corrected_z']. NB: 'A_Cartn_x', 'A_Cartn_y', 'A_Cartn_z' and 'mean_xyz' are no longer needed but I'm
@@ -71,6 +73,14 @@ def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfileformat_to_write: str
         # READ ENUMERATION MAPPINGS TO DICTS TO USE FOR CONVERTING RESIDUES AND ATOMS TO NUMBERS:
         atoms_enumerated, aas_enumerated, fasta_aas_enumerated = dh.read_enumeration_mappings()
 
+        # ASSIGN ATOM TO MAIN-CHAIN OR SIDE-CHAIN IN NEW COLUMN:
+        mainchain_atoms = PolypeptideAtoms.BACKBONE.value
+        sidechain_atoms = PolypeptideAtoms.SIDECHAIN.value
+
+        # TODO: Add new column that indicates whether the atom is main-chain or side-chain, useful for being
+        #  more explicit about a filtering step and/or creating two data subsets: backbone only coords
+        #  and side-chain only coords.
+        # pdf_cif.loc[:, ] =
         # ENUMERATE BY MAPPING RESIDUES, USING `aa_atoms_enumerated` JSON->DICT AND CAST TO INT:
         pdf_cif.loc[:, ColNames.AA_LABEL_NUM.value] = pdf_cif[CIF.S_mon_id.value].map(aas_enumerated).astype('Int64')
         expected_num_of_cols = 9
@@ -78,10 +88,14 @@ def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfileformat_to_write: str
                                                               f'But this has {len(pdf_cif.columns)}')
 
         # ENUMERATE BY MAPPING ATOM ('C', 'CA', ETC), USING JSON->DICT `aa_atoms_enumerated` AND CAST TO INT:
+        # TODO Shouldn't this also be throwing a warning to use .loc instead of slice/view thingy?
         pdf_cif[ColNames.ATOM_LABEL_NUM.value] = pdf_cif[CIF.A_label_atom_id.value].map(atoms_enumerated).astype('Int64')
         expected_num_of_cols = 10
         assert len(pdf_cif.columns) == expected_num_of_cols, (f'Dataframe should have {expected_num_of_cols} columns. '
                                                               f'But this has {len(pdf_cif.columns)}')
+
+        # REMOVE ORIGINAL RESIDUE COLUMN, NOT NEEDED NOW THAT ENUMERATED RESIDUE COLUMN IS CREATED:
+        pdf_cif = pdf_cif.drop(columns=[CIF.S_mon_id.value])
 
         # SUBTRACT EACH COORDINATE BY THE MEAN OF ALL 3 PER ATOM:
         pdf_cif.loc[:, ColNames.MEAN_COORDS.value] = pdf_cif[[CIF.A_Cartn_x.value,
@@ -90,15 +104,12 @@ def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfileformat_to_write: str
         pdf_cif.loc[:, ColNames.MEAN_CORR_X.value] = pdf_cif[CIF.A_Cartn_x.value] - pdf_cif[ColNames.MEAN_COORDS.value]
         pdf_cif.loc[:, ColNames.MEAN_CORR_Y.value] = pdf_cif[CIF.A_Cartn_y.value] - pdf_cif[ColNames.MEAN_COORDS.value]
         pdf_cif.loc[:, ColNames.MEAN_CORR_Z.value] = pdf_cif[CIF.A_Cartn_z.value] - pdf_cif[ColNames.MEAN_COORDS.value]
-
-        # REMOVE ORIGINAL RESIDUE COLUMN, NOT NEEDED NOW THAT ENUMERATED RESIDUE COLUMN IS CREATED:
-        pdf_cif = pdf_cif.drop(columns=[CIF.S_mon_id.value])
         expected_num_of_cols = 13
         assert len(pdf_cif.columns) == expected_num_of_cols, (f'Dataframe should have {expected_num_of_cols} columns. '
                                                               f'But this has {len(pdf_cif.columns)}')
 
         # WRITE OUT THE PARSED CIF TOKENS TO FLAT FILE (.ssv BY DEFAULT):
-        dh.write_tokenised_cif_to_flatfile(pdb_id, pdf_cif, dst_data_dir=dst_path_for_tokenised,
+        dh.write_tokenised_cif_to_flatfile(pdb_id, pdf_cif, dst_data_dir=dst_path,
                                            flatfiles=flatfileformat_to_write)
         return pdf_cif
 
@@ -108,6 +119,6 @@ if __name__ == '__main__':
     # write_tokenised_cif_to_csv(pdb_ids='4itq')
     print(os.getcwd())
     # Being called from here, which is in the subdir `preprocessing_funcs` so paths must be specified
-    parse_tokenise_cif_write_flatfile(pdb_ids='1OJ6', path_to_raw_cifs_dir='../diffusion/data/cif/',
-                                      dst_path_for_tokenised='../diffusion/data/tokenised/')
+    parse_tokenise_cif_write_flatfile(pdb_ids='1OJ6', path_to_raw_cifs_dir='../diffusion/diff_data/cif/',
+                                      dst_path='../diffusion/diff_data/tokenised/')
     pass

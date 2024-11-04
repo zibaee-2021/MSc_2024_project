@@ -59,8 +59,8 @@ PROT_TRAIN_CLUSTERS = 'prot_train_clusters'
 
 # paths:
 PATH_TO_CIF_DIR = '../src/diffusion/data/cif/'
-PATH_TO_TOKENISED_DIR = 'data/tokenised/'
-PATH_TO_EMB_DIR = 'data/emb/'
+PATH_TO_TOKENISED_DIR = 'diff_data/tokenised/'
+PATH_TO_EMB_DIR = 'diff_data/emb/'
 # OUTPUT FILE NAMES:
 PROT_E2E_MODEL_PT = 'prot_e2e_model.pt'
 # CAN BE INPUT OR OUTPUT:
@@ -115,20 +115,20 @@ def load_dataset():
     targetfile = _read_lst_file_from_src_diff_dir(fname=PROT_TRAIN_CLUSTERS)
 
     for line in targetfile:
+
         targets = line.rstrip().split()
         dh.make_api_calls_to_fetch_mmcif_and_write_locally(pdb_ids=targets, dst_path=PATH_TO_CIF_DIR)
         sp = []
+
         for target in targets:
+
+            # READ PRE-PARSED & TOKENISED DATA IF AVAILABLE, ELSE COMPUTE IT, PROVIDE IT IN A DATAFRAME:
             cif_tokenised_ssv = f'{PATH_TO_TOKENISED_DIR}{target}.ssv'
 
             if os.path.exists(cif_tokenised_ssv):
                 pdf_target = dh.read_tokenised_cif_ssv_to_pdf(pdb_id=target, use_subdir=True)
             else:
-                pdf_target = tk.parse_tokenise_cif_write_flatfile(pdb_ids=target, dst_path_for_tokenised='data/tokenised')
-
-            # TODO: Add new column that indicates whether the atom is main-chain or side-chain, useful for being
-            #  more explicit about a filtering step and/or creating two data subsets: backbone only coords
-            #  and side-chain only coords.
+                pdf_target = tk.parse_tokenise_cif_write_flatfile(pdb_ids=target, dst_path ='diff_data/tokenised')
 
             # GET MEAN-CORRECTED COORDINATES VIA 'mean_corrected_x', '_y', '_z' TO 3-ELEMENT LIST:
             coords = pdf_target[[ColNames.MEAN_CORR_X.value,
@@ -153,22 +153,25 @@ def load_dataset():
             # COMPLETE `bbindices`, VIA `BB_INDEX` IN DE-DUPLICATED DF:
             bbindices = pdf_target_deduped[ColNames.BB_INDEX.value].tolist()
 
-            # ONLY INCLUDED PROTEINS WITHIN A CERTAIN SIZE RANGE:
+            # ONLY INCLUDE PROTEINS WITHIN A CERTAIN SIZE RANGE:
             if len(aacodes) < 10 or len(aacodes) > 500:
                 continue
 
+            # READ PRE-COMPUTED EMBEDDING OF THIS PROTEIN:
             pdb_embed = torch.load(f'{PATH_TO_EMB_DIR}{target}.pt')
-            assert pdb_embed.size(1) == len(aacodes)  # This is the length of protein (i.e. number of residues)
+            # AND MAKE SURE IT HAS SAME NUMBER OF RESIDUES AS THE PARSED-TOKENISED SEQUENCE FROM MMCIF:
+            assert pdb_embed.size(1) == len(aacodes)
 
-            # One backbone atom per residue, so len(bbindices) should equal number of residues.
+            # ONE BACKBONE ATOM (ALPHA-CARBON) PER RESIDUE. SO `len(bbindices)` SHOULD EQUAL NUMBER OF RESIDUES:
             assert len(aacodes) == len(bbindices)
 
-            min_num_atoms_expected_per_aa = 5  # Glycine has 5 non-H atoms: 2xO, 2xC, 1xN, 5xH.
-            # Min number of expected atoms is len(bbindices) * min number of non-H atoms per residue.
-            min_num_expected_atoms = len(bbindices) * min_num_atoms_expected_per_aa
-            num_of_atoms_in_cif = len(aaindices)  # This is number of atoms, due to outer-join, mimicking DJ's RNA code.
+            # MAKE SURE YOU HAVE ATLEAST THE MINIMUM NUMBER OF EXPECTED ATOMS IN MMCIF DATA:
+            min_num_atoms_expected_per_residue = 5  # GLYCINE HAS 5 NON-H ATOMS: 2xO, 2xC, 1xN, 5xH.
+            min_num_expected_atoms = len(bbindices) * min_num_atoms_expected_per_residue
+            # THIS IS THE NUMBER OF ATOMS (AS ONE ROW PER ATOM DUE TO OUTER-JOIN. MIMICKS DJ'S RNA CODE:
+            num_of_atoms_in_cif = len(aaindices)
 
-            # Assuming the protein will never be 100% Glycines (otherwise I would use <= instead of <).
+            # ASSUME PROTEIN WILL NEVER BE 100% GLYCINE (OTHERWISE I'D USE `<=` INSTEAD OF `<`):
             if num_of_atoms_in_cif < min_num_expected_atoms:
                 print("WARNING: Too many missing atoms in ", target, len(aacodes), len(aaindices))
                 continue
