@@ -36,3 +36,36 @@ class CIF(Enum):
     HETATM = 'HETATM'
 
 # * ALL OF THESE POSITION INDICES ARE NEVER LESS THAN 1 (I.E. NEVER 0)
+
+
+"""
+  H    H    O*   H
+  |    |    ||   | 
+  N* - C* - C* - O*
+  |    |
+  H    R
+
+Backbone is from the central horizontal atoms in figure above, as well as the double-bonded Oxygen shown in vertical.
+Backbone atoms are highlighted with asterisks. 
+The first Carbon, from the amino-terminal end is the alpha-Carbon 
+which is therefore bound to the amino group H2N and to the side-chain group R.
+
+Using format from EMBL-EBI website, the backbone is:
+
+N - CA - C = 0 and OXT
+ 
+'OXT' which is the C-terminal Oxygen that only occurs once in the polypeptide chain.
+
+
+
+"""
+
+
+# AMINO ACID ATOMS USING FORMAT FROM EMBL-EBI WEBSITE. (EXCLUDING INDIVIDUAL HYDROGENS).
+class PolypeptideAtoms(Enum):
+
+    BACKBONE = ('C', 'CA', 'N', 'O', 'OXT')  # AKA "MAIN-CHAIN"
+    PEPTIDE_BOND_BACKBONE = ('C', 'N', 'O')  # SUBSET OF BACKBONE. PEPTIDE-BOND CARBONYL AND AMINO NITROGEN.
+    SIDECHAIN = ('CB', 'CD', 'CD1', 'CD2', 'CE', 'CE1', 'CE2', 'CE3', 'CG', 'CG1', 'CG2', 'CH2', 'CZ', 'CZ2',
+                       'CZ3', 'ND1', 'ND2', 'NE', 'NE1', 'NE2', 'NH1', 'NH2', 'NZ', 'OD1', 'OD2', 'OE1', 'OE2', 'OG',
+                       'OG1', 'OG2', 'OH', 'SD', 'SG')
