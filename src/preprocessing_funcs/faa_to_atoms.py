@@ -3,8 +3,9 @@ import fasta_reader as reader
 from data_layer import data_handler as dh
 
 
+
 def _get_aa_to_atom_map() -> dict:
-    aa_atoms_path = '../../data/aa_atoms_enumerated/aa_atoms.json'
+    aa_atoms_path = '../../data/atoms/per_residue_atoms.json'
     try:
         with open(aa_atoms_path, 'r') as json_f:
             aa_to_atoms_map = json.load(json_f)
