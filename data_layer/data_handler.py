@@ -178,9 +178,9 @@ def write_tokenised_cif_to_flatfile(pdb_id: str, pdf: pd.DataFrame, dst_data_dir
     if not dst_data_dir:  # i.e. use the top-level general-use `data` dir & define relpath from data_layer
         # Store cwd to return to at end. Change current dir to data layer:
         print(f'You did not pass any destination dir path for writing the tokenised cif flat flatfile to. '
-              f'Therefore it will be written to the top-level data dir at `diffSock/data/tokenised`.')
+              f'Therefore it will be written to the top-level data dir (`diffSock/data/tokenised`).')
         cwd = _chdir_to_data_layer()
-        dst_dir = '../data/tokenised/'
+        dst_data_dir = '../data/tokenised/'
     else:
         os.makedirs(dst_data_dir, exist_ok=True)
 
