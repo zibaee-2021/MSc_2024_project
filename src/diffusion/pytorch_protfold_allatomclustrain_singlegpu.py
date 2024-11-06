@@ -128,7 +128,7 @@ def load_dataset():
             if os.path.exists(cif_tokenised_ssv):
                 pdf_target = dh.read_tokenised_cif_ssv_to_pdf(pdb_id=target, use_subdir=True)
             else:
-                pdf_target = tk.parse_tokenise_cif_write_flatfile(pdb_ids=target, dst_path ='diff_data/tokenised')
+                pdf_target = tk.parse_tokenise_cif_write_flatfile(pdb_ids=target, relpath_to_dst_dir='diff_data/tokenised')
 
             # GET MEAN-CORRECTED COORDINATES VIA 'mean_corrected_x', '_y', '_z' TO 3-ELEMENT LIST:
             coords = pdf_target[[ColNames.MEAN_CORR_X.value,
