@@ -1,8 +1,6 @@
 import os
 from unittest import TestCase
-
 import pandas as pd
-
 from data_layer import data_handler as dh
 from src.preprocessing_funcs import data_validator as dv
 
@@ -10,7 +8,7 @@ from src.preprocessing_funcs import data_validator as dv
 class TestDataHandler(TestCase):
 
     def test_read_json_from_data_dir(self):
-        fname = 'aa_atoms_enumerated/aas_enumerated.json'
+        fname = 'enumerations/residues.json'
         f = dh.read_json_from_data_dir(fname)
         expected = {'ALA': 0,
                     'CYS': 1,
@@ -35,7 +33,7 @@ class TestDataHandler(TestCase):
         self.assertDictEqual(expected, f)
 
     def test_read_lst_file_from_data_dir(self):
-        fname = 'aa_atoms_enumerated/hydrogens.lst'
+        fname = 'enumerations/hydrogens.lst'
         f = dh.read_lst_file_from_data_dir(fname)
         expected = ['H', 'H2', 'HA', 'HA2', 'HA3', 'HB', 'HB1', 'HB2', 'HB3', 'HD1', 'HD2', 'HD3', 'HD11', 'HD12',
                     'HD13', 'HD21', 'HD22', 'HD23', 'HE', 'HE1', 'HE2', 'HE3', 'HE21', 'HE22', 'HG', 'HG1', 'HG2',
@@ -43,7 +41,6 @@ class TestDataHandler(TestCase):
                     'HXT', 'HZ', 'HZ1', 'HZ2', 'HZ3']
         self.assertListEqual(expected, f)
 
-    import os
     def test_check_protein_and_atom_numbering_of_parsed_cif(self):
         print(os.getcwd())
         pdf_to_profile = pd.read_csv('test_data/1OJ6_test.ssv', sep=' ')
