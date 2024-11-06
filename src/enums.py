@@ -30,7 +30,7 @@ class CIF(Enum):
     A_label_atom_id = 'A_label_atom_id'     # ATOM
     A_label_comp_id = 'A_label_comp_id'     # RESIDUE (3-LETTER)
     A_label_asym_id = 'A_label_asym_id'     # CHAIN
-    A_auth_seq_id = 'A_auth_seq_id'         # RESIDUE POSITION*
+    A_label_seq_id = 'A_label_seq_id'       # RESIDUE POSITION*
     A_Cartn_x = 'A_Cartn_x'                 # X COORDS
     A_Cartn_y = 'A_Cartn_y'                 # Y COORDS
     A_Cartn_z = 'A_Cartn_z'                 # Z COORDS

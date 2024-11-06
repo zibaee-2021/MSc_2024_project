@@ -8,7 +8,7 @@ General notes:
 
 atom_site:
     group_PDB,          # 'ATOM' or 'HETATM'    - Filter on this then remove.
-    auth_seq_id,        # residue position      - used to join with S_pdb_seq_num, then remove.
+    label_seq_id,        # residue position      - used to join with S_pdb_seq_num, then remove.
     label_comp_id,      # residue (3-letter)    - used to sanity-check with S_mon_id, then remove.
     id,                 # atom position         - sort on this, keep.
     label_atom_id,      # atom                  - keep
@@ -21,7 +21,7 @@ atom_site:
 _pdbx_poly_seq_scheme:
     seq_id,             # residue position      - sort on this, keep.
     mon_id,             # residue (3-letter)    - used to sanity-check with A_label_comp_id, keep*.
-    pdb_seq_num,        # residue position      - join to A_auth_seq_id, then remove.
+    pdb_seq_num,        # residue position      - join to A_label_seq_id, then remove.
     asym_id,            # chain                 - join on this, sort on this, then remove.
 
 """
@@ -129,6 +129,9 @@ def load_dataset():
                 pdf_target = dh.read_tokenised_cif_ssv_to_pdf(pdb_id=target, use_subdir=True)
             else:
                 pdf_target = tk.parse_tokenise_cif_write_flatfile(pdb_ids=target, relpath_to_dst_dir='diff_data/tokenised')
+
+            # # REMOVE ORIGINAL RESIDUE COLUMN, NOT NEEDED NOW THAT ENUMERATED RESIDUE COLUMN IS CREATED:
+            # pdf_cif = pdf_cif.drop(columns=[CIF.S_mon_id.value])
 
             # GET MEAN-CORRECTED COORDINATES VIA 'mean_corrected_x', '_y', '_z' TO 3-ELEMENT LIST:
             coords = pdf_target[[ColNames.MEAN_CORR_X.value,

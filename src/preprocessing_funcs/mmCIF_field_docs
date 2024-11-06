@@ -15,7 +15,7 @@ _atom_site
     .label_atom_id      PDB atom identifier (here is a name string, 'C', 'CA', etc).
     .label_comp_id      PDB 3-letter-code residue names. SANITY-CHECK: DO ATOM_SITE & PDBX_POLY_SEQ_SCHEME GIVE SAME AA
     .label_asym_id      PDB chain identifier.
-    .auth_seq_id        PDB residue number. (Author defined alternative to _atom_site.label_seq_id).
+    .label_seq_id        PDB residue number. Pointer to _entity_poly_seq.num in ENTITY_POLY_SEQ category.
     .Cartn_x            Cartesian X coordinate component describing the position of this atom site.
     .Cartn_y            Cartesian Y coordinate component describing the position of this atom site.
     .Cartn_z            Cartesian Z coordinate component describing the position of this atom site.

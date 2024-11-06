@@ -5,25 +5,49 @@ TOKENISER.PY
     - SUBTRACTS COORDINATES BY THEIR MEAN COORDINATE VALUES PER ATOM.
 ----------------------------------------------------------------------------------------------------------------------
 The following 14 mmCIF fields are extracted from the raw mmCIF files, parsed and tokenised into a dataframe.
-Here is a description of what these 14 fields are:
+These 14 fields are:
 
 atom_site:
-    group_PDB,          # 'ATOM' or 'HETATM'    - FILTER ON THIS, THEN REMOVE IT.
-    auth_seq_id,        # RESIDUE POSITION      - USED TO JOIN WITH S_pdb_seq_num, THEN REMOVE IT.
-    label_comp_id,      # RESIDUE (3-LETTER)    - USED TO SANITY-CHECK WITH S_mon_id, THEN REMOVE IT.
-    id,                 # ATOM POSITION         - SORT ON THIS, KEEP IN DF.
-    label_atom_id,      # ATOM                  - KEEP IN DF.
-    label_asym_id,      # CHAIN                 - JOIN ON THIS, SORT ON THIS, KEEP IN DF.
-    Cartn_x,            # ATOM COORDS          - X-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN)
-    Cartn_y,            # ATOM COORDS           - Y-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN)
-    Cartn_z,            # ATOM COORDS           - Z-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN)
+    group_PDB           # 'ATOM' or 'HETATM'    - FILTER ON THIS, THEN REMOVE IT.
+    label_seq_id         # RESIDUE POSITION      - USED TO JOIN WITH S_pdb_seq_num, THEN REMOVE IT.
+    label_comp_id       # RESIDUE (3-LETTER)    - USED TO SANITY-CHECK WITH S_mon_id, THEN REMOVE IT.
+    id                  # ATOM POSITION         - SORT ON THIS, KEEP IN DF.
+    label_atom_id       # ATOM                  - KEEP IN DF.
+    label_asym_id       # CHAIN                 - JOIN ON THIS, SORT ON THIS, KEEP IN DF.
+    Cartn_x             # ATOM COORDS          - X-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN)
+    Cartn_y             # ATOM COORDS           - Y-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN)
+    Cartn_z             # ATOM COORDS           - Z-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN)
     occupancy           # OCCUPANCY             - FILTER ON THIS, THEN REMOVE IT.
 
 _pdbx_poly_seq_scheme:
-    seq_id,             # RESIDUE POSITION      - SORT ON THIS, KEEP IN DATAFRAME.
-    mon_id,             # RESIDUE (3-LETTER)    - USE FOR SANITY-CHECK AGAINST A_label_comp_id, KEEP IN DF.
-    pdb_seq_num,        # RESIDUE POSITION      - JOIN TO A_auth_seq_id, THEN REMOVE IT.
-    asym_id,            # CHAIN                 - JOIN ON THIS, SORT ON THIS, THEN REMOVE IT.
+    seq_id              # RESIDUE POSITION      - SORT ON THIS, KEEP IN DATAFRAME.
+    mon_id              # RESIDUE (3-LETTER)    - USE FOR SANITY-CHECK AGAINST A_label_comp_id, KEEP IN DF.
+    pdb_seq_num         # RESIDUE POSITION      - JOIN TO A_label_seq_id, THEN REMOVE IT.
+    asym_id             # CHAIN                 - JOIN ON THIS, SORT ON THIS, THEN REMOVE IT.
+
+----------------------------------------------------------------------------------------------------------------------
+The output of the current `parse_tokenise_cif_write_flatfile()` function is a 17-column dataframe.
+These 17 columns are:
+
+A_label_asym_id       # CHAIN                 - JOIN ON THIS, SORT ON THIS, KEEP IN DF.
+S_seq_id              # RESIDUE POSITION      - SORT ON THIS, KEEP IN DATAFRAME.
+A_id                  # ATOM POSITION         - SORT ON THIS, KEEP IN DF.
+A_label_atom_id       # ATOM                  - KEEP IN DF.
+A_Cartn_x             # ATOM COORDS           - X-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN), CAN BE REMOVED.
+A_Cartn_y             # ATOM COORDS           - Y-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN), CAN BE REMOVED.
+A_Cartn_z             # ATOM COORDS           - Z-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN), CAN BE REMOVED.
+aa_label_num          # ENUMERATED RESIDUES   - EQUIVALENT TO `ntcodes` IN ORIGINAL RNA CODE. KEEP IN DF.
+bb_or_sc              # BACKBONE OR SIDE-CHAIN ATOM ('bb' or 'sc'), KEEP FOR POSSIBLE SUBSEQUENT OPERATIONS.
+bb_index              # POSITION OF THE ALPHA-CARBON FOR EACH RESIDUE IN THE POLYPEPTIDE (MAIN-CHAIN). KEEP IN DF.
+atom_label_num        # ENUMERATED ATOMS      - EQUIVALENT TO `atomcodes` IN ORIGINAL RNA CODE. KEEP IN DF.
+aa_atom_tuple         # RESIDUE-ATOM PAIR     - ONE TUPLE PER ROW. KEEP IN DF.
+aa_atom_label_num     # ENUMERATED RESIDUE-ATOM PAIRS. (ALTERNATIVE WAY TO GENERATE `atomcodes`).
+mean_xyz              # MEAN OF COORDS        - MEAN OF X, Y, Z COORDINATES FOR EACH ATOM. KEEP IN DF TEMPORARILY.
+mean_corrected_x      # X COORDINATES FOR EACH ATOM SUBTRACTED BY THE MEAN OF XYZ COORDINATES, ROW-WISE. KEEP IN DF.
+mean_corrected_y      # Y COORDINATES FOR EACH ATOM SUBTRACTED BY THE MEAN OF XYZ COORDINATES, ROW-WISE. KEEP IN DF.
+mean_corrected_z      # Z COORDINATES FOR EACH ATOM SUBTRACTED BY THE MEAN OF XYZ COORDINATES, ROW-WISE. KEEP IN DF.
+
+
 """
 
 
@@ -122,9 +146,6 @@ def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfile_format_to_write: st
         expected_num_of_cols = 13
         assert len(pdf_cif.columns) == expected_num_of_cols, (f'Dataframe should have {expected_num_of_cols} columns. '
                                                               f'But this has {len(pdf_cif.columns)}')
-
-        # REMOVE ORIGINAL RESIDUE COLUMN, NOT NEEDED NOW THAT ENUMERATED RESIDUE COLUMN IS CREATED:
-        pdf_cif = pdf_cif.drop(columns=[CIF.S_mon_id.value])
 
         # SUBTRACT EACH COORDINATE BY THE MEAN OF ALL 3 PER ATOM:
         pdf_cif.loc[:, ColNames.MEAN_COORDS.value] = pdf_cif[[CIF.A_Cartn_x.value,

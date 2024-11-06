@@ -23,8 +23,8 @@ and below (I know it's far from ideal duplicating info (even though just comment
 A_group_PDB             # 'ATOM' or 'HETATM'    - FILTER ON THIS, THEN REMOVE IT.
 S_seq_id.value,         # RESIDUE POSITION      - SORT ON THIS, KEEP IN DATAFRAME.
 S_mon_id.value,         # RESIDUE (3-letter)    - USE FOR SANITY-CHECK AGAINST A_label_comp_id, KEEP IN DF.
-S_pdb_seq_num.value,    # RESIDUE position      - JOIN TO A_auth_seq_id, THEN REMOVE IT.
-A_auth_seq_id.value,    # RESIDUE position      - USED TO JOIN WITH S_pdb_seq_num, THEN REMOVE IT.
+S_pdb_seq_num.value,    # RESIDUE position      - JOIN TO A_label_seq_id, THEN REMOVE IT.
+A_label_seq_id.value,   # RESIDUE position      - USED TO JOIN WITH S_pdb_seq_num, THEN REMOVE IT.
 A_label_comp_id.value,  # RESIDUE (3-letter)    - USED TO SANITY-CHECK WITH S_mon_id, THEN REMOVE IT.
 A_id.value,             # ATOM position         - SORT ON THIS, KEEP IN DF.
 A_label_atom_id.value,  # ATOM                  - KEEP IN DF.
@@ -81,7 +81,7 @@ def _extract_fields_from_atom_site(mmcif: dict) -> pd.DataFrame:
     label_atom_ids = mmcif[_atom_site + CIF.A_label_atom_id.value[2:]]  # ATOMS
     label_comp_ids = mmcif[_atom_site + CIF.A_label_comp_id.value[2:]]  # RESIDUE (3-LETTER)
     label_asym_ids = mmcif[_atom_site + CIF.A_label_asym_id.value[2:]]  # CHAIN
-    auth_seq_ids = mmcif[_atom_site + CIF.A_auth_seq_id.value[2:]]      # RESIDUE POSITION
+    label_seq_ids = mmcif[_atom_site + CIF.A_label_seq_id.value[2:]]      # RESIDUE POSITION
     x_coords = mmcif[_atom_site + CIF.A_Cartn_x.value[2:]]              # CARTESIAN X COORDS
     y_coords = mmcif[_atom_site+ CIF.A_Cartn_y.value[2:]]               # CARTESIAN Y COORDS
     z_coords = mmcif[_atom_site + CIF.A_Cartn_z.value[2:]]              # CARTESIAN Z COORDS
@@ -95,7 +95,7 @@ def _extract_fields_from_atom_site(mmcif: dict) -> pd.DataFrame:
             CIF.A_label_atom_id.value: label_atom_ids,      # 'N', 'CA', 'C', 'O', etc
             CIF.A_label_comp_id.value: label_comp_ids,      # 'ASP', 'ASP', 'ASP', etc
             CIF.A_label_asym_id.value: label_asym_ids,      # 'A', 'A', 'A', 'A', etc
-            CIF.A_auth_seq_id.value: auth_seq_ids,          # 1,1,1,1,1,1,2,2,2,2,2, etc
+            CIF.A_label_seq_id.value: label_seq_ids,          # 1,1,1,1,1,1,2,2,2,2,2, etc
             CIF.A_Cartn_x.value: x_coords,                  # COORDS
             CIF.A_Cartn_y.value: y_coords,                  # COORDS
             CIF.A_Cartn_z.value: z_coords,                  # COORDS
@@ -172,7 +172,7 @@ def parse_cif(pdb_id: str, path_to_raw_cif: str) -> pd.DataFrame:
         left=poly_seq_fields,
         right=atom_site_fields,
         left_on=[CIF.S_pdb_seq_num.value, CIF.S_asym_id.value],
-        right_on=[CIF.A_auth_seq_id.value, CIF.A_label_asym_id.value],
+        right_on=[CIF.A_label_seq_id.value, CIF.A_label_asym_id.value],
         how='outer'
     )
 
@@ -194,10 +194,10 @@ def parse_cif(pdb_id: str, path_to_raw_cif: str) -> pd.DataFrame:
         pdf_merged[col] = pd.to_numeric(pdf_merged[col], errors='coerce')
 
     # CAST STRINGS OF INTS TO NUMERIC AND THEN TO INTEGERS:
-    list_of_cols_to_cast = [CIF.S_seq_id.value,         # RESIDUE POSITION
-                            CIF.S_pdb_seq_num.value,    # RESIDUE POSITION
-                            CIF.A_id.value,             # ATOM POSITION
-                            CIF.A_auth_seq_id.value]    # RESIDUE POSITION
+    list_of_cols_to_cast = [CIF.S_seq_id.value,  # RESIDUE POSITION
+                            CIF.S_pdb_seq_num.value,  # RESIDUE POSITION
+                            CIF.A_id.value,  # ATOM POSITION
+                            CIF.A_label_seq_id.value]    # RESIDUE POSITION
 
     for col_to_cast in [list_of_cols_to_cast]:
         pdf_merged[col_to_cast] = pd.to_numeric(pdf_merged[col_to_cast], errors='coerce')
@@ -237,8 +237,8 @@ def parse_cif(pdb_id: str, path_to_raw_cif: str) -> pd.DataFrame:
         CIF.A_group_PDB.value,      # 'ATOM' or 'HETATM'    - FILTER ON THIS, THEN REMOVE IT.
         CIF.S_seq_id.value,         # RESIDUE POSITION      - SORT ON THIS, KEEP IN DATAFRAME.
         CIF.S_mon_id.value,         # RESIDUE (3-letter)    - USE FOR SANITY-CHECK AGAINST A_label_comp_id, KEEP IN DF.
-        CIF.S_pdb_seq_num.value,    # RESIDUE position      - JOIN TO A_auth_seq_id, THEN REMOVE IT.
-        CIF.A_auth_seq_id.value,    # RESIDUE position      - USED TO JOIN WITH S_pdb_seq_num, THEN REMOVE IT.
+        CIF.S_pdb_seq_num.value,    # RESIDUE position      - JOIN TO A_label_seq_id, THEN REMOVE IT.
+        CIF.A_label_seq_id.value,    # RESIDUE position      - USED TO JOIN WITH S_pdb_seq_num, THEN REMOVE IT.
         CIF.A_label_comp_id.value,  # RESIDUE (3-letter)    - USED TO SANITY-CHECK WITH S_mon_id, THEN REMOVE IT.
         CIF.A_id.value,             # ATOM position         - SORT ON THIS, KEEP IN DF.
         CIF.A_label_atom_id.value,  # ATOM                  - KEEP IN DF.
