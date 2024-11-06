@@ -112,7 +112,7 @@ def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfile_format_to_write: st
             # GET ATOM INDEX ('A_id') WHERE ATOM ('A_label_atom_id') IS 'CA' IN THIS RESIDUE GROUP.
             a_id_of_CA = group.loc[group[CIF.A_label_atom_id.value] == CIF.ALPHA_CARBON.value, CIF.A_id.value]
 
-            # CHECK THERE'S AT LEAST ONE CA IN THIS GROUP:
+            # CHECK THERE'S AT LEAST ONE 'CA' IN THIS GROUP:
             if a_id_of_CA.empty:
                 raise ValueError(f'No {CIF.ALPHA_CARBON.value} found in {CIF.A_label_atom_id.value} for group '
                                  f'{group[CIF.S_seq_id.value].iloc[0]}')
