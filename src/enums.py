@@ -8,7 +8,7 @@ class ColNames(Enum):
     AA_ATOM_LABEL_NUM = 'aa_atom_label_num'  # ENUMERATED RESIDUE-ATOM PAIRS. (ALTERNATIVE WAY TO GENERATE `atomcodes`).
     BB_INDEX = 'bb_index'                    # POSITION OF 1 OUT OF 5 BACKBONE ATOMS. I'VE CHOSEN ALPHA-CARBON ('CA').
     BACKBONE_SIDECHAIN = 'bb_or_sc'          # BACKBONE OR SIDE-CHAIN ATOM ('bb' or 'sc').
-    MEAN_COORDS = 'mean_xyz'                 # MEAN OF X, Y, Z, COORDINATES FOR EACH ATOM.
+    MEAN_COORDS = 'mean_xyz'                 # MEAN OF X, Y, Z COORDINATES FOR EACH ATOM.
     MEAN_CORR_X = 'mean_corrected_x'         # X COORDINATES FOR EACH ATOM SUBTRACTED BY THE MEAN OF XYZ COORDINATES.
     MEAN_CORR_Y = 'mean_corrected_y'         # Y COORDINATES FOR EACH ATOM SUBTRACTED BY THE MEAN OF XYZ COORDINATES.
     MEAN_CORR_Z = 'mean_corrected_z'         # Z COORDINATES FOR EACH ATOM SUBTRACTED BY THE MEAN OF XYZ COORDINATES.

@@ -76,10 +76,9 @@ def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfile_format_to_write: st
     Use `src/diffusion/diff_data/tokenised` by default, because expecting call from `src/diffusion`.
     :return: Parsed and tokenised cif file as dataframe which is also written to a flatfile (ssv by default)
     at `src/diffusion/diff_data/tokenised`.
-    Dataframe currently has these 16 Columns: ['A_label_asym_id', 'S_seq_id', 'A_id', 'A_label_atom_id', 'A_Cartn_x',
-    'A_Cartn_y', 'A_Cartn_z', 'aa_label_num', 'bb_or_sc', 'atom_label_num', `aa_atom_tuple`, `aa_atom_label_num`,
-    'mean_xyz', 'mean_corrected_x', 'mean_corrected_y', 'mean_corrected_z']. NB: 'A_Cartn_x', 'A_Cartn_y',
-    'A_Cartn_z' and 'mean_xyz' are not needed at the end (but I'm leaving them in for possible sanity-checks by eye).
+    Dataframe currently has these 17 Columns: ['A_label_asym_id', 'S_seq_id', 'A_id', 'A_label_atom_id', 'A_Cartn_x',
+    'A_Cartn_y', 'A_Cartn_z', 'aa_label_num', 'bb_or_sc', 'bb_index', 'atom_label_num', 'aa_atom_tuple',
+    'aa_atom_label_num', 'mean_xyz', 'mean_corrected_x', 'mean_corrected_y', 'mean_corrected_z'].
     """
     if isinstance(pdb_ids, str):
         pdb_ids = [pdb_ids]
@@ -119,7 +118,7 @@ def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfile_format_to_write: st
             else:
                 a_id = a_id_of_CA.iloc[0]
 
-                # ASSIGN THIS ATOM INDEX TO BB_INDEX FOR ALL ROWS IN THIS GROUP:
+                # ASSIGN THIS ATOM INDEX TO BB_INDEX ('bb_index') FOR ALL ROWS IN THIS GROUP:
                 pdf_cif.loc[group.index, ColNames.BB_INDEX.value] = a_id
 
         # MAKE NEW COLUMN FOR ENUMERATED RESIDUES, USING `aa_atoms_enumerated` JSON->DICT AND CAST TO INT.
