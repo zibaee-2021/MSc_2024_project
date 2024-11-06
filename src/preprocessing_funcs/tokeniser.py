@@ -84,8 +84,9 @@ def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfile_format_to_write: st
         pdb_ids = [pdb_ids]
 
     for pdb_id in pdb_ids:
-        relpath_to_raw_cifs_dir = relpath_to_raw_cifs_dir.removesuffix('.cif').removeprefix('/')
-        cif = f'{relpath_to_raw_cifs_dir}{pdb_id}.cif'
+        relpath_to_raw_cifs_dir = relpath_to_raw_cifs_dir.removesuffix('/').removeprefix('/')
+        pdb_id = pdb_id.removesuffix('.cif')
+        cif = f'{relpath_to_raw_cifs_dir}/{pdb_id}.cif'
         assert os.path.exists(cif)
 
         # PARSE mmCIF TO EXTRACT 14 FIELDS, TO FILTER, IMPUTE, SORT AND JOIN ON, RETURNING AN 8-COLUMN DATAFRAME:
