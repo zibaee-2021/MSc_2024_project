@@ -1,7 +1,15 @@
 What some of the sequence labels/properties (https://mmcif.wwpdb.org/dictionaries/mmcif_ma.dic/Items/) are is not
 so obvious from their names, so I list and describe them here:
 
+** THE PURPOSE OF INCLUDING _pdbx_poly_seq_scheme IS TO INCLUDE ROWS FOR RESIDUES MISSING FROM _atom_site,
+EVEN THOUGH THOSE ROWS WILL JUST CONTAIN NAN (THEN 0) COORDINATES.
+(I AM ALSO USING IT TO CHECK THAT THE RESIDUES ARE INDEED THE SAME FOR THE SEQUENCE POSITION NUMBERING IN
+BOTH SETS OF FIELDS, I.E. IF _pdbx_poly_seq_scheme.seq_id=148 IS GLUTAMATE, THEN _atom_site.label_seq_id=148
+SHOULD ALSO BE GLUTAMATE). AS FAR AS I HAVE SEEN SO FAR, THIS IS INDEED THE CASE. **
+
+
 _pdbx_poly_seq_scheme
+
     .seq_id             Pointer to _atom_site.label_seq_id, itself a pointer to _entity_poly_seq.num:
                                 Sequence number, must be unique and increasing.
     .mon_id             Pointer to _entity_poly_seq.mon_id, itself a pointer to _chem_comp.id:
