@@ -106,34 +106,44 @@ def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfile_format_to_write: st
         assert len(pdf_cif.columns) == expected_num_of_cols, (f'Dataframe should have {expected_num_of_cols} columns. '
                                                               f'But this has {len(pdf_cif.columns)}')
 
-        # ASSIGN INDEX OF CHOSEN BACKBONE ATOM (ALPHA-CARBON) FOR ALL ROWS PER RESIDUE ROW-WISE SUBSETS:
-        for _, group in pdf_cif.groupby(CIF.S_seq_id.value):  # GROUP BY RESIDUE POSITION VALUE
-            # GET ATOM INDEX ('A_id') WHERE ATOM ('A_label_atom_id') IS 'CA' IN THIS RESIDUE GROUP.
-            a_id_of_CA = group.loc[group[CIF.A_label_atom_id.value] == CIF.ALPHA_CARBON.value, CIF.A_id.value]
+            # ASSIGN INDEX OF CHOSEN BACKBONE ATOM (ALPHA-CARBON) FOR ALL ROWS IN EACH ROW-WISE-RESIDUE SUBSETS:
+            for S_seq_id, group in pdf_cif.groupby(CIF.S_seq_id.value):  # GROUP BY RESIDUE POSITION VALUE
+                # GET ATOM INDEX ('A_id') WHERE ATOM ('A_label_atom_id') IS 'CA' IN THIS RESIDUE GROUP.
+                a_id_of_CA = group.loc[group[CIF.A_label_atom_id.value] == CIF.ALPHA_CARBON.value, CIF.A_id.value]
 
-            # CHECK THERE'S AT LEAST ONE 'CA' IN THIS GROUP:
-            if a_id_of_CA.empty:
-                raise ValueError(f'No {CIF.ALPHA_CARBON.value} found in {CIF.A_label_atom_id.value} for group '
-                                 f'{group[CIF.S_seq_id.value].iloc[0]}')
-            else:
-                a_id = a_id_of_CA.iloc[0]
+                # CHECK THERE'S AT LEAST ONE 'CA' IN THIS GROUP:
+                if a_id_of_CA.empty:
+                    print(f'Currently no CA for this residue {S_seq_id}')
+                    continue
+                    # raise ValueError(f'No {CIF.ALPHA_CARBON.value} found in {CIF.A_label_atom_id.value} for group '
+                    #                  f'{group[CIF.S_seq_id.value].iloc[0]}')
+                else:
+                    a_id = a_id_of_CA.iloc[0]
 
-                # ASSIGN THIS ATOM INDEX TO BB_INDEX ('bb_index') FOR ALL ROWS IN THIS GROUP:
-                pdf_cif.loc[group.index, ColNames.BB_INDEX.value] = a_id
+                    # ASSIGN THIS ATOM INDEX TO BB_INDEX ('bb_index') FOR ALL ROWS IN THIS GROUP:
+                    pdf_cif.loc[group.index, ColNames.BB_INDEX.value] = a_id
 
-        # MAKE NEW COLUMN FOR ENUMERATED RESIDUES, USING `aa_atoms_enumerated` JSON->DICT AND CAST TO INT.
-        # NB: `residues_enumerated` AND `S_mon_id` ARE BOTH USING 3-LETTER RESIDUE NAMES SO MAPPING IS FINE:
-        pdf_cif.loc[:, ColNames.AA_LABEL_NUM.value] = pdf_cif[CIF.S_mon_id.value].map(residues_enumerated).astype('Int64')
-        # pdf_cif[ColNames.AA_LABEL_NUM.value] = pdf_cif[CIF.S_mon_id.value].map(residues_enumerated).astype('Int64')
-        expected_num_of_cols = 10
-        assert len(pdf_cif.columns) == expected_num_of_cols, (f'Dataframe should have {expected_num_of_cols} columns. '
-                                                              f'But this has {len(pdf_cif.columns)}')
+            # CAST NEW COLUMN TO INT64 (FOR CONSISTENCY):
+            pdf_cif[ColNames.BB_INDEX.value] = pd.to_numeric(pdf_cif[ColNames.BB_INDEX.value], errors='coerce')
+            pdf_cif[ColNames.BB_INDEX.value] = pdf_cif[ColNames.BB_INDEX.value].astype('Int64')
 
-        # MAKE NEW COLUMN FOR ENUMERATED ATOMS ('C', 'CA', ETC), USING JSON->DICT `aa_atoms_enumerated` AND CAST TO INT:
-        pdf_cif[ColNames.ATOM_LABEL_NUM.value] = pdf_cif[CIF.A_label_atom_id.value].map(atoms_enumerated).astype('Int64')
-        expected_num_of_cols = 11
-        assert len(pdf_cif.columns) == expected_num_of_cols, (f'Dataframe should have {expected_num_of_cols} columns. '
-                                                              f'But this has {len(pdf_cif.columns)}')
+            # MAKE NEW COLUMN FOR ENUMERATED RESIDUES, USING JSON->DICT, CAST TO INT.
+            #`residues_enumerated` DICT KEY AND `S_mon_id` COLUMN VALUES MAP VIA 3-LETTER RESIDUE NAMES:
+            pdf_cif.loc[:, ColNames.AA_LABEL_NUM.value] = (pdf_cif[CIF.S_mon_id.value]
+                                                           .map(residues_enumerated)
+                                                           .astype('Int64'))
+            # pdf_cif[ColNames.AA_LABEL_NUM.value] = pdf_cif[CIF.S_mon_id.value].map(residues_enumerated).astype('Int64')
+            expected_num_of_cols = 11
+            assert len(pdf_cif.columns) == expected_num_of_cols, \
+                f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf_cif.columns)}'
+
+            # MAKE NEW COLUMN FOR ENUMERATED ATOMS ('C', 'CA', ETC), USING JSON->DICT, CAST TO INT:
+            pdf_cif[ColNames.ATOM_LABEL_NUM.value] = (pdf_cif[CIF.A_label_atom_id.value]
+                                                      .map(atoms_enumerated)
+                                                      .astype('Int64'))
+            expected_num_of_cols = 12
+            assert len(pdf_cif.columns) == expected_num_of_cols, \
+                f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf_cif.columns)}'
 
         # MAKE NEW COLUMN OF RESIDUE-ATOM PAIRS:
         # NEW COLUMN NAME = `aa_atom_tuple`. E.G. CONTAINS ('ASP':'C'), ('ASP':'CA'), ETC:
