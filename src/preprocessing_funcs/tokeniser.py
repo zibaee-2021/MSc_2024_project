@@ -58,6 +58,97 @@ from data_layer import data_handler as dh
 from src.enums import ColNames, CIF, PolypeptideAtoms
 
 
+def _assign_mean_corrected_coordinates(pdf: pd.DataFrame) -> pd.DataFrame:
+    # SUBTRACT EACH COORDINATE BY THE MEAN OF ALL 3 PER ATOM:
+    pdf.loc[:, ColNames.MEAN_COORDS.value] = pdf[[CIF.A_Cartn_x.value,
+                                                          CIF.A_Cartn_y.value,
+                                                          CIF.A_Cartn_z.value]].mean(axis=1)
+    pdf.loc[:, ColNames.MEAN_CORR_X.value] = pdf[CIF.A_Cartn_x.value] - pdf[ColNames.MEAN_COORDS.value]
+    pdf.loc[:, ColNames.MEAN_CORR_Y.value] = pdf[CIF.A_Cartn_y.value] - pdf[ColNames.MEAN_COORDS.value]
+    pdf.loc[:, ColNames.MEAN_CORR_Z.value] = pdf[CIF.A_Cartn_z.value] - pdf[ColNames.MEAN_COORDS.value]
+    expected_num_of_cols = 18
+    assert len(pdf.columns) == expected_num_of_cols, \
+        f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf.columns)}'
+    return pdf
+
+
+def _enumerate_residues_atoms(pdf_cif: pd.DataFrame, residues_atoms_enumerated: dict) -> pd.DataFrame:
+    # MAKE NEW COLUMN OF RESIDUE-ATOM PAIRS:
+    # NEW COLUMN NAME = `aa_atom_tuple`. E.G. CONTAINS ('ASP':'C'), ('ASP':'CA'), ETC:
+    pdf_cif[ColNames.AA_ATOM_PAIR.value] = list(zip(pdf_cif[CIF.S_mon_id.value],
+                                                    pdf_cif[CIF.A_label_atom_id.value]))
+
+    # MAKE NEW COLUMN FOR ENUMERATED RESIDUE-ATOM PAIRS, VIA RESIDUE-ATOM PAIRS, THEN CAST TO INT:
+    # NEW COLUMN NAME = `aa_atom_label_num`. E.G. CONTAINS 0, 386, 127, ETC.
+    pdf_cif[ColNames.AA_ATOM_LABEL_NUM.value] = (pdf_cif[ColNames.AA_ATOM_PAIR.value]
+                                                 .map(residues_atoms_enumerated)
+                                                 .astype('Int64'))
+    expected_num_of_cols = 14
+    assert len(pdf_cif.columns) == expected_num_of_cols, \
+        f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf_cif.columns)}'
+    return pdf_cif
+
+
+def _enumerate_atoms(pdf_cif, atoms_enumerated: dict) -> pd.DataFrame:
+    # MAKE NEW COLUMN FOR ENUMERATED ATOMS ('C', 'CA', ETC), USING JSON->DICT, CAST TO INT:
+    pdf_cif[ColNames.ATOM_LABEL_NUM.value] = (pdf_cif[CIF.A_label_atom_id.value]
+                                              .map(atoms_enumerated)
+                                              .astype('Int64'))
+    expected_num_of_cols = 12
+    assert len(pdf_cif.columns) == expected_num_of_cols, \
+        f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf_cif.columns)}'
+    return pdf_cif
+
+
+def _enumerate_residues(pdf: pd.DataFrame, residues_enumerated: dict) -> pd.DataFrame:
+    # MAKE NEW COLUMN FOR ENUMERATED RESIDUES, USING JSON->DICT, CAST TO INT.
+    # `residues_enumerated` DICT KEY AND `S_mon_id` COLUMN VALUES MAP VIA 3-LETTER RESIDUE NAMES:
+    pdf.loc[:, ColNames.AA_LABEL_NUM.value] = (pdf[CIF.S_mon_id.value]
+                                                   .map(residues_enumerated)
+                                                   .astype('Int64'))
+    # pdf_cif[ColNames.AA_LABEL_NUM.value] = pdf_cif[CIF.S_mon_id.value].map(residues_enumerated).astype('Int64')
+    expected_num_of_cols = 11
+    assert len(pdf.columns) == expected_num_of_cols, \
+        f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf.columns)}'
+    return pdf
+
+
+def _assign_backbone_index_to_all_residue_rows(pdf: pd.DataFrame) -> pd.DataFrame:
+    # ASSIGN INDEX OF CHOSEN BACKBONE ATOM (ALPHA-CARBON) FOR ALL ROWS IN EACH ROW-WISE-RESIDUE SUBSETS:
+    for S_seq_id, group in pdf.groupby(CIF.S_seq_id.value):  # GROUP BY RESIDUE POSITION VALUE
+        # GET ATOM INDEX ('A_id') WHERE ATOM ('A_label_atom_id') IS 'CA' IN THIS RESIDUE GROUP.
+        a_id_of_CA = group.loc[group[CIF.A_label_atom_id.value] == CIF.ALPHA_CARBON.value, CIF.A_id.value]
+
+        # CHECK THERE'S AT LEAST ONE 'CA' IN THIS GROUP:
+        if a_id_of_CA.empty:
+            print(f'Currently no CA for this residue {S_seq_id}')
+            continue
+            # raise ValueError(f'No {CIF.ALPHA_CARBON.value} found in {CIF.A_label_atom_id.value} for group '
+            #                  f'{group[CIF.S_seq_id.value].iloc[0]}')
+        else:
+            a_id = a_id_of_CA.iloc[0]
+
+            # ASSIGN THIS ATOM INDEX TO BB_INDEX ('bb_index') FOR ALL ROWS IN THIS GROUP:
+            pdf.loc[group.index, ColNames.BB_INDEX.value] = a_id
+
+    # CAST NEW COLUMN TO INT64 (FOR CONSISTENCY):
+    pdf[ColNames.BB_INDEX.value] = pd.to_numeric(pdf[ColNames.BB_INDEX.value], errors='coerce')
+    pdf[ColNames.BB_INDEX.value] = pdf[ColNames.BB_INDEX.value].astype('Int64')
+    return pdf
+
+
+def _make_column_to_indicate_backbone_or_sidechain(pdf: pd.DataFrame) -> pd.DataFrame:
+    # TODO: test this filter step to create new column with 'bb' or 'sc' works or not.
+    # MAKE NEW COLUMN TO INDICATE IF ATOM IS FROM POLYPEPTIDE BACKBONE ('bb) OR SIDE-CHAIN ('sc'):
+    pdf.loc[:, ColNames.BACKBONE_SIDECHAIN.value] = (pdf[CIF.A_label_atom_id.value]
+                                                         .isin(PolypeptideAtoms.BACKBONE.value)
+                                                         .replace({True: 'bb', False: 'sc'}))
+    expected_num_of_cols = 9
+    assert len(pdf.columns) == expected_num_of_cols, \
+        f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf.columns)}'
+    return pdf
+
+
 # TODO this function needs a unit test. Make a small cif and make sure it does what it should
 def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfile_format_to_write: str = 'ssv',
                                       relpath_to_cifs_dir='diff_data/cif',
@@ -98,78 +189,12 @@ def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfile_format_to_write: st
             # NB: THIS FUNCTION CURRENTLY READS ONLY THE MAPPINGS THAT LACK HYDROGENS:
             residues_atoms_enumerated, atoms_enumerated, residues_enumerated = dh.read_enumeration_mappings()
 
-            # TODO: test this filter step to create new column with 'bb' or 'sc' works or not.
-            # MAKE NEW COLUMN TO INDICATE IF ATOM IS FROM POLYPEPTIDE BACKBONE ('bb) OR SIDE-CHAIN ('sc'):
-            pdf_cif.loc[:, ColNames.BACKBONE_SIDECHAIN.value] = (pdf_cif[CIF.A_label_atom_id.value]
-                                                                 .isin(PolypeptideAtoms.BACKBONE.value)
-                                                                 .replace({True: 'bb', False: 'sc'}))
-            expected_num_of_cols = 9
-            assert len(pdf_cif.columns) == expected_num_of_cols, \
-                f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf_cif.columns)}'
-
-            # ASSIGN INDEX OF CHOSEN BACKBONE ATOM (ALPHA-CARBON) FOR ALL ROWS IN EACH ROW-WISE-RESIDUE SUBSETS:
-            for S_seq_id, group in pdf_cif.groupby(CIF.S_seq_id.value):  # GROUP BY RESIDUE POSITION VALUE
-                # GET ATOM INDEX ('A_id') WHERE ATOM ('A_label_atom_id') IS 'CA' IN THIS RESIDUE GROUP.
-                a_id_of_CA = group.loc[group[CIF.A_label_atom_id.value] == CIF.ALPHA_CARBON.value, CIF.A_id.value]
-
-                # CHECK THERE'S AT LEAST ONE 'CA' IN THIS GROUP:
-                if a_id_of_CA.empty:
-                    print(f'Currently no CA for this residue {S_seq_id}')
-                    continue
-                    # raise ValueError(f'No {CIF.ALPHA_CARBON.value} found in {CIF.A_label_atom_id.value} for group '
-                    #                  f'{group[CIF.S_seq_id.value].iloc[0]}')
-                else:
-                    a_id = a_id_of_CA.iloc[0]
-
-                    # ASSIGN THIS ATOM INDEX TO BB_INDEX ('bb_index') FOR ALL ROWS IN THIS GROUP:
-                    pdf_cif.loc[group.index, ColNames.BB_INDEX.value] = a_id
-
-            # CAST NEW COLUMN TO INT64 (FOR CONSISTENCY):
-            pdf_cif[ColNames.BB_INDEX.value] = pd.to_numeric(pdf_cif[ColNames.BB_INDEX.value], errors='coerce')
-            pdf_cif[ColNames.BB_INDEX.value] = pdf_cif[ColNames.BB_INDEX.value].astype('Int64')
-
-            # MAKE NEW COLUMN FOR ENUMERATED RESIDUES, USING JSON->DICT, CAST TO INT.
-            #`residues_enumerated` DICT KEY AND `S_mon_id` COLUMN VALUES MAP VIA 3-LETTER RESIDUE NAMES:
-            pdf_cif.loc[:, ColNames.AA_LABEL_NUM.value] = (pdf_cif[CIF.S_mon_id.value]
-                                                           .map(residues_enumerated)
-                                                           .astype('Int64'))
-            # pdf_cif[ColNames.AA_LABEL_NUM.value] = pdf_cif[CIF.S_mon_id.value].map(residues_enumerated).astype('Int64')
-            expected_num_of_cols = 11
-            assert len(pdf_cif.columns) == expected_num_of_cols, \
-                f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf_cif.columns)}'
-
-            # MAKE NEW COLUMN FOR ENUMERATED ATOMS ('C', 'CA', ETC), USING JSON->DICT, CAST TO INT:
-            pdf_cif[ColNames.ATOM_LABEL_NUM.value] = (pdf_cif[CIF.A_label_atom_id.value]
-                                                      .map(atoms_enumerated)
-                                                      .astype('Int64'))
-            expected_num_of_cols = 12
-            assert len(pdf_cif.columns) == expected_num_of_cols, \
-                f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf_cif.columns)}'
-
-            # MAKE NEW COLUMN OF RESIDUE-ATOM PAIRS:
-            # NEW COLUMN NAME = `aa_atom_tuple`. E.G. CONTAINS ('ASP':'C'), ('ASP':'CA'), ETC:
-            pdf_cif[ColNames.AA_ATOM_PAIR.value] = list(zip(pdf_cif[CIF.S_mon_id.value],
-                                                            pdf_cif[CIF.A_label_atom_id.value]))
-
-            # MAKE NEW COLUMN FOR ENUMERATED RESIDUE-ATOM PAIRS, VIA RESIDUE-ATOM PAIRS, THEN CAST TO INT:
-            # NEW COLUMN NAME = `aa_atom_label_num`. E.G. CONTAINS 0, 386, 127, ETC.
-            pdf_cif[ColNames.AA_ATOM_LABEL_NUM.value] = (pdf_cif[ColNames.AA_ATOM_PAIR.value]
-                                                         .map(atoms_enumerated)
-                                                         .astype('Int64'))
-            expected_num_of_cols = 14
-            assert len(pdf_cif.columns) == expected_num_of_cols, \
-                f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf_cif.columns)}'
-
-            # SUBTRACT EACH COORDINATE BY THE MEAN OF ALL 3 PER ATOM:
-            pdf_cif.loc[:, ColNames.MEAN_COORDS.value] = pdf_cif[[CIF.A_Cartn_x.value,
-                                                                  CIF.A_Cartn_y.value,
-                                                                  CIF.A_Cartn_z.value]].mean(axis=1)
-            pdf_cif.loc[:, ColNames.MEAN_CORR_X.value] = pdf_cif[CIF.A_Cartn_x.value] - pdf_cif[ColNames.MEAN_COORDS.value]
-            pdf_cif.loc[:, ColNames.MEAN_CORR_Y.value] = pdf_cif[CIF.A_Cartn_y.value] - pdf_cif[ColNames.MEAN_COORDS.value]
-            pdf_cif.loc[:, ColNames.MEAN_CORR_Z.value] = pdf_cif[CIF.A_Cartn_z.value] - pdf_cif[ColNames.MEAN_COORDS.value]
-            expected_num_of_cols = 18
-            assert len(pdf_cif.columns) == expected_num_of_cols, \
-                f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf_cif.columns)}'
+            pdf_cif = _make_column_to_indicate_backbone_or_sidechain(pdf_cif)
+            pdf_cif = _assign_backbone_index_to_all_residue_rows(pdf_cif)
+            pdf_cif = _enumerate_residues(pdf_cif, residues_enumerated)
+            pdf_cif = _enumerate_atoms(pdf_cif, atoms_enumerated)
+            pdf_cif = _enumerate_residues_atoms(pdf_cif, residues_atoms_enumerated)
+            pdf_cif = _assign_mean_corrected_coordinates(pdf_cif)
 
             # WRITE OUT THE PARSED CIF TOKENS TO FLAT FILE (ssv BY DEFAULT):
             dh.write_tokenised_cif_to_flatfile(pdb_id, pdf_cif,
