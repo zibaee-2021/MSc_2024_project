@@ -8,20 +8,20 @@ General notes:
 
 atom_site:
     group_PDB,          # 'ATOM' or 'HETATM'    - Filter on this then remove.
-    label_seq_id,        # residue position      - used to join with S_pdb_seq_num, then remove.
+    label_seq_id,       # residue position     - used to join with S_seq_id, then remove.
     label_comp_id,      # residue (3-letter)    - used to sanity-check with S_mon_id, then remove.
     id,                 # atom position         - sort on this, keep.
     label_atom_id,      # atom                  - keep
-    label_asym_id,      # chain                 - join on this, sort on this, keep.
+    label_asym_id,      # chain                 - join on this, keep.
     Cartn_x,            # atom x-coordinates
     Cartn_y,            # atom y-coordinates
     Cartn_z,            # atom z-coordinates
     occupancy           # occupancy
 
 _pdbx_poly_seq_scheme:
-    seq_id,             # residue position      - sort on this, keep.
+    seq_id,             # residue position      - join on this, sort on this, keep.
     mon_id,             # residue (3-letter)    - used to sanity-check with A_label_comp_id, keep*.
-    pdb_seq_num,        # residue position      - join to A_label_seq_id, then remove.
+    pdb_seq_num,        # residue position      - keep for now, as may relate to sequence as input to make embeddings.
     asym_id,            # chain                 - join on this, sort on this, then remove.
 
 """
