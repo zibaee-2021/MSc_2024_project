@@ -98,13 +98,14 @@ def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfile_format_to_write: st
             # NB: THIS FUNCTION CURRENTLY READS ONLY THE MAPPINGS THAT LACK HYDROGENS:
             residues_atoms_enumerated, atoms_enumerated, residues_enumerated = dh.read_enumeration_mappings()
 
-        # TODO: test this filter step to create new column with 'bb' or 'sc' works or not.
-        # MAKE NEW COLUMN TO INDICATE IF ATOM IS FROM POLYPEPTIDE BACKBONE ('bb) OR SIDE-CHAIN ('sc'):
-        pdf_cif.loc[:, ColNames.BACKBONE_SIDECHAIN.value] \
-            = pdf_cif[CIF.A_label_atom_id.value].isin(PolypeptideAtoms.BACKBONE.value).replace({True: 'bb', False: 'sc'})
-        expected_num_of_cols = 9
-        assert len(pdf_cif.columns) == expected_num_of_cols, (f'Dataframe should have {expected_num_of_cols} columns. '
-                                                              f'But this has {len(pdf_cif.columns)}')
+            # TODO: test this filter step to create new column with 'bb' or 'sc' works or not.
+            # MAKE NEW COLUMN TO INDICATE IF ATOM IS FROM POLYPEPTIDE BACKBONE ('bb) OR SIDE-CHAIN ('sc'):
+            pdf_cif.loc[:, ColNames.BACKBONE_SIDECHAIN.value] = (pdf_cif[CIF.A_label_atom_id.value]
+                                                                 .isin(PolypeptideAtoms.BACKBONE.value)
+                                                                 .replace({True: 'bb', False: 'sc'}))
+            expected_num_of_cols = 9
+            assert len(pdf_cif.columns) == expected_num_of_cols, \
+                f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf_cif.columns)}'
 
             # ASSIGN INDEX OF CHOSEN BACKBONE ATOM (ALPHA-CARBON) FOR ALL ROWS IN EACH ROW-WISE-RESIDUE SUBSETS:
             for S_seq_id, group in pdf_cif.groupby(CIF.S_seq_id.value):  # GROUP BY RESIDUE POSITION VALUE
@@ -145,31 +146,35 @@ def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfile_format_to_write: st
             assert len(pdf_cif.columns) == expected_num_of_cols, \
                 f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf_cif.columns)}'
 
-        # MAKE NEW COLUMN OF RESIDUE-ATOM PAIRS:
-        # NEW COLUMN NAME = `aa_atom_tuple`. E.G. CONTAINS ('ASP':'C'), ('ASP':'CA'), ETC:
-        pdf_cif[ColNames.AA_ATOM_PAIR.value] = list(zip(pdf_cif[CIF.S_mon_id.value], pdf_cif[CIF.A_label_atom_id.value]))
+            # MAKE NEW COLUMN OF RESIDUE-ATOM PAIRS:
+            # NEW COLUMN NAME = `aa_atom_tuple`. E.G. CONTAINS ('ASP':'C'), ('ASP':'CA'), ETC:
+            pdf_cif[ColNames.AA_ATOM_PAIR.value] = list(zip(pdf_cif[CIF.S_mon_id.value],
+                                                            pdf_cif[CIF.A_label_atom_id.value]))
 
-        # MAKE NEW COLUMN FOR ENUMERATED RESIDUE-ATOM PAIRS, VIA RESIDUE-ATOM PAIRS, THEN CAST TO INT:
-        # NEW COLUMN NAME = `aa_atom_label_num`. E.G. CONTAINS 0, 386, 127, ETC.
-        pdf_cif[ColNames.AA_ATOM_LABEL_NUM.value] = pdf_cif[ColNames.AA_ATOM_PAIR.value].map(atoms_enumerated).astype('Int64')
-        expected_num_of_cols = 13
-        assert len(pdf_cif.columns) == expected_num_of_cols, (f'Dataframe should have {expected_num_of_cols} columns. '
-                                                              f'But this has {len(pdf_cif.columns)}')
+            # MAKE NEW COLUMN FOR ENUMERATED RESIDUE-ATOM PAIRS, VIA RESIDUE-ATOM PAIRS, THEN CAST TO INT:
+            # NEW COLUMN NAME = `aa_atom_label_num`. E.G. CONTAINS 0, 386, 127, ETC.
+            pdf_cif[ColNames.AA_ATOM_LABEL_NUM.value] = (pdf_cif[ColNames.AA_ATOM_PAIR.value]
+                                                         .map(atoms_enumerated)
+                                                         .astype('Int64'))
+            expected_num_of_cols = 14
+            assert len(pdf_cif.columns) == expected_num_of_cols, \
+                f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf_cif.columns)}'
 
-        # SUBTRACT EACH COORDINATE BY THE MEAN OF ALL 3 PER ATOM:
-        pdf_cif.loc[:, ColNames.MEAN_COORDS.value] = pdf_cif[[CIF.A_Cartn_x.value,
-                                                              CIF.A_Cartn_y.value,
-                                                              CIF.A_Cartn_z.value]].mean(axis=1)
-        pdf_cif.loc[:, ColNames.MEAN_CORR_X.value] = pdf_cif[CIF.A_Cartn_x.value] - pdf_cif[ColNames.MEAN_COORDS.value]
-        pdf_cif.loc[:, ColNames.MEAN_CORR_Y.value] = pdf_cif[CIF.A_Cartn_y.value] - pdf_cif[ColNames.MEAN_COORDS.value]
-        pdf_cif.loc[:, ColNames.MEAN_CORR_Z.value] = pdf_cif[CIF.A_Cartn_z.value] - pdf_cif[ColNames.MEAN_COORDS.value]
-        expected_num_of_cols = 16
-        assert len(pdf_cif.columns) == expected_num_of_cols, (f'Dataframe should have {expected_num_of_cols} columns. '
-                                                              f'But this has {len(pdf_cif.columns)}')
+            # SUBTRACT EACH COORDINATE BY THE MEAN OF ALL 3 PER ATOM:
+            pdf_cif.loc[:, ColNames.MEAN_COORDS.value] = pdf_cif[[CIF.A_Cartn_x.value,
+                                                                  CIF.A_Cartn_y.value,
+                                                                  CIF.A_Cartn_z.value]].mean(axis=1)
+            pdf_cif.loc[:, ColNames.MEAN_CORR_X.value] = pdf_cif[CIF.A_Cartn_x.value] - pdf_cif[ColNames.MEAN_COORDS.value]
+            pdf_cif.loc[:, ColNames.MEAN_CORR_Y.value] = pdf_cif[CIF.A_Cartn_y.value] - pdf_cif[ColNames.MEAN_COORDS.value]
+            pdf_cif.loc[:, ColNames.MEAN_CORR_Z.value] = pdf_cif[CIF.A_Cartn_z.value] - pdf_cif[ColNames.MEAN_COORDS.value]
+            expected_num_of_cols = 18
+            assert len(pdf_cif.columns) == expected_num_of_cols, \
+                f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf_cif.columns)}'
 
-        # WRITE OUT THE PARSED CIF TOKENS TO FLAT FILE (ssv BY DEFAULT):
-        dh.write_tokenised_cif_to_flatfile(pdb_id, pdf_cif, dst_data_dir=relpath_to_dst_dir,
-                                           flatfiles=flatfile_format_to_write)
+            # WRITE OUT THE PARSED CIF TOKENS TO FLAT FILE (ssv BY DEFAULT):
+            dh.write_tokenised_cif_to_flatfile(pdb_id, pdf_cif,
+                                               dst_data_dir=relpath_to_dst_dir,
+                                               flatfiles=flatfile_format_to_write)
         return pdf_cif
 
 
@@ -178,6 +183,7 @@ if __name__ == '__main__':
     # write_tokenised_cif_to_csv(pdb_ids='4itq')
     print(os.getcwd())
     # Being called from here, which is in the subdir `preprocessing_funcs` so paths must be specified
-    parse_tokenise_cif_write_flatfile(pdb_ids='1OJ6', relpath_to_raw_cifs_dir='../diffusion/diff_data/cif/',
+    parse_tokenise_cif_write_flatfile(pdb_ids='1OJ6',
+                                      relpath_to_cifs_dir='../diffusion/diff_data/cif/',
                                       relpath_to_dst_dir='../diffusion/diff_data/tokenised/')
     pass
