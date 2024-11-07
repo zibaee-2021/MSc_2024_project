@@ -7,23 +7,23 @@ TOKENISER.PY
 The following 14 mmCIF fields are extracted from the raw mmCIF files, parsed and tokenised into a dataframe.
 These 14 fields are:
 
-atom_site:
+_atom_site:
     group_PDB           # 'ATOM' or 'HETATM'    - FILTER ON THIS, THEN REMOVE IT.
-    label_seq_id         # RESIDUE POSITION      - USED TO JOIN WITH S_pdb_seq_num, THEN REMOVE IT.
-    label_comp_id       # RESIDUE (3-LETTER)    - USED TO SANITY-CHECK WITH S_mon_id, THEN REMOVE IT.
-    id                  # ATOM POSITION         - SORT ON THIS, KEEP IN DF.
-    label_atom_id       # ATOM                  - KEEP IN DF.
-    label_asym_id       # CHAIN                 - JOIN ON THIS, SORT ON THIS, KEEP IN DF.
-    Cartn_x             # ATOM COORDS          - X-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN)
+    label_seq_id        # RESIDUE POSITION      - JOIN TO S_seq_id, THEN REMOVE IT.
+    label_comp_id       # RESIDUE (3-LETTER)    - FOR SANITY-CHECK WITH S_mon_id, THEN REMOVE IT.
+    id                  # ATOM POSITION         - SORT ON THIS, KEEP IN DATAFRAME.
+    label_atom_id       # ATOM                  - KEEP IN DATAFRAME.
+    label_asym_id       # CHAIN                 - JOIN TO S_asym_id, KEEP IN DATAFRAME.
+    Cartn_x             # ATOM COORDS           - X-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN)
     Cartn_y             # ATOM COORDS           - Y-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN)
     Cartn_z             # ATOM COORDS           - Z-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN)
     occupancy           # OCCUPANCY             - FILTER ON THIS, THEN REMOVE IT.
 
 _pdbx_poly_seq_scheme:
-    seq_id              # RESIDUE POSITION      - SORT ON THIS, KEEP IN DATAFRAME.
-    mon_id              # RESIDUE (3-LETTER)    - USE FOR SANITY-CHECK AGAINST A_label_comp_id, KEEP IN DF.
-    pdb_seq_num         # RESIDUE POSITION      - JOIN TO A_label_seq_id, THEN REMOVE IT.
-    asym_id             # CHAIN                 - JOIN ON THIS, SORT ON THIS, THEN REMOVE IT.
+    seq_id              # RESIDUE POSITION      - JOIN TO A_label_seq_id. SORT ON THIS, KEEP IN DATAFRAME.
+    mon_id              # RESIDUE (3-LETTER)    - USE FOR SANITY-CHECK AGAINST A_label_comp_id, KEEP IN DATAFRAME.
+    pdb_seq_num         # RESIDUE POSITION      - KEEP FOR NOW, AS MAY RELATE TO INPUT TO MAKE EMBEDDINGS.
+    asym_id             # CHAIN                 - JOIN TO A_label_asym_id, SORT ON THIS, THEN REMOVE IT.
 
 ----------------------------------------------------------------------------------------------------------------------
 The output of the current `parse_tokenise_cif_write_flatfile()` function is a 17-column dataframe.
@@ -60,7 +60,7 @@ from src.enums import ColNames, CIF, PolypeptideAtoms
 
 # TODO this function needs a unit test. Make a small cif and make sure it does what it should
 def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfile_format_to_write: str = 'ssv',
-                                      relpath_to_raw_cifs_dir='diff_data/cif',
+                                      relpath_to_cifs_dir='diff_data/cif',
                                       relpath_to_dst_dir='diff_data/tokenised') -> pd.DataFrame:
     """
     Parse, then tokenise structure-related information in mmCIF files for proteins as specified by their PDB
@@ -70,7 +70,7 @@ def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfile_format_to_write: st
     Tokenising involves enumerating atoms and residues, and mean-adjusting x, y, z coordinates.
     :param pdb_ids: PDB identifier(s) for protein(s) to tokenise.
     :param flatfile_format_to_write: Write to ssv, csv or tsv. Use ssv by default.
-    :param relpath_to_raw_cifs_dir: Relative path to source dir of the raw cif files to be parsed and tokenised.
+    :param relpath_to_cifs_dir: Relative path to source dir of the raw cif files to be parsed and tokenised.
     Uses `src/diffusion/diff_data/cif` subdir by default, because expecting call from `src/diffusion`.
     :param relpath_to_dst_dir: Relative path to destination dir for the parsed and tokenised cif as a flat file.
     Use `src/diffusion/diff_data/tokenised` by default, because expecting call from `src/diffusion`.
@@ -80,24 +80,23 @@ def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfile_format_to_write: st
     'A_Cartn_y', 'A_Cartn_z', 'aa_label_num', 'bb_or_sc', 'bb_index', 'atom_label_num', 'aa_atom_tuple',
     'aa_atom_label_num', 'mean_xyz', 'mean_corrected_x', 'mean_corrected_y', 'mean_corrected_z'].
     """
+    flatfile_format_to_write = flatfile_format_to_write.removeprefix('.').lower()
     if isinstance(pdb_ids, str):
         pdb_ids = [pdb_ids]
-
     for pdb_id in pdb_ids:
-        relpath_to_raw_cifs_dir = relpath_to_raw_cifs_dir.removesuffix('/').removeprefix('/')
-        pdb_id = pdb_id.removesuffix('.cif')
-        cif = f'{relpath_to_raw_cifs_dir}/{pdb_id}.cif'
-        assert os.path.exists(cif)
+        # IF ALREADY PARSED AND SAVED AS FLATFILE, JUST READ IT IN:
+        cif_tokenised_ssv = f'{relpath_to_dst_dir}/{pdb_id}.{flatfile_format_to_write}'
+        if os.path.exists(cif_tokenised_ssv):
+            pdf_cif = dh.read_tokenised_cif_ssv_to_pdf(pdb_id=pdb_id, use_subdir=True)
+        else:
+            # OTHERWISE GET THE CIF DATA (EITHER LOCALLY OR VIA API)
+            relpath_to_cifs_dir = relpath_to_cifs_dir.removesuffix('/').removeprefix('/')
+            # PARSE mmCIF TO EXTRACT 14 FIELDS, TO FILTER, IMPUTE, SORT AND JOIN ON, RETURNING AN 8-COLUMN DATAFRAME:
+            pdf_cif = parser.parse_cif(pdb_id=pdb_id, relpath_to_cifs_dir=relpath_to_cifs_dir)
 
-        # PARSE mmCIF TO EXTRACT 14 FIELDS, TO FILTER, IMPUTE, SORT AND JOIN ON, RETURNING AN 8-COLUMN DATAFRAME:
-        pdf_cif = parser.parse_cif(pdb_id=pdb_id, path_to_raw_cif=cif)
-        expected_num_of_cols = 8
-        assert len(pdf_cif.columns) == expected_num_of_cols, (f'Dataframe should have {expected_num_of_cols} columns. '
-                                                              f'But this has {len(pdf_cif.columns)}')
-
-        # READ ENUMERATION MAPPINGS TO DICTS TO USE FOR CONVERTING RESIDUES AND ATOMS TO NUMBERS:
-        # NB: THIS FUNCTION CURRENTLY READS ONLY THE MAPPINGS THAT LACK HYDROGENS:
-        residues_atoms_enumerated, atoms_enumerated, residues_enumerated = dh.read_enumeration_mappings()
+            # READ MAPPINGS TO DICTS, FOR CONVERTING RESIDUES & ATOMS TO NUMERIC REPRESENTATIONS FOR TOKENISATION:
+            # NB: THIS FUNCTION CURRENTLY READS ONLY THE MAPPINGS THAT LACK HYDROGENS:
+            residues_atoms_enumerated, atoms_enumerated, residues_enumerated = dh.read_enumeration_mappings()
 
         # TODO: test this filter step to create new column with 'bb' or 'sc' works or not.
         # MAKE NEW COLUMN TO INDICATE IF ATOM IS FROM POLYPEPTIDE BACKBONE ('bb) OR SIDE-CHAIN ('sc'):

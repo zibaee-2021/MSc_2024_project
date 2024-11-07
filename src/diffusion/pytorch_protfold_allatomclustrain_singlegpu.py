@@ -123,12 +123,7 @@ def load_dataset():
         for target in targets:
 
             # READ PRE-PARSED & TOKENISED DATA IF AVAILABLE, ELSE COMPUTE IT, PROVIDE IT IN A DATAFRAME:
-            cif_tokenised_ssv = f'{PATH_TO_TOKENISED_DIR}{target}.ssv'
-
-            if os.path.exists(cif_tokenised_ssv):
-                pdf_target = dh.read_tokenised_cif_ssv_to_pdf(pdb_id=target, use_subdir=True)
-            else:
-                pdf_target = tk.parse_tokenise_cif_write_flatfile(pdb_ids=target, relpath_to_dst_dir='diff_data/tokenised')
+            pdf_target = tk.parse_tokenise_cif_write_flatfile(pdb_ids=target, relpath_to_dst_dir='diff_data/tokenised')
 
             # # REMOVE ORIGINAL RESIDUE COLUMN, NOT NEEDED NOW THAT ENUMERATED RESIDUE COLUMN IS CREATED:
             # pdf_cif = pdf_cif.drop(columns=[CIF.S_mon_id.value])
