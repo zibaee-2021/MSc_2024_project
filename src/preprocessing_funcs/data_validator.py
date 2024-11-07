@@ -51,3 +51,9 @@ def check_protein_and_atom_numbering_of_parsed_tokenised_cif_ssv(pdb: dict):
         increase = '' if is_increasing else 'not '
         print(f'Numbers in {CIF.A_id.value} do {increase}always increase as you go down the rows.')
 
+
+# Some code that may be useful for checking types etc
+#     print(f'data type is {pdf_merged[CIF.S_asym_id.value].dtype}')
+#     print(f'any hidden values: {pdf_merged[CIF.S_asym_id.value].apply(repr).unique()}')
+#     # my_df['stuff'] = my_df['stuff'].str.strip()  # to remove any leading or trailing whitespace
+#     print(f'how many rows of each dtype {pdf_merged[CIF.S_asym_id.value].value_counts(dropna=False)}')
