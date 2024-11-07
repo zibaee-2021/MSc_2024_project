@@ -140,7 +140,7 @@ def load_dataset():
             aaindices = pdf_target[CIF.S_seq_id.value].tolist()
 
             # GET `bbindices`, VIA ASSIGNING DUPLICATED VALUES TO NEW COLUMN `BB_INDEX`, (DE-DUPLICATED BELOW):
-            pdf_target = pdf_target.loc[pdf_target[CIF.A_label_atom_id.value] == 'CA', ColNames.BB_INDEX.value] = pdf_target[CIF.A_id.value]
+            pdf_target = pdf_target.loc[pdf_target[CIF.A_label_atom_id.value] == CIF.ALPHA_CARBON.value, ColNames.BB_INDEX.value] = pdf_target[CIF.A_id.value]
 
             # DE-DUPLICATE ROWS ON RESIDUE POSITION (`S_seq_id`) TO GET CORRECT DIMENSION OF `aacodes` and `bbindices`:
             pdf_target_deduped = pdf_target.drop_duplicates(subset=CIF.S_seq_id.value, keep='first').reset_index(drop=True)
