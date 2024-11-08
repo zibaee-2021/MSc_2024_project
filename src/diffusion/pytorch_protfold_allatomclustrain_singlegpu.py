@@ -136,6 +136,9 @@ def load_dataset():
             # GET `atomcodes` VIA 'atom_label_num' COLUMN, WHICH HOLDS ENUMERATED ATOMS VALUES:
             atomcodes = pdf_target[ColNames.ATOM_LABEL_NUM.value].tolist()
 
+            # GET `aaatomcodes` VIA 'aa_atom_label_num' COLUMN, WHICH HOLDS ENUMERATED RESIDUE-ATOM PAIRS VALUES:
+            aaatomcodes = pdf_target[ColNames.AA_ATOM_LABEL_NUM.value].tolist()
+
             # GET `aaindices`. EXPECTED TO HAVE REPEATED VALUES BECAUSE 1 AA HAS 5 OR MORE ATOMS (NOT DUPLICATE ROWS):
             aaindices = pdf_target[CIF.S_seq_id.value].tolist()
 
@@ -163,7 +166,7 @@ def load_dataset():
             # ONE BACKBONE ATOM (ALPHA-CARBON) PER RESIDUE. SO `len(bbindices)` SHOULD EQUAL NUMBER OF RESIDUES:
             assert len(aacodes) == len(bbindices)
 
-            # MAKE SURE YOU HAVE ATLEAST THE MINIMUM NUMBER OF EXPECTED ATOMS IN MMCIF DATA:
+            # MAKE SURE YOU HAVE AT LEAST THE MINIMUM NUMBER OF EXPECTED ATOMS IN MMCIF DATA:
             min_num_atoms_expected_per_residue = 5  # GLYCINE HAS 5 NON-H ATOMS: 2xO, 2xC, 1xN, 5xH.
             min_num_expected_atoms = len(bbindices) * min_num_atoms_expected_per_residue
             # THIS IS THE NUMBER OF ATOMS (AS ONE ROW PER ATOM DUE TO OUTER-JOIN. MIMICKS DJ'S RNA CODE:
@@ -176,6 +179,7 @@ def load_dataset():
 
             aacodes = np.asarray(aacodes, dtype=np.uint8)
             atomcodes = np.asarray(atomcodes, dtype=np.uint8)
+            aaatomcodes = np.asarray(aaatomcodes, dtype=np.uint8)
             bbindices = np.asarray(bbindices, dtype=np.int16)
             aaindices = np.asarray(aaindices, dtype=np.int16)
 
@@ -194,6 +198,7 @@ def load_dataset():
             print(target_coords.shape, target, len(aacodes), distances.min(), distances.max())
 
             sp.append((aacodes, atomcodes, aaindices, bbindices, target, target_coords))
+            # sp.append((aacodes, aaatomcodes, aaindices, bbindices, target, target_coords))
 
         # Choose every 10th sample for validation
         if tnum % 10 == 0:
