@@ -268,7 +268,7 @@ def parse_cif(pdb_id: str, relpath_to_cifs_dir: str) -> pd.DataFrame:
     Parse given local mmCIF file to extract and tabulate necessary atom and amino acid data fields from
     `_pdbx_poly_seq_scheme` and `_atom_site`.
     :param pdb_id: Alphanumeric 4-character Protein Databank Identifier. e.g. '1OJ6'.
-    :param relpath_to_cifs_dir: Relative path to locally downloaded raw mmCIF file, e.g. 'path/to/1OJ6' (MUST INCLUDE PDB ID).
+    :param relpath_to_cifs_dir: Relative path to local raw mmCIF file, e.g. 'path/to/1OJ6' (MUST INCLUDE PDB ID).
     :return: Necessary fields extracted from raw mmCIF (from local copy or API) and joined in one table.
     """
     mmcif_dict = _get_mmcif_data(pdb_id, relpath_to_cifs_dir)
