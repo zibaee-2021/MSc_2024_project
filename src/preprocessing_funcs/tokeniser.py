@@ -14,9 +14,9 @@ _atom_site:
     id                  # ATOM POSITION         - SORT ON THIS, KEEP IN DATAFRAME.
     label_atom_id       # ATOM                  - KEEP IN DATAFRAME.
     label_asym_id       # CHAIN                 - JOIN TO S_asym_id, KEEP IN DATAFRAME.
-    Cartn_x             # ATOM COORDS           - X-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN)
-    Cartn_y             # ATOM COORDS           - Y-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN)
-    Cartn_z             # ATOM COORDS           - Z-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN)
+    Cartn_x             # COORDINATES           - ATOM X-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN)
+    Cartn_y             # COORDINATES           - ATOM Y-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN)
+    Cartn_z             # COORDINATES           - ATOM Z-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN)
     occupancy           # OCCUPANCY             - FILTER ON THIS, THEN REMOVE IT.
 
 _pdbx_poly_seq_scheme:
