@@ -48,12 +48,11 @@ class TestPreprocessingFuncs(TestCase):
             pdf_merged.to_csv(path_or_buf=f'{self.pdf_merged_dir}/{self.test_1V5H_ssv}', sep=' ', index=False)
 
     def test_parse_tokenise_cif_write_flatfile(self):
-
-        pdf = tk.parse_tokenise_cif_write_flatfile(pdb_ids='test_1V5H',
-                                                   relpath_to_cifs_dir='test_data/cif',
-                                                   relpath_to_dst_dir='test_data/tokenised')
-
+        pdf = tk.parse_tokenise_cif_write_flatfile(pdb_ids=self.test_1V5H_ssv[:-4],
+                                                   relpath_to_cifs_dir=self.cif_dir,
+                                                   relpath_to_dst_dir=self.tokenised_dir)
         # pdf.to_csv(path_or_buf='test_data/tokenised/test_1V5H.ssv', sep=' ', index=False)
+
         self.assertEqual(18, len(pdf.columns))
 
     def test_datatypes_after_casting(self):
