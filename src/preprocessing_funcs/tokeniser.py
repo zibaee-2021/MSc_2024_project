@@ -33,16 +33,16 @@ A_label_asym_id       # CHAIN                 - JOIN ON THIS, SORT ON THIS, KEEP
 S_seq_id              # RESIDUE POSITION      - SORT ON THIS, KEEP IN DATAFRAME.
 A_id                  # ATOM POSITION         - SORT ON THIS, KEEP IN DF.
 A_label_atom_id       # ATOM                  - KEEP IN DF.
-A_Cartn_x             # ATOM COORDS           - X-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN), CAN BE REMOVED.
-A_Cartn_y             # ATOM COORDS           - Y-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN), CAN BE REMOVED.
-A_Cartn_z             # ATOM COORDS           - Z-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN), CAN BE REMOVED.
+A_Cartn_x             # COORDINATES           - ATOM X-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN), CAN BE REMOVED.
+A_Cartn_y             # COORDINATES           - ATOM Y-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN), CAN BE REMOVED.
+A_Cartn_z             # COORDINATES           - ATOM Z-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN), CAN BE REMOVED.
 aa_label_num          # ENUMERATED RESIDUES   - EQUIVALENT TO `ntcodes` IN ORIGINAL RNA CODE. KEEP IN DF.
 bb_or_sc              # BACKBONE OR SIDE-CHAIN ATOM ('bb' or 'sc'), KEEP FOR POSSIBLE SUBSEQUENT OPERATIONS.
 bb_index              # POSITION OF THE ALPHA-CARBON FOR EACH RESIDUE IN THE POLYPEPTIDE (MAIN-CHAIN). KEEP IN DF.
 atom_label_num        # ENUMERATED ATOMS      - EQUIVALENT TO `atomcodes` IN ORIGINAL RNA CODE. KEEP IN DF.
 aa_atom_tuple         # RESIDUE-ATOM PAIR     - ONE TUPLE PER ROW. KEEP IN DF.
-aa_atom_label_num     # ENUMERATED RESIDUE-ATOM PAIRS. (ALTERNATIVE WAY TO GENERATE `atomcodes`).
-mean_xyz              # MEAN OF COORDS        - MEAN OF X, Y, Z COORDINATES FOR EACH ATOM. KEEP IN DF TEMPORARILY.
+aa_atom_label_num     # ENUMERATED RESIDUE-ATOM PAIRS. (ALTERNATIVE WAY TO GENERATE `atomcodes`, will be `aaatomcodes`).
+mean_xyz              # MEAN OF COORDINATES   - MEAN OF X, Y, Z COORDINATES FOR EACH ATOM. KEEP IN DF TEMPORARILY.
 mean_corrected_x      # X COORDINATES FOR EACH ATOM SUBTRACTED BY THE MEAN OF XYZ COORDINATES, ROW-WISE. KEEP IN DF.
 mean_corrected_y      # Y COORDINATES FOR EACH ATOM SUBTRACTED BY THE MEAN OF XYZ COORDINATES, ROW-WISE. KEEP IN DF.
 mean_corrected_z      # Z COORDINATES FOR EACH ATOM SUBTRACTED BY THE MEAN OF XYZ COORDINATES, ROW-WISE. KEEP IN DF.
@@ -72,37 +72,53 @@ def _assign_mean_corrected_coordinates(pdf: pd.DataFrame) -> pd.DataFrame:
     return pdf
 
 
-def _enumerate_residues_atoms(pdf_cif: pd.DataFrame, residues_atoms_enumerated: dict) -> pd.DataFrame:
-    # MAKE NEW COLUMN OF RESIDUE-ATOM PAIRS:
-    # NEW COLUMN NAME = `aa_atom_tuple`. E.G. CONTAINS ('ASP':'C'), ('ASP':'CA'), ETC:
-    pdf_cif[ColNames.AA_ATOM_PAIR.value] = list(zip(pdf_cif[CIF.S_mon_id.value],
-                                                    pdf_cif[CIF.A_label_atom_id.value]))
+def _enumerate_residues_atoms(pdf: pd.DataFrame) -> pd.DataFrame:
+    """
+    Enumerate residue-atom pairs of CIF for one protein, by mapping via pre-written json at `data/enumerations`. Add
+    this enumeration to a new column `aa_atom_label_num`. It serves as the tokenised form of polypeptide residue-atom
+    pairs for this protein, to be read later to `aaatomcodes` array.
+    :param pdf: Dataframe of one protein CIF, containing atoms to enumerate to new column.
+    :return: Given dataframe with two new columns holding the enumerated residue-atom pairs data, as well as a column
+    holding the intermediate data of residue-atom pairs. Expected to have 14 columns.
+    """
+    residues_atoms_enumerated = dh._read_enumerations_json(fname='residues_atoms_no_hydrogens')
+    # FIRST MAKE NEW COLUMN OF RESIDUE-ATOM PAIRS. E.G. CONTAINS ('ASP':'C'), ('ASP':'CA'), ETC:
+    pdf[ColNames.AA_ATOM_PAIR.value] = list(zip(pdf[CIF.S_mon_id.value],
+                                                pdf[CIF.A_label_atom_id.value]))
 
-    # MAKE NEW COLUMN FOR ENUMERATED RESIDUE-ATOM PAIRS, VIA RESIDUE-ATOM PAIRS, THEN CAST TO INT:
-    # NEW COLUMN NAME = `aa_atom_label_num`. E.G. CONTAINS 0, 386, 127, ETC.
-    pdf_cif[ColNames.AA_ATOM_LABEL_NUM.value] = (pdf_cif[ColNames.AA_ATOM_PAIR.value]
-                                                 .map(residues_atoms_enumerated)
-                                                 .astype('Int64'))
+    # MAKE NEW COLUMN FOR ENUMERATED RESIDUE-ATOM PAIRS, VIA RESIDUE-ATOM PAIRS:
+    pdf[ColNames.AA_ATOM_LABEL_NUM.value] = (pdf[ColNames.AA_ATOM_PAIR.value]
+                                             .map(residues_atoms_enumerated)
+                                             .astype('Int64'))
     expected_num_of_cols = 14
-    assert len(pdf_cif.columns) == expected_num_of_cols, \
-        f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf_cif.columns)}'
-    return pdf_cif
+    assert len(pdf.columns) == expected_num_of_cols, \
+        f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf.columns)}'
+    return pdf
 
 
-def _enumerate_atoms(pdf_cif, atoms_enumerated: dict) -> pd.DataFrame:
+def _enumerate_atoms(pdf: pd.DataFrame) -> pd.DataFrame:
+    """
+    Enumerate atoms of CIF for one protein, by mapping via pre-written json at `data/enumerations`. Add
+    this enumeration to a new column `atom_label_num`. It serves as the tokenised form of polypeptide atoms for this
+    protein, to be read later to `atomcodes` array.
+    :param pdf: Dataframe of one protein CIF, containing atoms to enumerate to new column.
+    :return: Given dataframe with one new column holding the enumerated atoms data. Expected to have 12 columns.
+    """
     # MAKE NEW COLUMN FOR ENUMERATED ATOMS ('C', 'CA', ETC), USING JSON->DICT, CAST TO INT:
-    pdf_cif[ColNames.ATOM_LABEL_NUM.value] = (pdf_cif[CIF.A_label_atom_id.value]
-                                              .map(atoms_enumerated)
-                                              .astype('Int64'))
+    atoms_enumerated = dh._read_enumerations_json(fname='unique_atoms_only_no_hydrogens')
+    pdf[ColNames.ATOM_LABEL_NUM.value] = (pdf[CIF.A_label_atom_id.value]
+                                          .map(atoms_enumerated)
+                                          .astype('Int64'))
     expected_num_of_cols = 12
-    assert len(pdf_cif.columns) == expected_num_of_cols, \
-        f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf_cif.columns)}'
-    return pdf_cif
+    assert len(pdf.columns) == expected_num_of_cols, \
+        f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf.columns)}'
+    return pdf
 
 
-def _enumerate_residues(pdf: pd.DataFrame, residues_enumerated: dict) -> pd.DataFrame:
+def _enumerate_residues(pdf: pd.DataFrame) -> pd.DataFrame:
     # MAKE NEW COLUMN FOR ENUMERATED RESIDUES, USING JSON->DICT, CAST TO INT.
     # `residues_enumerated` DICT KEY AND `S_mon_id` COLUMN VALUES MAP VIA 3-LETTER RESIDUE NAMES:
+    residues_enumerated = dh._read_enumerations_json(fname=f'residues')
     pdf.loc[:, ColNames.AA_LABEL_NUM.value] = (pdf[CIF.S_mon_id.value]
                                                    .map(residues_enumerated)
                                                    .astype('Int64'))
@@ -110,6 +126,19 @@ def _enumerate_residues(pdf: pd.DataFrame, residues_enumerated: dict) -> pd.Data
     expected_num_of_cols = 11
     assert len(pdf.columns) == expected_num_of_cols, \
         f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf.columns)}'
+    return pdf
+
+
+def _enumerate_atoms_and_residues(pdf: pd.DataFrame) -> pd.DataFrame:
+    """
+    Enumerate residues, atoms, and residue-atoms pairs of given protein CIF data, and store to new columns in given
+    dataframe. Currently hard-coded to only use atom data that lacks all hydrogen atoms.
+    :param pdf: Dataframe of one protein CIF, containing atoms to enumerate to new columns.
+    :return: Dataframe with new columns of enumerated data for residues, atoms, and residue-atoms pairs.
+    """
+    pdf = _enumerate_residues(pdf)
+    pdf = _enumerate_atoms(pdf)
+    pdf = _enumerate_residues_atoms(pdf)
     return pdf
 
 
@@ -149,7 +178,6 @@ def _make_column_to_indicate_backbone_or_sidechain(pdf: pd.DataFrame) -> pd.Data
     return pdf
 
 
-# TODO this function needs a unit test. Make a small cif and make sure it does what it should
 def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfile_format_to_write: str = 'ssv',
                                       relpath_to_cifs_dir='diff_data/cif',
                                       relpath_to_dst_dir='diff_data/tokenised') -> pd.DataFrame:
@@ -185,18 +213,11 @@ def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfile_format_to_write: st
             # PARSE mmCIF TO EXTRACT 14 FIELDS, TO FILTER, IMPUTE, SORT AND JOIN ON, RETURNING AN 8-COLUMN DATAFRAME:
             pdf_cif = parser.parse_cif(pdb_id=pdb_id, relpath_to_cifs_dir=relpath_to_cifs_dir)
 
-            # READ MAPPINGS TO DICTS, FOR CONVERTING RESIDUES & ATOMS TO NUMERIC REPRESENTATIONS FOR TOKENISATION:
-            # NB: THIS FUNCTION CURRENTLY READS ONLY THE MAPPINGS THAT LACK HYDROGENS:
-            residues_atoms_enumerated, atoms_enumerated, residues_enumerated = dh.read_enumeration_mappings()
-
             pdf_cif = _make_column_to_indicate_backbone_or_sidechain(pdf_cif)
             pdf_cif = _assign_backbone_index_to_all_residue_rows(pdf_cif)
-            pdf_cif = _enumerate_residues(pdf_cif, residues_enumerated)
-            pdf_cif = _enumerate_atoms(pdf_cif, atoms_enumerated)
-            pdf_cif = _enumerate_residues_atoms(pdf_cif, residues_atoms_enumerated)
+            pdf_cif = _enumerate_atoms_and_residues(pdf_cif)
             pdf_cif = _assign_mean_corrected_coordinates(pdf_cif)
 
-            # WRITE OUT THE PARSED CIF TOKENS TO FLAT FILE (ssv BY DEFAULT):
             dh.write_tokenised_cif_to_flatfile(pdb_id, pdf_cif,
                                                dst_data_dir=relpath_to_dst_dir,
                                                flatfiles=flatfile_format_to_write)
