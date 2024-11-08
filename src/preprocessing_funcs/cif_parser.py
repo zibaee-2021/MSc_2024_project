@@ -39,11 +39,12 @@ A_occupancy.value       # OCCUPANCY             - FILTER ON THIS, THEN REMOVE IT
 """
 
 import os
+from typing import List
 import numpy as np
 import pandas as pd
 from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 from src.preprocessing_funcs import api_caller as api
-from src.enums import ColNames, CIF
+from src.enums import CIF
 
 
 def _impute_missing_coords(pdf_to_impute, value_to_impute_with=0):
@@ -93,13 +94,18 @@ def _replace_low_occupancy_coords_with_nans(pdf: pd.DataFrame) -> pd.DataFrame:
 def _sort_by_chain_residues_atoms(pdf: pd.DataFrame) -> pd.DataFrame:
     # SORT ROWS BY CHAIN, RESIDUE SEQUENCE NUMBERING (SEQ ID) THEN ATOM SEQUENCE NUMBERING (A_ID):
     pdf.reset_index(drop=True, inplace=True)
-    pdf = pdf.sort_values([CIF.A_label_asym_id.value, CIF.S_seq_id.value, CIF.A_id.value])
+    pdf = pdf.sort_values([CIF.S_asym_id.value,
+                           CIF.S_seq_id.value,
+                           CIF.A_id.value])
     return pdf
 
 
 def _cast_objects_to_stringdtype(pdf: pd.DataFrame) -> pd.DataFrame:
-    cols_to_cast = [CIF.S_mon_id.value, CIF.A_label_comp_id.value, CIF.A_label_atom_id.value,
-                    CIF.A_label_asym_id.value, CIF.S_asym_id.value]
+    cols_to_cast = [CIF.S_mon_id.value,
+                    CIF.A_label_comp_id.value,
+                    CIF.A_label_atom_id.value,
+                    CIF.A_label_asym_id.value,
+                    CIF.S_asym_id.value]
     for col_to_cast in cols_to_cast:
         pdf[col_to_cast] = pdf[col_to_cast].astype('string')
     return pdf
@@ -140,8 +146,8 @@ def _reorder_columns(pdf_merged: pd.DataFrame) -> pd.DataFrame:
         CIF.S_mon_id.value,         # RESIDUE (3-letter)    - USE FOR SANITY-CHECK AGAINST A_label_comp_id, KEEP IN DF.
         CIF.A_label_comp_id.value,  # RESIDUE (3-letter)    - USED TO SANITY-CHECK WITH S_mon_id, THEN REMOVE IT.
         CIF.A_label_atom_id.value,  # ATOM                  - KEEP IN DF.
-        CIF.A_label_asym_id.value,  # CHAIN                 - JOIN ON THIS, SORT ON THIS, KEEP IN DF.
-        CIF.S_asym_id.value,        # CHAIN                 - JOIN ON THIS, SORT ON THIS, THEN REMOVE IT.
+        CIF.A_label_asym_id.value,  # CHAIN                 - JOIN ON THIS, SORT ON THIS, THEN REMOVE IT.
+        CIF.S_asym_id.value,        # CHAIN                 - JOIN ON THIS, SORT ON THIS, KEEP IN DF.
         CIF.A_Cartn_x.value,        # COORDINATES           - X-COORDINATES
         CIF.A_Cartn_y.value,        # COORDINATES           - Y-COORDINATES
         CIF.A_Cartn_z.value,        # COORDINATES           - Z-COORDINATES
@@ -150,7 +156,13 @@ def _reorder_columns(pdf_merged: pd.DataFrame) -> pd.DataFrame:
 
 
 def _join_atomsite_to_polyseq(atomsite: pd.DataFrame, polyseq: pd.DataFrame) -> pd.DataFrame:
-    # JOIN `_atom_site` TO `_pdbx_poly_seq_scheme` ON PROTEIN SEQUENCE NUMBER AND CHAIN:
+    """
+    Join dataframes corresponding to `_atom_site` and `_pdbx_poly_seq_scheme` fields, on protein sequence number.
+    :param atomsite:
+    :param polyseq:
+    :return:
+    """
+    #
     return pd.merge(
         left=polyseq,
         right=atomsite,
@@ -160,6 +172,26 @@ def _join_atomsite_to_polyseq(atomsite: pd.DataFrame, polyseq: pd.DataFrame) -> 
         right_on=[CIF.A_label_seq_id.value],
         how='outer'
     )
+
+
+def _split_up_into_different_chains(atomsite_pdf: pd.DataFrame, polyseq_pdf: pd.DataFrame) -> list:
+    """
+
+    :return: List of tuples containing each given pdf for each polypeptide chain,
+    e.g. [(`atomsite_pdf_A`, `polyseq_pdf_A`, (`atomsite_pdf_B`, `polyseq_pdf_B`, etc)
+    """
+
+    num_of_chains_A = atomsite_pdf[CIF.S_asym_id.value].nunique()
+    num_of_chains_S = polyseq_pdf[CIF.S_asym_id.value].nunique()
+    assert num_of_chains_A == num_of_chains_S, (f'There are {num_of_chains_A} in _atom_site, but {num_of_chains_S} in '
+                                                f'_pdbx_poly_seq_scheme!')
+    chains = atomsite_pdf[CIF.S_asym_id.value].unique()
+    if num_of_chains_A > 1:
+        grouped_dfs = [group_df for _, group_df in atomsite_pdf.groupby('ColAB')]
+
+
+    else:
+        return [num_of_chains_A, num_of_chains_S]
 
 
 def _remove_hetatm_rows(atomsite_pdf: pd.DataFrame) -> pd.DataFrame:
@@ -263,7 +295,7 @@ def _get_mmcif_data(pdb_id: str, relpath_to_raw_cif: str) -> dict:
     return mmcif
 
 
-def parse_cif(pdb_id: str, relpath_to_cifs_dir: str) -> pd.DataFrame:
+def parse_cif(pdb_id: str, relpath_to_cifs_dir: str) -> List[pd.DataFrame]:
     """
     Parse given local mmCIF file to extract and tabulate necessary atom and amino acid data fields from
     `_pdbx_poly_seq_scheme` and `_atom_site`.
@@ -275,21 +307,22 @@ def parse_cif(pdb_id: str, relpath_to_cifs_dir: str) -> pd.DataFrame:
     polyseq_pdf = _extract_fields_from_poly_seq(mmcif_dict)
     atomsite_pdf = _extract_fields_from_atom_site(mmcif_dict)
     atomsite_pdf = _remove_hetatm_rows(atomsite_pdf)
-    pdf_merged = _join_atomsite_to_polyseq(atomsite_pdf, polyseq_pdf)
-    pdf_merged = _reorder_columns(pdf_merged)
-    pdf_merged = _cast_number_strings_to_numeric_types(pdf_merged)
-    pdf_merged = _cast_objects_to_stringdtype(pdf_merged)
-    pdf_merged = _sort_by_chain_residues_atoms(pdf_merged)
-    pdf_merged = _replace_low_occupancy_coords_with_nans(pdf_merged)
-    pdf_merged = _impute_missing_coords(pdf_merged, value_to_impute_with=0)
+    chains_pdfs = _split_up_into_different_chains(atomsite_pdf, polyseq_pdf)
+    pdfs_merged = []
+    for chain_pdfs in chains_pdfs:
+        atomsite_pdf, polyseq_pdf = chain_pdfs
+        pdf_merged = _join_atomsite_to_polyseq(atomsite_pdf, polyseq_pdf)
+        pdf_merged = _reorder_columns(pdf_merged)
+        pdf_merged = _cast_number_strings_to_numeric_types(pdf_merged)
+        pdf_merged = _cast_objects_to_stringdtype(pdf_merged)
+        pdf_merged = _sort_by_chain_residues_atoms(pdf_merged)
+        pdf_merged = _replace_low_occupancy_coords_with_nans(pdf_merged)
+        pdf_merged = _impute_missing_coords(pdf_merged, value_to_impute_with=0)
 
-    # PRINT THE CHAIN(S) FOUND IN THIS CIF, I.E. `S_asym_id`. (PARTICULARLY IMPORTANT IF MORE THAN ONE CHAIN):
-    num_of_chains = pdf_merged[CIF.S_asym_id.value].nunique()
-    chains = pdf_merged[CIF.S_asym_id.value].unique()
-    print(f"CIF with PDB id='{pdb_id}' has {num_of_chains} chain(s). \nThey are {chains.tolist()}.")
 
-    # ONLY KEEP THESE EIGHT COLUMNS, AND IN THIS ORDER:
-    pdf_merged = pdf_merged[[CIF.S_asym_id.value,        # CHAIN                * `A_label_asym_id`
+
+        # ONLY KEEP THESE EIGHT COLUMNS, AND IN THIS ORDER:
+        pdf_merged = pdf_merged[[CIF.S_asym_id.value,        # CHAIN                * `A_label_asym_id`
                              CIF.S_seq_id.value,         # RESIDUE POSITION     * `A_label_seq_id`
                              CIF.S_mon_id.value,         # RESIDUE              * `A_label_comp`
                              CIF.A_id.value,             # ATOM POSITION        **
@@ -301,5 +334,5 @@ def parse_cif(pdb_id: str, relpath_to_cifs_dir: str) -> pd.DataFrame:
     # * THE CORRESPONDING COLUMNS IN `_atom_site` (SHOWN IN LINE ABOVE) MAY HAVE NANS ON SOME ROWS.
     # ** SOME ROWS FROM `_atom_site` MAY HAVE NANS.
     # *** SOME ROWS MAY HAVE HAD NANS, THAT WERE IMPUTED TO 0. THERE SHOULD BE NO NANS IN THESE 3 COLUMNS.
-
-    return pdf_merged
+        pdfs_merged.append(pdf_merged)
+    return pdfs_merged
