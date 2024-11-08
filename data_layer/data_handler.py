@@ -208,28 +208,21 @@ def write_tokenised_cif_to_flatfile(pdb_id: str, pdf: pd.DataFrame, dst_data_dir
         _restore_original_working_dir(cwd)
 
 
-def read_tokenised_cif_ssv_to_pdf(pdb_id: str, use_subdir=False) -> pd.DataFrame:
+def read_tokenised_cif_ssv_to_pdf(pdb_id: str, relpath_to_tokenised_dir: str) -> pd.DataFrame:
     """
     Read pre-tokenised flatfile (i.e. ssv) of cif for given pdb id, from either `src/diffusion/diff_data/tokenised`or
     top-level `data/tokenised`. The reason for having option of data path is simply a workaround to problems when
     reading from top-level data dir.
     :param pdb_id: Pdb id of protein.
-    :param use_subdir: True to use `src/diffusion/diff_data/tokenised`, otherwise `data/tokenised`.
-    :return: Pre-tokenised cif
+    :param relpath_to_tokenised_dir: Relative path to the ssv holding the tokenised CIF data.
+    E.g. `src/diffusion/diff_data/tokenised`, or `data/tokenised`.
+    :return: Pre-tokenised CIF, stored as a ssv flatfile, read back into dataframe.
     """
-    cwd = ''
-    if not use_subdir:
-        # STORE `cwd` TO RETURN TO AT END. CHANGE CURRENT DIR TO `data_layer`:
-        cwd = _chdir_to_data_layer()
-        dst_dir = '../data/tokenised'
-    else:
-        dst_dir = 'diff_data/tokenised'
-        os.makedirs(dst_dir, exist_ok=True)
-    cif_ssv = f'{dst_dir}/{pdb_id}.ssv'
-    print(f'Attempting to read {cif_ssv}')
-    pdf = pd.read_csv(cif_ssv, sep=' ')
-    if not use_subdir:
-        _restore_original_working_dir(cwd)
+    os.makedirs(relpath_to_tokenised_dir, exist_ok=True)
+    relpath_to_tokenised_dir = relpath_to_tokenised_dir.removesuffix('/').removeprefix('/')
+    path_cif_ssv = f'{relpath_to_tokenised_dir}/{pdb_id}.ssv'
+    print(f'Attempting to read {path_cif_ssv}')
+    pdf = pd.read_csv(path_cif_ssv, sep=' ')
     return pdf
 
 

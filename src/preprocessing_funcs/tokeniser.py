@@ -206,7 +206,7 @@ def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfile_format_to_write: st
         # IF ALREADY PARSED AND SAVED AS FLATFILE, JUST READ IT IN:
         cif_tokenised_ssv = f'{relpath_to_dst_dir}/{pdb_id}.{flatfile_format_to_write}'
         if os.path.exists(cif_tokenised_ssv):
-            pdf_cif = dh.read_tokenised_cif_ssv_to_pdf(pdb_id=pdb_id, use_subdir=True)
+            pdf_cif = dh.read_tokenised_cif_ssv_to_pdf(pdb_id=pdb_id, relpath_to_tokenised_dir=relpath_to_dst_dir)
         else:
             # OTHERWISE GET THE CIF DATA (EITHER LOCALLY OR VIA API)
             relpath_to_cifs_dir = relpath_to_cifs_dir.removesuffix('/').removeprefix('/')
