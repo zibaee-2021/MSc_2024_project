@@ -13,6 +13,10 @@ import ast
 
 
 def __enumerate_atoms_and_residues():
+    """
+    ONLY CALLED ONCE TO GENERATE DICTS OF ENUMERATION MAPPINGS FOR ATOMS AND RESIDUE-ATOM PAIRS, TO BE USED FOR
+    WRITING TO JSON FILES THAT ARE TO BE READ AND USED BY TOKENISER.PY.
+    """
     residues, residues_atoms = dh.read_aa_atoms_yaml()
     residues_enumerated = {aa: i for i, aa in enumerate(residues)}
 
@@ -34,14 +38,22 @@ def __enumerate_atoms_and_residues():
     return residues_atoms_enumerated, atoms_enumerated, residues_enumerated
 
 
-def _write_enumerated_atoms_and_residues():
+def _write_enumerated_atoms_and_residues() -> None:
+    """
+    ONLY CALLED ONCE TO GENERATE ENUMERATION MAPPINGS FOR ATOMS AND RESIDUE-ATOM PAIRS, THEN WRITTEN TO JSON FILES
+    THAT ARE TO BE READ AND USED BY TOKENISER.PY.
+    """
     residues_atoms_enumerated, atoms_enumerated, residues_enumerated = __enumerate_atoms_and_residues()
     dh.write_enumerations_json(fname='residues_atoms', dict_to_write=residues_atoms_enumerated)
     dh.write_enumerations_json(fname='unique_atoms_only', dict_to_write=atoms_enumerated)
     dh.write_enumerations_json(fname='residues', dict_to_write=residues_enumerated)
 
 
-def _write_enumerated_atoms_without_hydrogens():
+def _write_enumerated_atoms_without_hydrogens() -> None:
+    """
+    ONLY CALLED ONCE TO GENERATE ENUMERATION MAPPINGS FOR ATOMS AND RESIDUE-ATOM PAIRS, WITHOUT HYDROGENS, THEN
+    WRITTEN TO JSON FILES THAT ARE TO BE READ AND USED BY TOKENISER.PY.
+    """
     hydrogen_atoms = dh.read_lst_file_from_data_dir('enumerations/hydrogens.lst')
     residues_atoms_enumerated, unique_atoms_only_enumerated, _residues_unused = dh.read_enumeration_mappings()
 
