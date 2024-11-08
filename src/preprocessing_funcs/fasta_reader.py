@@ -9,17 +9,17 @@ from io import StringIO
 import api_caller as api
 
 
-class PathsUrls(Enum):
-    fastas_path = '../../data/FASTA'
+class Paths(Enum):
+    relpath_fastas = '../../data/FASTA'
 
 
 def read_fasta_sequences(uniprot_ids=None) -> dict:
     """
     Read specified FASTA sequences in.
-    If FASTA file of id is not found locally in `../data/FASTA/`, an attempt will be made to read it directly from
-    Uniprot API.
+    If FASTA file for the given UniProt id(s) is not found locally in `../data/FASTA/`, an attempt will be made to
+    read it directly from Uniprot API webserver.
     If no identifier passed in, all FASTA files will be read from `../data/FASTA/`.
-    :param uniprot_ids: A list of unique Uniprot identifiers.
+    :param uniprot_ids: A list of unique Uniprot identifiers (aka 'primary accession numbers').
     :return: 1-letter FASTA amino acid sequence(s) mapped to the identifier(s).
     """
     if isinstance(uniprot_ids, str):
@@ -30,8 +30,8 @@ def read_fasta_sequences(uniprot_ids=None) -> dict:
     if not uniprot_ids:
         uniprot_ids = []
         print(f"No FASTA files were specified, "
-              f"so all FASTA files found at '{PathsUrls.fastas_path.value}' will be read in.")
-        fasta_files = glob.glob(os.path.join(PathsUrls.fastas_path.value, '*'))
+              f"so all FASTA files found at '{Paths.relpath_fastas.value}' will be read in.")
+        fasta_files = glob.glob(os.path.join(Paths.relpath_fastas.value, '*'))
         for fasta_file in fasta_files:
             fasta_id_faa = os.path.basename(fasta_file)
             fasta_id = os.path.splitext(fasta_id_faa)[0]
@@ -39,7 +39,7 @@ def read_fasta_sequences(uniprot_ids=None) -> dict:
 
     for fasta_id in uniprot_ids:
 
-        fasta_path = os.path.join(PathsUrls.fastas_path.value, fasta_id)
+        fasta_path = os.path.join(Paths.relpath_fastas.value, fasta_id)
         fasta_path_faa = f'{fasta_path}.faa'
 
         try:
