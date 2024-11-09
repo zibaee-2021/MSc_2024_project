@@ -180,18 +180,16 @@ def _split_up_into_different_chains(atomsite_pdf: pd.DataFrame, polyseq_pdf: pd.
     :return: List of tuples containing each given pdf for each polypeptide chain,
     e.g. [(`atomsite_pdf_A`, `polyseq_pdf_A`, (`atomsite_pdf_B`, `polyseq_pdf_B`, etc)
     """
-
-    num_of_chains_A = atomsite_pdf[CIF.S_asym_id.value].nunique()
+    num_of_chains_A = atomsite_pdf[CIF.A_label_asym_id.value].nunique()
     num_of_chains_S = polyseq_pdf[CIF.S_asym_id.value].nunique()
     assert num_of_chains_A == num_of_chains_S, (f'There are {num_of_chains_A} in _atom_site, but {num_of_chains_S} in '
                                                 f'_pdbx_poly_seq_scheme!')
-    chains = atomsite_pdf[CIF.S_asym_id.value].unique()
-    if num_of_chains_A > 1:
-        grouped_dfs = [group_df for _, group_df in atomsite_pdf.groupby('ColAB')]
-
-
-    else:
-        return [num_of_chains_A, num_of_chains_S]
+    chains = atomsite_pdf[CIF.A_label_asym_id.value].unique()
+    grouped_atomsite_dfs = [group_df for _, group_df in atomsite_pdf.groupby(CIF.A_label_asym_id.value)]
+    grouped_polyseq_dfs = [group_df for _, group_df in polyseq_pdf.groupby(CIF.S_asym_id.value)]
+    grouped_tuple = [(grp_as,grp_ps) for grp_as, grp_ps in zip(grouped_atomsite_dfs, grouped_polyseq_dfs)]
+    assert len(chains) == len(grouped_tuple)
+    return grouped_tuple
 
 
 def _remove_hetatm_rows(atomsite_pdf: pd.DataFrame) -> pd.DataFrame:
