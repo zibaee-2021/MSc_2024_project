@@ -35,6 +35,7 @@ class TestPreprocessingFuncs(TestCase):
         self.pdf_merged_dir = 'test_data/merged'
         self.test_1V5H_ssv = 'test_1V5H.ssv'
         self.test_1V5H_cif = 'test_1V5H.cif'
+        self.test_1OJ6_4chains_cif = 'test_1OJ6_4chains.cif'
 
         not_yet_called = False
         # CALL ONLY ONCE (i.e. SET FLAG TO FALSE AFTER CALL)
@@ -72,4 +73,13 @@ class TestPreprocessingFuncs(TestCase):
         self.assertEqual(pdf_merged['A_Cartn_y'].dtype, 'float64')
         self.assertEqual(pdf_merged['A_Cartn_z'].dtype, 'float64')
         self.assertEqual(pdf_merged['A_occupancy'].dtype, 'float64')
+
+    def test__split_up_into_different_chains(self):
+        mmcif_dict = MMCIF2Dict(f'{self.cif_dir}/{self.test_1OJ6_4chains_cif}')
+        polyseq_pdf = cif_parser._extract_fields_from_poly_seq(mmcif_dict)
+        atomsite_pdf = cif_parser._extract_fields_from_atom_site(mmcif_dict)
+        atomsite_pdf = cif_parser._remove_hetatm_rows(atomsite_pdf)
+        chains_pdfs = cif_parser._split_up_into_different_chains(atomsite_pdf, polyseq_pdf)
+        for chain_pdfs in chains_pdfs:
+            pass
 
