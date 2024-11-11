@@ -178,9 +178,9 @@ def _make_column_to_indicate_backbone_or_sidechain(pdf: pd.DataFrame) -> pd.Data
     return pdf
 
 
-def parse_tokenise_cif_write_flatfile(pdb_ids=None, flatfile_format_to_write: str = 'ssv',
-                                      relpath_to_cifs_dir='diff_data/cif',
-                                      relpath_to_dst_dir='diff_data/tokenised') -> pd.DataFrame:
+def parse_tokenise_and_write_cif_to_flatfile(pdb_ids=None, flatfile_format_to_write: str = 'ssv',
+                                             relpath_to_cifs_dir='diff_data/cif',
+                                             relpath_to_dst_dir='diff_data/tokenised') -> pd.DataFrame:
     """
     Parse, then tokenise structure-related information in mmCIF files for proteins as specified by their PDB
     entries (`pdb_ids`) - unique Protein Data Bank identifiers.
@@ -229,7 +229,7 @@ if __name__ == '__main__':
     # write_tokenised_cif_to_csv(pdb_ids='4itq')
     print(os.getcwd())
     # Being called from here, which is in the subdir `preprocessing_funcs` so paths must be specified
-    parse_tokenise_cif_write_flatfile(pdb_ids='1OJ6',
-                                      relpath_to_cifs_dir='../diffusion/diff_data/cif/',
-                                      relpath_to_dst_dir='../diffusion/diff_data/tokenised/')
+    parse_tokenise_and_write_cif_to_flatfile(pdb_ids='1OJ6',
+                                             relpath_to_cifs_dir='../diffusion/diff_data/cif/',
+                                             relpath_to_dst_dir='../diffusion/diff_data/tokenised/')
     pass

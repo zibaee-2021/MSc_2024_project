@@ -52,10 +52,10 @@ class TestPreprocessingFuncs(TestCase):
         parsed_pdfs = cif_parser.parse_cif(pdb_id=self.test_1OJ6_4chains_cif, relpath_to_cifs_dir=self.test_cif_dir)
         pass
 
-    def test_parse_tokenise_cif_write_flatfile(self):
-        pdf = tk.parse_tokenise_cif_write_flatfile(pdb_ids=self.test_1V5H_ssv[:-4],
-                                                   relpath_to_cifs_dir=self.test_cif_dir,
-                                                   relpath_to_dst_dir=self.test_tokenised_dir)
+    def test_parse_tokenise_and_write_cif_to_flatfile(self):
+        pdf = tk.parse_tokenise_and_write_cif_to_flatfile(pdb_ids=self.test_1V5H_ssv[:-4],
+                                                          relpath_to_cifs_dir=self.test_cif_dir,
+                                                          relpath_to_dst_dir=self.test_tokenised_dir)
         # pdf.to_csv(path_or_buf='test_data/tokenised/test_1V5H.ssv', sep=' ', index=False)
 
         self.assertEqual(18, len(pdf.columns))
