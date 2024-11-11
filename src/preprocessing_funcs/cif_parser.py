@@ -319,13 +319,13 @@ def parse_cif(pdb_id: str, relpath_to_cifs_dir: str) -> List[pd.DataFrame]:
 
         # ONLY KEEP THESE EIGHT COLUMNS, AND IN THIS ORDER:
         pdf_merged = pdf_merged[[CIF.S_asym_id.value,        # CHAIN                * `A_label_asym_id`
-                             CIF.S_seq_id.value,         # RESIDUE POSITION     * `A_label_seq_id`
-                             CIF.S_mon_id.value,         # RESIDUE              * `A_label_comp`
-                             CIF.A_id.value,             # ATOM POSITION        **
-                             CIF.A_label_atom_id.value,  # ATOM                 **
-                             CIF.A_Cartn_x.value,        # X COORDINATES        ***
-                             CIF.A_Cartn_y.value,        # Y COORDINATES        ***
-                             CIF.A_Cartn_z.value]]       # Z COORDINATES        ***
+                                 CIF.S_seq_id.value,         # RESIDUE POSITION     * `A_label_seq_id`
+                                 CIF.S_mon_id.value,         # RESIDUE              * `A_label_comp`
+                                 CIF.A_id.value,             # ATOM POSITION        **
+                                 CIF.A_label_atom_id.value,  # ATOM                 **
+                                 CIF.A_Cartn_x.value,        # X COORDINATES        ***
+                                 CIF.A_Cartn_y.value,        # Y COORDINATES        ***
+                                 CIF.A_Cartn_z.value]]       # Z COORDINATES        ***
 
     # * THE CORRESPONDING COLUMNS IN `_atom_site` (SHOWN IN LINE ABOVE) MAY HAVE NANS ON SOME ROWS.
     # ** SOME ROWS FROM `_atom_site` MAY HAVE NANS.
