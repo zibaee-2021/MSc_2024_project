@@ -317,8 +317,6 @@ def parse_cif(pdb_id: str, relpath_to_cifs_dir: str) -> List[pd.DataFrame]:
         pdf_merged = _replace_low_occupancy_coords_with_nans(pdf_merged)
         pdf_merged = _impute_missing_coords(pdf_merged, value_to_impute_with=0)
 
-
-
         # ONLY KEEP THESE EIGHT COLUMNS, AND IN THIS ORDER:
         pdf_merged = pdf_merged[[CIF.S_asym_id.value,        # CHAIN                * `A_label_asym_id`
                              CIF.S_seq_id.value,         # RESIDUE POSITION     * `A_label_seq_id`
