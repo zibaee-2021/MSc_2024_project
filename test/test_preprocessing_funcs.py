@@ -30,9 +30,9 @@ mean_corrected_z      # Z-COORDINATES FOR EACH ATOM SUBTRACTED BY THE MEAN OF XY
 class TestPreprocessingFuncs(TestCase):
 
     def setUp(self):
-        self.cif_dir = 'test_data/cif'
-        self.tokenised_dir = 'test_data/tokenised'
-        self.pdf_merged_dir = 'test_data/merged'
+        self.test_cif_dir = 'test_data/cif'
+        self.test_tokenised_dir = 'test_data/tokenised'
+        self._test_joined_dir = 'test_data/merged'
         self.test_1V5H_ssv = 'test_1V5H.ssv'
         self.test_1V5H_cif = 'test_1V5H.cif'
         self.test_1OJ6_4chains_cif = 'test_1OJ6_4chains.cif'
@@ -40,24 +40,28 @@ class TestPreprocessingFuncs(TestCase):
         not_yet_called = False
         # CALL ONLY ONCE (i.e. SET FLAG TO FALSE AFTER CALL)
         if not_yet_called:
-            mmcif_dict = MMCIF2Dict(f'{self.cif_dir}/{self.test_1V5H_cif}')
+            mmcif_dict = MMCIF2Dict(f'{self.test_cif_dir}/{self.test_1V5H_cif}')
             polyseq_pdf = cif_parser._extract_fields_from_poly_seq(mmcif_dict)
             atomsite_pdf = cif_parser._extract_fields_from_atom_site(mmcif_dict)
             atomsite_pdf = cif_parser._remove_hetatm_rows(atomsite_pdf)
             pdf_merged = cif_parser._join_atomsite_to_polyseq(atomsite_pdf, polyseq_pdf)
-            os.makedirs(self.pdf_merged_dir, exist_ok=True)
-            pdf_merged.to_csv(path_or_buf=f'{self.pdf_merged_dir}/{self.test_1V5H_ssv}', sep=' ', index=False)
+            os.makedirs(self._test_joined_dir, exist_ok=True)
+            pdf_merged.to_csv(path_or_buf=f'{self._test_joined_dir}/{self.test_1V5H_ssv}', sep=' ', index=False)
+
+    def test_parse_cif(self):
+        parsed_pdfs = cif_parser.parse_cif(pdb_id=self.test_1OJ6_4chains_cif, relpath_to_cifs_dir=self.test_cif_dir)
+        pass
 
     def test_parse_tokenise_cif_write_flatfile(self):
         pdf = tk.parse_tokenise_cif_write_flatfile(pdb_ids=self.test_1V5H_ssv[:-4],
-                                                   relpath_to_cifs_dir=self.cif_dir,
-                                                   relpath_to_dst_dir=self.tokenised_dir)
+                                                   relpath_to_cifs_dir=self.test_cif_dir,
+                                                   relpath_to_dst_dir=self.test_tokenised_dir)
         # pdf.to_csv(path_or_buf='test_data/tokenised/test_1V5H.ssv', sep=' ', index=False)
 
         self.assertEqual(18, len(pdf.columns))
 
     def test_datatypes_after_casting(self):
-        pdf_merged = pd.read_csv(f'{self.pdf_merged_dir}/{self.test_1V5H_ssv}', sep=' ')
+        pdf_merged = pd.read_csv(f'{self._test_joined_dir}/{self.test_1V5H_ssv}', sep=' ')
         pdf_merged = cif_parser._cast_number_strings_to_numeric_types(pdf_merged)
         pdf_merged = cif_parser._cast_objects_to_stringdtype(pdf_merged)
         expected_int64_dtype = pd.Int64Dtype()
@@ -75,11 +79,11 @@ class TestPreprocessingFuncs(TestCase):
         self.assertEqual(pdf_merged['A_occupancy'].dtype, 'float64')
 
     def test__split_up_into_different_chains(self):
-        mmcif_dict = MMCIF2Dict(f'{self.cif_dir}/{self.test_1OJ6_4chains_cif}')
+        mmcif_dict = MMCIF2Dict(f'{self.test_cif_dir}/{self.test_1OJ6_4chains_cif}')
         polyseq_pdf = cif_parser._extract_fields_from_poly_seq(mmcif_dict)
         atomsite_pdf = cif_parser._extract_fields_from_atom_site(mmcif_dict)
         atomsite_pdf = cif_parser._remove_hetatm_rows(atomsite_pdf)
-        chains_pdfs = cif_parser._split_up_into_different_chains(atomsite_pdf, polyseq_pdf)
+        chains_pdfs = cif_parser._split_up_by_chain(atomsite_pdf, polyseq_pdf)
         for chain_pdfs in chains_pdfs:
             pass
 

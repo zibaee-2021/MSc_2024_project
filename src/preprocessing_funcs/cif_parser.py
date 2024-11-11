@@ -1,4 +1,7 @@
 """
+(For some variable names in certain functions, I have, knowingly, violated the generally-accepted 'good practice' of
+indicating the data structure/type for a variable within its name. I just think it makes it's easier to read in some functions.)
+
 CIF_PARSER.PY DOES FOLLOWING:
     - GET THE RAW MMCIF DATA
     - EXTRACT FIELDS OF INTEREST FROM THE RAW MMCIF TO 2 DATAFRAMES
@@ -8,7 +11,7 @@ CIF_PARSER.PY DOES FOLLOWING:
     - REMOVE LOW OCCUPANCY ROWS, NANs AND/OR IMPUTE MISSING COORD ROWS
     - SORT BY CERTAIN COLUMNS (`asym_id`, 'seq_id', 'id')
     - REPLACE LOW OCCUPANCY ROWS WITH NANS
-    - IMPUTE NANS IN COORDS WITH ZEROS
+    - REMOVE ROWS WITH MISSING DATA IN COORDINATES
     - REMOVE UNNECESSARY COLUMNS
 --------------------------------------------------------------------------------------------------
 
@@ -47,6 +50,17 @@ from src.preprocessing_funcs import api_caller as api
 from src.enums import CIF
 
 
+def _remove_rows_with_missing_coords(pdf: pd.DataFrame) -> pd.DataFrame:
+    missing_count = pdf[CIF.A_Cartn_x.value].isna().sum()
+    print(f'BEFORE removing them, there are {missing_count} rows with missing values in column'
+          f' {CIF.A_Cartn_x.value}')
+    pdf = pdf.dropna(how='any', axis=0, inplace=False, subset=[CIF.A_Cartn_x.value])
+    missing_count = pdf[CIF.A_Cartn_x.value].isna().sum()
+    print(f'AFTER removing them, there are {missing_count} rows with missing values in column'
+          f' {CIF.A_Cartn_x.value}')
+    return pdf
+
+
 def _impute_missing_coords(pdf_to_impute, value_to_impute_with=0):
     """
     Impute missing values of the mean x, y, z structure coordinates with 0s.
@@ -68,6 +82,33 @@ def _impute_missing_coords(pdf_to_impute, value_to_impute_with=0):
                                 f'but {missing_count} rows in column {CIF.A_Cartn_x.value} have NANs. '
                                 f'Therefore something has gone wrong!')
     return pdf_to_impute
+
+
+def _process_missing_data(pdf_with_missing_data: pd.DataFrame, impute=False) -> pd.DataFrame:
+    """
+    Process rows of parsed mmCIF data that having missing data in coordinates (based on `Cartn_x`) by either imputing
+    with zeros or removing the rows entirely. Currently, the preferred option is deemed to be the latter,
+    as DJ states in Slack answer: "The missing atom threshold is arbitrary - it's just to filter out structures that
+    have too many gaps. You could do it by looking at all the data and say rejecting the worst 5%. It doesn't really
+    make that much difference. The way the code is currently implemented, there should be no zero or Nan coordinates
+    included as padding as the loss function cannot handle them. You could handle this by a mask, but in reality
+    there's little point as you get almost the same effect by just skipping them. Just keep track of how many you are
+    skipping, though, so that the ntindices are correct. Your approach of correctly filling in the missing sequence
+    is probably better - but my approach is good enough for now - given the time, I'd take the same shortcut that I
+    took so that you can get something working sooner rather than later.The general idea here is that as long as
+    structures are mostly complete, with relatively few not too large gaps then the network just learns to ignore the
+    breaks and during inference there will be no breaks as all the atoms will be present and initialized to random
+    positions before the denoising process starts... It's one of the benefits of using an atom-level diffusion model
+    - it's all just a cloud of labelled atoms."
+    :param pdf_with_missing_data:
+    :param impute:
+    :return:
+    """
+    if impute:
+        result_pdf = _impute_missing_coords(pdf_with_missing_data)
+    else:
+        result_pdf = _remove_rows_with_missing_coords(pdf_with_missing_data)
+    return result_pdf
 
 
 def _replace_low_occupancy_coords_with_nans(pdf: pd.DataFrame) -> pd.DataFrame:
@@ -96,7 +137,7 @@ def _sort_by_chain_residues_atoms(pdf: pd.DataFrame) -> pd.DataFrame:
     pdf.reset_index(drop=True, inplace=True)
     pdf = pdf.sort_values([CIF.S_asym_id.value,
                            CIF.S_seq_id.value,
-                           CIF.A_id.value])
+                           CIF.A_id.value], ignore_index=True)
     return pdf
 
 
@@ -174,7 +215,7 @@ def _join_atomsite_to_polyseq(atomsite: pd.DataFrame, polyseq: pd.DataFrame) -> 
     )
 
 
-def _split_up_into_different_chains(atomsite_pdf: pd.DataFrame, polyseq_pdf: pd.DataFrame) -> list:
+def _split_up_by_chain(atomsite_pdf: pd.DataFrame, polyseq_pdf: pd.DataFrame) -> list:
     """
 
     :return: List of tuples containing each given pdf for each polypeptide chain,
@@ -270,6 +311,7 @@ def _extract_fields_from_poly_seq(mmcif: dict) -> pd.DataFrame:
 
 def _get_mmcif_data(pdb_id: str, relpath_to_raw_cif: str) -> dict:
     relpath_to_raw_cif = relpath_to_raw_cif.removesuffix('.cif').removeprefix('/').removesuffix('/')
+    pdb_id = pdb_id.removesuffix('.cif')
     relpath_to_raw_cif = f'{relpath_to_raw_cif}/{pdb_id}.cif'
 
     if os.path.exists(relpath_to_raw_cif):
@@ -299,26 +341,29 @@ def parse_cif(pdb_id: str, relpath_to_cifs_dir: str) -> List[pd.DataFrame]:
     `_pdbx_poly_seq_scheme` and `_atom_site`.
     :param pdb_id: Alphanumeric 4-character Protein Databank Identifier. e.g. '1OJ6'.
     :param relpath_to_cifs_dir: Relative path to local raw mmCIF file, e.g. 'path/to/1OJ6' (MUST INCLUDE PDB ID).
-    :return: Necessary fields extracted from raw mmCIF (from local copy or API) and joined in one table.
+    :return: Necessary fields extracted from raw mmCIF (from local copy or API) and joined in one table. This is a
+    list of one or more results for each chain found in this mmCIF.
     """
     mmcif_dict = _get_mmcif_data(pdb_id, relpath_to_cifs_dir)
     polyseq_pdf = _extract_fields_from_poly_seq(mmcif_dict)
     atomsite_pdf = _extract_fields_from_atom_site(mmcif_dict)
     atomsite_pdf = _remove_hetatm_rows(atomsite_pdf)
-    chains_pdfs = _split_up_into_different_chains(atomsite_pdf, polyseq_pdf)
-    pdfs_merged = []
-    for chain_pdfs in chains_pdfs:
-        atomsite_pdf, polyseq_pdf = chain_pdfs
-        pdf_merged = _join_atomsite_to_polyseq(atomsite_pdf, polyseq_pdf)
-        pdf_merged = _reorder_columns(pdf_merged)
-        pdf_merged = _cast_number_strings_to_numeric_types(pdf_merged)
-        pdf_merged = _cast_objects_to_stringdtype(pdf_merged)
-        pdf_merged = _sort_by_chain_residues_atoms(pdf_merged)
-        pdf_merged = _replace_low_occupancy_coords_with_nans(pdf_merged)
-        pdf_merged = _impute_missing_coords(pdf_merged, value_to_impute_with=0)
+    # GENERATE A LIST OF TUPLES, EACH TUPLE IS THE ATOMSITE AND POLYSEQ DATA FOR A SINGLE CHAIN
+    all_chains = _split_up_by_chain(atomsite_pdf, polyseq_pdf)
+
+    parsed_cif_by_chain = []
+    for chain in all_chains:
+        atomsite_pdf, polyseq_pdf = chain
+        joined_pdf = _join_atomsite_to_polyseq(atomsite_pdf, polyseq_pdf)
+        joined_pdf = _reorder_columns(joined_pdf)
+        joined_pdf = _cast_number_strings_to_numeric_types(joined_pdf)
+        joined_pdf = _cast_objects_to_stringdtype(joined_pdf)
+        joined_pdf = _sort_by_chain_residues_atoms(joined_pdf)
+        joined_pdf = _replace_low_occupancy_coords_with_nans(joined_pdf)
+        joined_pdf = _process_missing_data(joined_pdf, impute=False)
 
         # ONLY KEEP THESE EIGHT COLUMNS, AND IN THIS ORDER:
-        pdf_merged = pdf_merged[[CIF.S_asym_id.value,        # CHAIN                * `A_label_asym_id`
+        joined_pdf = joined_pdf[[CIF.S_asym_id.value,        # CHAIN                * `A_label_asym_id`
                                  CIF.S_seq_id.value,         # RESIDUE POSITION     * `A_label_seq_id`
                                  CIF.S_mon_id.value,         # RESIDUE              * `A_label_comp`
                                  CIF.A_id.value,             # ATOM POSITION        **
@@ -326,9 +371,5 @@ def parse_cif(pdb_id: str, relpath_to_cifs_dir: str) -> List[pd.DataFrame]:
                                  CIF.A_Cartn_x.value,        # X COORDINATES        ***
                                  CIF.A_Cartn_y.value,        # Y COORDINATES        ***
                                  CIF.A_Cartn_z.value]]       # Z COORDINATES        ***
-
-    # * THE CORRESPONDING COLUMNS IN `_atom_site` (SHOWN IN LINE ABOVE) MAY HAVE NANS ON SOME ROWS.
-    # ** SOME ROWS FROM `_atom_site` MAY HAVE NANS.
-    # *** SOME ROWS MAY HAVE HAD NANS, THAT WERE IMPUTED TO 0. THERE SHOULD BE NO NANS IN THESE 3 COLUMNS.
-        pdfs_merged.append(pdf_merged)
-    return pdfs_merged
+        parsed_cif_by_chain.append(joined_pdf)
+    return parsed_cif_by_chain
