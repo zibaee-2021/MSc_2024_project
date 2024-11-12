@@ -64,8 +64,8 @@ def _assign_mean_corrected_coordinates(pdfs: List[pd.DataFrame]) -> List[pd.Data
     for pdf in pdfs:
         # SUBTRACT EACH COORDINATE BY THE MEAN OF ALL 3 PER ATOM:
         pdf.loc[:, ColNames.MEAN_COORDS.value] = pdf[[CIF.A_Cartn_x.value,
-                                                              CIF.A_Cartn_y.value,
-                                                              CIF.A_Cartn_z.value]].mean(axis=1)
+                                                      CIF.A_Cartn_y.value,
+                                                      CIF.A_Cartn_z.value]].mean(axis=1)
         pdf.loc[:, ColNames.MEAN_CORR_X.value] = pdf[CIF.A_Cartn_x.value] - pdf[ColNames.MEAN_COORDS.value]
         pdf.loc[:, ColNames.MEAN_CORR_Y.value] = pdf[CIF.A_Cartn_y.value] - pdf[ColNames.MEAN_COORDS.value]
         pdf.loc[:, ColNames.MEAN_CORR_Z.value] = pdf[CIF.A_Cartn_z.value] - pdf[ColNames.MEAN_COORDS.value]
