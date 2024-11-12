@@ -6,7 +6,7 @@ INPUT = amino acid sequence (1-letter FASTA format).
 
 OUTPUT = XYZ coordinates for atoms that are seen, otherwise `<NA>`.
 """
-import tokeniser as tk
+from src.preprocessing_funcs import tokeniser as tk
 from data_layer import data_handler as dh
 
 
