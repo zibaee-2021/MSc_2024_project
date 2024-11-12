@@ -57,8 +57,14 @@ class TestPreprocessingFuncs(TestCase):
                                                           relpath_to_cifs_dir=self.test_cif_dir,
                                                           relpath_to_dst_dir=self.test_tokenised_dir)
         # pdf.to_csv(path_or_buf='test_data/tokenised/test_1V5H.ssv', sep=' ', index=False)
-
         self.assertEqual(18, len(pdf.columns))
+
+    def test_parse_tokenise_and_write_cif_to_flatfile__4_chains(self):
+        list_of_pdfs = tk.parse_tokenise_and_write_cif_to_flatfile(pdb_ids=self.test_1OJ6_4chains_cif,
+                                                                   relpath_to_cifs_dir=self.test_cif_dir,
+                                                                   relpath_to_dst_dir=self.test_tokenised_dir)
+        for pdf in list_of_pdfs:
+            self.assertEqual(18, len(pdf.columns))
 
     def test_datatypes_after_casting(self):
         pdf_merged = pd.read_csv(f'{self._test_joined_dir}/{self.test_1V5H_ssv}', sep=' ')
