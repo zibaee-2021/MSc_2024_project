@@ -180,5 +180,6 @@ if __name__ == '__main__':
     pdbids = parse_single_dom_prots_and_write_csv(path_cath_list=path_cath_domain_list,
                                                   path_single_dom_prots=path_singl_dom_prots)
     dst_path = '../data/dataset/big_files_to_git_ignore/cifs_573_single_domain_prots/'
-    dh.make_api_calls_to_fetch_mmcif_and_write_locally(pdb_ids=pdbids, dst_path=dst_path)
+    for pdbid in pdbids:
+        dh.make_api_calls_to_fetch_mmcif_and_write_locally(pdb_id=pdbid, dst_path=dst_path)
     _assert_cif_count_equals_pdb_id_count(len(pdbids))
