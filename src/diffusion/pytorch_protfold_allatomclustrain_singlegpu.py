@@ -58,7 +58,7 @@ AAS_CODES_3_LETTER = 'aas_enumerated'
 PROT_TRAIN_CLUSTERS = 'prot_train_clusters'
 
 # paths:
-PATH_TO_CIF_DIR = '../src/diffusion/data/cif/'
+PATH_TO_CIF_DIR = '../src/diffusion/diff_data/cif/'
 PATH_TO_TOKENISED_DIR = 'diff_data/tokenised/'
 PATH_TO_EMB_DIR = 'diff_data/emb/'
 # OUTPUT FILE NAMES:
@@ -113,93 +113,98 @@ def load_dataset():
 
     # GET THE LIST OF PDB NAMES FOR PROTEINS TO TOKENISE:
     targetfile = _read_lst_file_from_src_diff_dir(fname=PROT_TRAIN_CLUSTERS)
+    train_list_per_chain, validation_list_per_chain = [], []
 
-    for line in targetfile:
+    for line in targetfile:  # It is expected that there is only one pdb id per line.
 
-        targets = line.rstrip().split()
-        dh.make_api_calls_to_fetch_mmcif_and_write_locally(pdb_ids=targets, dst_path=PATH_TO_CIF_DIR)
+        target_pdbid = line.rstrip().split()[0]
+        dh.make_api_calls_to_fetch_mmcif_and_write_locally(pdb_id=target_pdbid, dst_path=PATH_TO_CIF_DIR)
         sp = []
+        # READ PRE-PARSED & TOKENISED DATA, OR COMPUTE IT FROM SCRATCH. RETURN AS LIST OF DATAFRAMES, ONE PER CHAIN:
+        pdf_target_per_chain = (
+            tk.parse_tokenise_and_write_cif_to_flatfile(pdb_id=target_pdbid, relpath_to_dst_dir='diff_data/tokenised'))
 
-        for target in targets:
+        # FOR THE TIME-BEING, I WILL JUST USE ONE CHAIN FROM EACH PROTEIN, AND IGNORE THE OTHERS:
+        pdf_target = pdf_target_per_chain[0]
 
-            # READ PRE-PARSED & TOKENISED DATA IF AVAILABLE, ELSE COMPUTE IT, PROVIDE IT IN A DATAFRAME:
-            pdf_target = tk.parse_tokenise_and_write_cif_to_flatfile(pdb_ids=target,
-                                                                     relpath_to_dst_dir='diff_data/tokenised')
+        # GET MEAN-CORRECTED COORDINATES VIA 'mean_corrected_x', '_y', '_z' TO 3-ELEMENT LIST:
+        coords = pdf_target[[ColNames.MEAN_CORR_X.value, ColNames.MEAN_CORR_Y.value, ColNames.MEAN_CORR_Z.value]].values
 
-            # # REMOVE ORIGINAL RESIDUE COLUMN, NOT NEEDED NOW THAT ENUMERATED RESIDUE COLUMN IS CREATED:
-            # pdf_cif = pdf_cif.drop(columns=[CIF.S_mon_id.value])
+        # GET `atomcodes` VIA 'atom_label_num' COLUMN, WHICH HOLDS ENUMERATED ATOMS VALUES:
+        atomcodes = pdf_target[ColNames.ATOM_LABEL_NUM.value].tolist()
 
-            # GET MEAN-CORRECTED COORDINATES VIA 'mean_corrected_x', '_y', '_z' TO 3-ELEMENT LIST:
-            coords = pdf_target[[ColNames.MEAN_CORR_X.value,
-                                 ColNames.MEAN_CORR_Y.value,
-                                 ColNames.MEAN_CORR_Z.value]].values
+        # GET `aaatomcodes` VIA 'aa_atom_label_num' COLUMN, WHICH HOLDS ENUMERATED RESIDUE-ATOM PAIRS VALUES:
+        aaatomcodes = pdf_target[ColNames.AA_ATOM_LABEL_NUM.value].tolist()
 
-            # GET `atomcodes` VIA 'atom_label_num' COLUMN, WHICH HOLDS ENUMERATED ATOMS VALUES:
-            atomcodes = pdf_target[ColNames.ATOM_LABEL_NUM.value].tolist()
+        # GET `aaindices`. EXPECTED TO HAVE REPEATED VALUES BECAUSE 1 AA HAS 5 OR MORE ATOMS (NOT DUPLICATE ROWS):
+        aaindices = pdf_target[CIF.S_seq_id.value].tolist()
 
-            # GET `aaatomcodes` VIA 'aa_atom_label_num' COLUMN, WHICH HOLDS ENUMERATED RESIDUE-ATOM PAIRS VALUES:
-            aaatomcodes = pdf_target[ColNames.AA_ATOM_LABEL_NUM.value].tolist()
+        # # GET `bbindices`, VIA ASSIGNING DUPLICATED VALUES TO NEW COLUMN `BB_INDEX`, (DE-DUPLICATED BELOW):
+        # pdf_target = pdf_target.loc[pdf_target[CIF.A_label_atom_id.value]
+        #                             == CIF.ALPHA_CARBON.value, ColNames.BB_INDEX.value] \
+        #     = pdf_target[CIF.A_id.value]
 
-            # GET `aaindices`. EXPECTED TO HAVE REPEATED VALUES BECAUSE 1 AA HAS 5 OR MORE ATOMS (NOT DUPLICATE ROWS):
-            aaindices = pdf_target[CIF.S_seq_id.value].tolist()
+        # DE-DUPLICATE ROWS ON RESIDUE POSITION (`S_seq_id`) TO GET CORRECT DIMENSION OF `aacodes` and `bbindices`:
+        pdf_target_deduped = (pdf_target
+                              .drop_duplicates(subset=CIF.S_seq_id.value, keep='first')
+                              .reset_index(drop=True))
 
-            # GET `bbindices`, VIA ASSIGNING DUPLICATED VALUES TO NEW COLUMN `BB_INDEX`, (DE-DUPLICATED BELOW):
-            pdf_target = pdf_target.loc[pdf_target[CIF.A_label_atom_id.value] == CIF.ALPHA_CARBON.value, ColNames.BB_INDEX.value] = pdf_target[CIF.A_id.value]
+        # GET `aacodes`, VIA 'aa_label_num' COLUMN, WHICH HOLDS ENUMERATED RESIDUES VALUES:
+        aacodes = pdf_target_deduped[ColNames.AA_LABEL_NUM.value].tolist()
 
-            # DE-DUPLICATE ROWS ON RESIDUE POSITION (`S_seq_id`) TO GET CORRECT DIMENSION OF `aacodes` and `bbindices`:
-            pdf_target_deduped = pdf_target.drop_duplicates(subset=CIF.S_seq_id.value, keep='first').reset_index(drop=True)
+        # COMPLETE `bbindices`, VIA `BB_INDEX` IN DE-DUPLICATED DF:
+        bbindices = pdf_target_deduped[ColNames.BB_INDEX.value].tolist()
 
-            # GET `aacodes`, VIA 'aa_label_num' COLUMN, WHICH HOLDS ENUMERATED RESIDUES VALUES:
-            aacodes = pdf_target_deduped[ColNames.AA_LABEL_NUM.value].tolist()
+        # ONLY INCLUDE PROTEINS WITHIN A CERTAIN SIZE RANGE:
+        if len(aacodes) < 10 or len(aacodes) > 500:
+            continue
 
-            # COMPLETE `bbindices`, VIA `BB_INDEX` IN DE-DUPLICATED DF:
-            bbindices = pdf_target_deduped[ColNames.BB_INDEX.value].tolist()
+        # READ PRE-COMPUTED EMBEDDING OF THIS PROTEIN:
+        pdb_embed = torch.load(f'{PATH_TO_EMB_DIR}{target_pdbid}.pt')
 
-            # ONLY INCLUDE PROTEINS WITHIN A CERTAIN SIZE RANGE:
-            if len(aacodes) < 10 or len(aacodes) > 500:
-                continue
+        # AND MAKE SURE IT HAS SAME NUMBER OF RESIDUES AS THE PARSED-TOKENISED SEQUENCE FROM MMCIF:
+        # **** THIS WON'T BE THE CASE BECAUSE MY EMBEDDINGS WERE MADE FROM FULL PROTEIN SEQUENCE.
+        # SO I NEED TO REDO THE EMBEDDINGS, USING ONLY PROTEIN SEQUENCE FROM CIF (I.E. WITH GAPS)****
+        # assert pdb_embed.size(1) == len(aacodes)
 
-            # READ PRE-COMPUTED EMBEDDING OF THIS PROTEIN:
-            pdb_embed = torch.load(f'{PATH_TO_EMB_DIR}{target}.pt')
-            # AND MAKE SURE IT HAS SAME NUMBER OF RESIDUES AS THE PARSED-TOKENISED SEQUENCE FROM MMCIF:
-            assert pdb_embed.size(1) == len(aacodes)
+        # ONE BACKBONE ATOM (ALPHA-CARBON) PER RESIDUE. SO `len(bbindices)` SHOULD EQUAL NUMBER OF RESIDUES:
+        assert len(aacodes) == len(bbindices)
 
-            # ONE BACKBONE ATOM (ALPHA-CARBON) PER RESIDUE. SO `len(bbindices)` SHOULD EQUAL NUMBER OF RESIDUES:
-            assert len(aacodes) == len(bbindices)
+        # MAKE SURE YOU HAVE AT LEAST THE MINIMUM NUMBER OF EXPECTED ATOMS IN MMCIF DATA:
+        min_num_atoms_expected_per_residue = 5  # GLYCINE HAS 5 NON-H ATOMS: 2xO, 2xC, 1xN, 5xH.
+        min_num_expected_atoms = len(bbindices) * min_num_atoms_expected_per_residue
+        # THIS IS THE NUMBER OF ATOMS (AS ONE ROW PER ATOM DUE TO OUTER-JOIN. MIMICKS DJ'S RNA CODE:
+        num_of_atoms_in_cif = len(aaindices)
 
-            # MAKE SURE YOU HAVE AT LEAST THE MINIMUM NUMBER OF EXPECTED ATOMS IN MMCIF DATA:
-            min_num_atoms_expected_per_residue = 5  # GLYCINE HAS 5 NON-H ATOMS: 2xO, 2xC, 1xN, 5xH.
-            min_num_expected_atoms = len(bbindices) * min_num_atoms_expected_per_residue
-            # THIS IS THE NUMBER OF ATOMS (AS ONE ROW PER ATOM DUE TO OUTER-JOIN. MIMICKS DJ'S RNA CODE:
-            num_of_atoms_in_cif = len(aaindices)
+        # ASSUME PROTEIN WILL NEVER BE 100% GLYCINE (OTHERWISE I'D USE `<=` INSTEAD OF `<`):
+        if num_of_atoms_in_cif < min_num_expected_atoms:
+            print("WARNING: Too many missing atoms in ", target_pdbid, len(aacodes), len(aaindices))
+            continue
 
-            # ASSUME PROTEIN WILL NEVER BE 100% GLYCINE (OTHERWISE I'D USE `<=` INSTEAD OF `<`):
-            if num_of_atoms_in_cif < min_num_expected_atoms:
-                print("WARNING: Too many missing atoms in ", target, len(aacodes), len(aaindices))
-                continue
+        aacodes = np.asarray(aacodes, dtype=np.uint8)
+        atomcodes = np.asarray(atomcodes, dtype=np.uint8)
+        aaatomcodes = np.asarray(aaatomcodes, dtype=np.uint8)  # THIS IS AN ALTERNATIVE TO atomcodes.
+        bbindices = np.asarray(bbindices, dtype=np.int16)
+        aaindices = np.asarray(aaindices, dtype=np.int16)
 
-            aacodes = np.asarray(aacodes, dtype=np.uint8)
-            atomcodes = np.asarray(atomcodes, dtype=np.uint8)
-            aaatomcodes = np.asarray(aaatomcodes, dtype=np.uint8)
-            bbindices = np.asarray(bbindices, dtype=np.int16)
-            aaindices = np.asarray(aaindices, dtype=np.int16)
+        target_coords = np.asarray(coords, dtype=np.float32)
+        target_coords -= target_coords.mean(0)
 
-            target_coords = np.asarray(coords, dtype=np.float32)
-            target_coords -= target_coords.mean(0)
+        assert len(aacodes) == target_coords[bbindices].shape[0]
 
-            assert len(aacodes) == target_coords[bbindices].shape[0]
-
-            sum_d2 += (target_coords ** 2).sum()
-            sum_d += np.sqrt((target_coords ** 2).sum(axis=-1)).sum()
-            nn += target_coords.shape[0]
+        sum_d2 += (target_coords ** 2).sum()
+        sum_d += np.sqrt((target_coords ** 2).sum(axis=-1)).sum()
+        nn += target_coords.shape[0]
 
             diff = target_coords[1:] - target_coords[:-1]
             distances = np.linalg.norm(diff, axis=1)
+        diff = target_coords[1:] - target_coords[:-1]
+        distances = np.linalg.norm(diff, axis=1)
 
-            print(target_coords.shape, target, len(aacodes), distances.min(), distances.max())
+        print(target_coords.shape, target_pdbid, len(aacodes), distances.min(), distances.max())
 
-            sp.append((aacodes, atomcodes, aaindices, bbindices, target, target_coords))
-            # sp.append((aacodes, aaatomcodes, aaindices, bbindices, target, target_coords))
+        sp.append((aacodes, atomcodes, aaindices, bbindices, target_pdbid, target_coords))
+        # sp.append((aacodes, aaatomcodes, aaindices, bbindices, target, target_coords))
 
         # Choose every 10th sample for validation
         if tnum % 10 == 0:
@@ -207,10 +212,10 @@ def load_dataset():
         else:
             train_list.append(sp)
         tnum += 1
-        
-    sigma_data = sqrt((sum_d2 / nn) - (sum_d / nn) ** 2)
-    print(f'Data s.d. = , {sigma_data}')
-    print(f'Data unit var scaling = , {1 / sigma_data}')
+
+        sigma_data = sqrt((sum_d2 / nn) - (sum_d / nn) ** 2)
+        print(f'Data s.d. = , {sigma_data}')
+        print(f'Data unit var scaling = , {1 / sigma_data}')
 
     return train_list, validation_list
 

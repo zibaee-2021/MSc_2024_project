@@ -2,13 +2,14 @@
 # the other functions a bit tidier.
 import glob
 import os
+import re
 from typing import List
 import json
 import pandas as pd
 import torch
 import yaml
 from typing import Tuple
-from src.enums import CIF
+from src.enums import CIF, ColNames
 from src.preprocessing_funcs import api_caller as api
 
 
@@ -129,26 +130,21 @@ def read_nonnull_fastas_from_json_to_dict(fname: str) -> dict:
     return pdbids_fasta_json
 
 
-def make_api_calls_to_fetch_mmcif_and_write_locally(pdb_ids: list, dst_path: str):
+def make_api_calls_to_fetch_mmcif_and_write_locally(pdb_id: str, dst_path: str):
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
     non_200_count = 0
-    for pdb_id in pdb_ids:
-
-        mmcif_file = f'{dst_path}{pdb_id}.cif'
-        if os.path.exists(mmcif_file):
-            print(f'{mmcif_file} already exists. No API call required.')
-        else:
-            response = api.call_for_cif_with_pdb_id(pdb_id)
-            code = response.status_code
-            if code != 200:
-                non_200_count += 1
-                print(f'Response status code for {pdb_id} is {code}, hence could not read the pdb for this id.')
-
-            with open(mmcif_file, 'w') as file:
-                file.write(response.text)
-
-    print(f'{non_200_count} non-200 status codes out of {len(pdb_ids)} PDB API calls.')
-
+    mmcif_file = f'{dst_path}{pdb_id}.cif'
+    if os.path.exists(mmcif_file):
+        print(f'{mmcif_file} already exists. No API call required.')
+    else:
+        response = api.call_for_cif_with_pdb_id(pdb_id)
+        code = response.status_code
+        if code != 200:
+            non_200_count += 1
+            print(f'Response status code for {pdb_id} is {code}, hence could not read the pdb for this id.')
+        with open(mmcif_file, 'w') as file:
+            file.write(response.text)
+    print(f'{non_200_count} non-200 status codes out of {pdb_id} PDB API calls.')
     _restore_original_working_dir(cwd)
 
 
@@ -226,10 +222,23 @@ def read_tokenised_cif_ssv_to_pdf(pdb_id: str, relpath_to_tokenised_dir: str) ->
     """
     os.makedirs(relpath_to_tokenised_dir, exist_ok=True)
     relpath_to_tokenised_dir = relpath_to_tokenised_dir.removesuffix('/').removeprefix('/')
-    path_cif_ssv = f'{relpath_to_tokenised_dir}/{pdb_id}_A.ssv'
-    print(f'Attempting to read {path_cif_ssv}')
-    pdf = pd.read_csv(path_cif_ssv, sep=' ')
-    return pdf
+    pattern = fr'{pdb_id}_[A-Z]\.ssv'
+    ssvs = []
+    for f in os.listdir(relpath_to_tokenised_dir):
+        if os.path.isfile(os.path.join(relpath_to_tokenised_dir, f)) and re.match(pattern, f):
+            ssvs.append(f)
+    pdfs = []
+    for ssv in ssvs:
+        path_cif_ssv = f'{relpath_to_tokenised_dir}/{ssv}'
+        print(f'Attempting to read {path_cif_ssv} into a dataframe')
+
+        pdf = pd.read_csv(path_cif_ssv, sep=' ')
+        print(f'{pdf[ColNames.AA_ATOM_LABEL_NUM.value].dtype}')
+
+        nat_indices = pdf[pdf[ColNames.AA_ATOM_LABEL_NUM.value].isna()].index
+        print(f'Row indices with NaT values: {list(nat_indices)}')
+        pdfs.append(pdf)
+    return pdfs
 
 
 def _read_json_from_data_dir(fname: str) -> dict:
