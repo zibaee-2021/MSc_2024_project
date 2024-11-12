@@ -98,7 +98,7 @@ def read_aa_atoms_yaml() -> Tuple[list, dict]:
     aas_atoms = dict()
     aas = list()
 
-    with open('../data/yamls/atoms_residues.yaml', 'r') as stream:
+    with open('../data/yamls/residues_atoms.yaml', 'r') as stream:
         try:
             atoms_aas = yaml.load(stream, Loader=yaml.Loader)
             aas = atoms_aas['ROOT']['AAs']
