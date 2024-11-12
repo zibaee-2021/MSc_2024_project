@@ -204,51 +204,48 @@ def _make_new_column_for_backbone_or_sidechain_label(pdfs: List[pd.DataFrame]) -
     return result_pdfs
 
 
-def parse_tokenise_and_write_cif_to_flatfile(pdb_ids=None, flatfile_format_to_write: str = 'ssv',
+def parse_tokenise_and_write_cif_to_flatfile(pdb_id: str, flatfile_format_to_write: str = 'ssv',
                                              relpath_to_cifs_dir='diff_data/cif',
-                                             relpath_to_dst_dir='diff_data/tokenised') -> pd.DataFrame:
+                                             relpath_to_dst_dir='diff_data/tokenised') -> List[pd.DataFrame]:
     """
     Parse, then tokenise structure-related information in mmCIF files for proteins as specified by their PDB
     entries (`pdb_ids`) - unique Protein Data Bank identifiers.
     Write the tokenised sequence and structure data to flat files (ssv by default) in `tokenised` subdir.
     Parsing involves extracting required fields from mmCIF files to dataframes.
     Tokenising involves enumerating atoms and residues, and mean-adjusting x, y, z coordinates.
-    :param pdb_ids: PDB identifier(s) for protein(s) to tokenise.
+    :param pdb_id: PDB identifier for protein data to tokenise.
     :param flatfile_format_to_write: Write to ssv, csv or tsv. Use ssv by default.
     :param relpath_to_cifs_dir: Relative path to source dir of the raw cif files to be parsed and tokenised.
     Uses `src/diffusion/diff_data/cif` subdir by default, because expecting call from `src/diffusion`.
     :param relpath_to_dst_dir: Relative path to destination dir for the parsed and tokenised cif as a flat file.
     Use `src/diffusion/diff_data/tokenised` by default, because expecting call from `src/diffusion`.
     :return: Parsed and tokenised cif file as dataframe which is also written to a flatfile (ssv by default)
-    at `src/diffusion/diff_data/tokenised`.
+    at `src/diffusion/diff_data/tokenised`. List of dataframes, one per chain.
     Dataframe currently has these 17 Columns: ['A_label_asym_id', 'S_seq_id', 'A_id', 'A_label_atom_id', 'A_Cartn_x',
     'A_Cartn_y', 'A_Cartn_z', 'aa_label_num', 'bb_or_sc', 'bb_index', 'atom_label_num', 'aa_atom_tuple',
     'aa_atom_label_num', 'mean_xyz', 'mean_corrected_x', 'mean_corrected_y', 'mean_corrected_z'].
     """
     flatfile_format_to_write = flatfile_format_to_write.removeprefix('.').lower()
-    if isinstance(pdb_ids, str):
-        pdb_ids = [pdb_ids]
-    for pdb_id in pdb_ids:
-        pdb_id = pdb_id.removesuffix('.cif')
-        # IF ALREADY PARSED AND SAVED AS FLATFILE, JUST READ IT IN:
-        cif_tokenised_ssv = f'{relpath_to_dst_dir}/{pdb_id}_A.{flatfile_format_to_write}'
-        if os.path.exists(cif_tokenised_ssv):
-            list_of_cif_pdfs = dh.read_tokenised_cif_ssv_to_pdf(pdb_id=pdb_id,
-                                                                relpath_to_tokenised_dir=relpath_to_dst_dir)
-        else:
-            # OTHERWISE GET THE CIF DATA (EITHER LOCALLY OR VIA API)
-            relpath_to_cifs_dir = relpath_to_cifs_dir.removesuffix('/').removeprefix('/')
-            # PARSE mmCIF TO EXTRACT 14 FIELDS, TO FILTER, IMPUTE, SORT AND JOIN ON, RETURNING AN 8-COLUMN DATAFRAME:
-            # (THIS RETURNS A LIST OF DATAFRAMES, ONE PER POLYPEPTIDE CHAIN).
-            list_of_cif_pdfs = parser.parse_cif(pdb_id=pdb_id, relpath_to_cifs_dir=relpath_to_cifs_dir)
-            list_of_cif_pdfs = _make_new_column_for_backbone_or_sidechain_label(list_of_cif_pdfs)
-            list_of_cif_pdfs = _assign_backbone_index_to_all_residue_rows(list_of_cif_pdfs, pdb_id)
-            list_of_cif_pdfs = _enumerate_atoms_and_residues(list_of_cif_pdfs)
-            list_of_cif_pdfs = _assign_mean_corrected_coordinates(list_of_cif_pdfs)
-            dh.write_tokenised_cif_to_flatfile(pdb_id, list_of_cif_pdfs,
-                                               dst_data_dir=relpath_to_dst_dir,
-                                               flatfiles=flatfile_format_to_write)
-        return list_of_cif_pdfs
+    pdb_id = pdb_id.removesuffix('.cif')
+    # IF ALREADY PARSED AND SAVED AS FLATFILE, JUST READ IT IN:
+    cif_tokenised_ssv = f'{relpath_to_dst_dir}/{pdb_id}_A.{flatfile_format_to_write}'
+    if os.path.exists(cif_tokenised_ssv):
+        list_of_cif_pdfs_per_chain = dh.read_tokenised_cif_ssv_to_pdf(pdb_id=pdb_id,
+                                                                      relpath_to_tokenised_dir=relpath_to_dst_dir)
+    else:
+        # OTHERWISE GET THE CIF DATA (EITHER LOCALLY OR VIA API)
+        relpath_to_cifs_dir = relpath_to_cifs_dir.removesuffix('/').removeprefix('/')
+        # PARSE mmCIF TO EXTRACT 14 FIELDS, TO FILTER, IMPUTE, SORT AND JOIN ON, RETURNING AN 8-COLUMN DATAFRAME:
+        # (THIS RETURNS A LIST OF DATAFRAMES, ONE PER POLYPEPTIDE CHAIN).
+        list_of_cif_pdfs_per_chain = parser.parse_cif(pdb_id=pdb_id, relpath_to_cifs_dir=relpath_to_cifs_dir)
+        list_of_cif_pdfs_per_chain = _make_new_column_for_backbone_or_sidechain_label(list_of_cif_pdfs_per_chain)
+        list_of_cif_pdfs_per_chain = _assign_backbone_index_to_all_residue_rows(list_of_cif_pdfs_per_chain, pdb_id)
+        list_of_cif_pdfs_per_chain = _enumerate_atoms_and_residues(list_of_cif_pdfs_per_chain)
+        list_of_cif_pdfs_per_chain = _assign_mean_corrected_coordinates(list_of_cif_pdfs_per_chain)
+        dh.write_tokenised_cif_to_flatfile(pdb_id, list_of_cif_pdfs_per_chain,
+                                           dst_data_dir=relpath_to_dst_dir,
+                                           flatfiles=flatfile_format_to_write)
+    return list_of_cif_pdfs_per_chain
 
 
 if __name__ == '__main__':
