@@ -86,7 +86,7 @@ def load_dataset():
                                 ntindex += 1
                                 # lastnid = fields[8]
                                 lastnid = nucleotide_index
-                            if atid == "C3'" or atid == "P":  # Is this a way to determine when moved to next base? Why not just use `label_seq_id` ?
+                            if atid == "C3'" or atid == "P":
                                 # Replace representative reference atom index with preferred type (C3' > P)
                                 bbindices[-1] = atomindex
                             # Split the line
