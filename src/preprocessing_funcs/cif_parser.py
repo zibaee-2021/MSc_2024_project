@@ -1,18 +1,16 @@
 """
-(For some variable names in certain functions, I have, knowingly, violated the generally-accepted 'good practice' of
-indicating the data structure/type for a variable within its name. I just think it makes it's easier to read in some functions.)
-
 CIF_PARSER.PY DOES FOLLOWING:
     - GET THE RAW MMCIF DATA
     - EXTRACT FIELDS OF INTEREST FROM THE RAW MMCIF TO 2 DATAFRAMES
     - REMOVE HETATM ROWS FROM `_atom_site` DATAFRAME
-    - MERGE THE 2 DATAFRAMES ON `asym_id` AND `label_asym_id`, THEN ON `seq_id` AND `label_seq_id`
-    - CAST STRING TYPES TO NUMERIC TYPES, CAST TEXT (OBJECTS) TO PANDAS STRINGS
-    - REMOVE LOW OCCUPANCY ROWS, NANs AND/OR IMPUTE MISSING COORD ROWS
-    - SORT BY CERTAIN COLUMNS (`asym_id`, 'seq_id', 'id')
-    - REPLACE LOW OCCUPANCY ROWS WITH NANS
-    - REMOVE ROWS WITH MISSING DATA IN COORDINATES
-    - REMOVE UNNECESSARY COLUMNS
+    - SEPARATE OUT BY POLYPEPTIDE CHAIN AND PROCESS ONE CHAIN AT A TIME:
+        - JOIN THE TWO DATAFRAMES ON RESIDUE POSITION `S_seq_id` AND `A_label_seq_id`
+        - CAST STRING TYPES TO NUMERIC TYPES, CAST TEXT (OBJECTS) TO PANDAS STRINGS
+        - REMOVE LOW OCCUPANCY ROWS, NANs AND/OR IMPUTE MISSING COORD ROWS
+        - SORT BY CERTAIN COLUMN 'S_seq_id' and 'A_id'
+        - REPLACE LOW OCCUPANCY ROWS WITH NANS
+        - REMOVE ROWS WITH MISSING DATA IN COORDINATES
+        - REMOVE UNNECESSARY COLUMNS
 --------------------------------------------------------------------------------------------------
 
 (Note the CIF enum includes an `S_` or `A_` prefix, this is just for readability/provenance of each property, so the
@@ -20,25 +18,25 @@ strings themselves must be read as a substring from the third character onwards,
 Bio.PDB.MMCIF2Dict.MMCIF2Dict(cif) to map to the fields in the raw mmCIF files, which is executed in
 `_extract_fields_from_poly_seq(mmcif_dict)` and `_extract_fields_from_atom_site(mmcif_dict)`).
 
-These 14 fields are used and end up in a 14-column dataframe. A description of what they are all used for is given here
-and below (I know it's far from ideal duplicating info (even though just comments) but I feel it is beneficial, for now).
+Extract 14 fields from the two joined fields. Output a list of 8-column dataframes, one per chain:
 
-'A_' is for `_atom_site`; 'S_' is for `_pdbx_poly_seq_scheme`.
+'A_' = `_atom_site`; 'S_' = `_pdbx_poly_seq_scheme`.
 
-A_group_PDB             # 'ATOM' or 'HETATM'    - FILTER ON THIS, THEN REMOVE IT.
-S_seq_id.value,         # RESIDUE POSITION      - USED TO JOIN WITH A_label_seq_id. SORT ON THIS, KEEP IN DATAFRAME.
-S_mon_id.value,         # RESIDUE (3-LETTER)    - USE FOR SANITY-CHECK AGAINST A_label_comp_id, KEEP IN DATAFRAME.
-S_pdb_seq_num.value,    # RESIDUE POSITION      - KEEP FOR NOW, AS MAY RELATE TO SEQUENCE AS INPUT TO MAKE EMBEDDINGS.
-A_label_seq_id.value,   # RESIDUE POSITION      - USED TO JOIN WITH S_seq_id, THEN REMOVE IT.
-A_label_comp_id.value,  # RESIDUE (3-LETTER)    - USED TO SANITY-CHECK WITH S_mon_id, THEN REMOVE IT.
-A_id.value,             # ATOM POSITION         - SORT ON THIS, KEEP IN DATAFRAME.
-A_label_atom_id.value,  # ATOM                  - KEEP IN DATAFRAME.
-A_label_asym_id.value,  # CHAIN                 - JOIN ON THIS, SORT ON THIS, KEEP IN DATAFRAME.
-S_asym_id.value,        # CHAIN                 - JOIN ON THIS, THEN REMOVE IT.
-A_Cartn_x.value,        # COORDINATES           - ATOM X-COORDINATES
-A_Cartn_y.value,        # COORDINATES           - ATOM Y-COORDINATES
-A_Cartn_z.value,        # COORDINATES           - ATOM Z-COORDINATES
-A_occupancy.value       # OCCUPANCY             - FILTER ON THIS, THEN REMOVE IT.
+A_group_PDB             # 'ATOM' or 'HETATM'    - FILTER ON THIS.                                           THEN REMOVE
+S_pdb_seq_num.value,    # RESIDUE POSITION      -                                                           JUST REMOVE
+A_label_seq_id.value,   # RESIDUE POSITION      - USED TO JOIN WITH S_seq_id.                               THEN REMOVE
+A_label_comp_id.value,  # RESIDUE (3-LETTER)    - USED TO SANITY-CHECK WITH S_mon_id.                       THEN REMOVE
+A_label_asym_id.value,  # CHAIN                 - JOIN ON THIS, SORT ON THIS.                               THEN REMOVE
+A_occupancy.value       # OCCUPANCY             - FILTER ON THIS.                                           THEN REMOVE
+
+S_asym_id.value,        # CHAIN                 - JOIN ON THIS.                                             THEN KEEP
+S_seq_id.value,         # RESIDUE POSITION      - USED TO JOIN WITH A_label_seq_id. SORT ON THIS.           THEN KEEP
+S_mon_id.value,         # RESIDUE (3-LETTER)    - USE FOR SANITY-CHECK AGAINST A_label_comp_id.             THEN KEEP
+A_id.value,             # ATOM POSITION         - SORT ON THIS.                                             THEN KEEP
+A_label_atom_id.value,  # ATOM                  -                                                           JUST KEEP
+A_Cartn_x.value,        # COORDINATES           - ATOM X-COORDINATES                                        JUST KEEP
+A_Cartn_y.value,        # COORDINATES           - ATOM Y-COORDINATES                                        JUST KEEP
+A_Cartn_z.value,        # COORDINATES           - ATOM Z-COORDINATES                                        JUST KEEP
 """
 
 import os
@@ -50,7 +48,12 @@ from src.preprocessing_funcs import api_caller as api
 from src.enums import CIF
 
 
-def _remove_rows_with_missing_coords(pdf: pd.DataFrame) -> pd.DataFrame:
+def _remove_rows_with_missing_x_coords(pdf: pd.DataFrame) -> pd.DataFrame:
+    """
+
+    :param pdf: IMPORTANT: THIS IS EXPECTED TO BE FOR ON POLYPEPTIDE CHAIN ONLY.
+    :return:
+    """
     missing_count = pdf[CIF.A_Cartn_x.value].isna().sum()
     print(f'BEFORE removing them, there are {missing_count} rows with missing values in column'
           f' {CIF.A_Cartn_x.value}')
@@ -100,14 +103,14 @@ def _process_missing_data(pdf_with_missing_data: pd.DataFrame, impute=False) -> 
     breaks and during inference there will be no breaks as all the atoms will be present and initialized to random
     positions before the denoising process starts... It's one of the benefits of using an atom-level diffusion model
     - it's all just a cloud of labelled atoms."
-    :param pdf_with_missing_data:
+    :param pdf_with_missing_data: IMPORTANT: THIS IS EXPECTED TO BE FOR ON POLYPEPTIDE CHAIN ONLY.
     :param impute:
     :return:
     """
     if impute:
         result_pdf = _impute_missing_coords(pdf_with_missing_data)
     else:
-        result_pdf = _remove_rows_with_missing_coords(pdf_with_missing_data)
+        result_pdf = _remove_rows_with_missing_x_coords(pdf_with_missing_data)
     return result_pdf
 
 
@@ -115,6 +118,7 @@ def _replace_low_occupancy_coords_with_nans(pdf: pd.DataFrame) -> pd.DataFrame:
     """
     'Occupancy' is the fraction of the atom present at this atom position. Replace all atom coordinates that have
     occupancy less than or equal to 0.5 with NAN.
+    IMPORTANT: THIS IS EXPECTED TO BE FOR ON POLYPEPTIDE CHAIN ONLY.
     :param pdf: Pandas dataframe for CIF being parsed.
     :return: Given dataframe parsed according to occupancy metric.
     """
@@ -133,15 +137,23 @@ def _replace_low_occupancy_coords_with_nans(pdf: pd.DataFrame) -> pd.DataFrame:
 
 
 def _sort_by_chain_residues_atoms(pdf: pd.DataFrame) -> pd.DataFrame:
+    """
+    IMPORTANT: THIS IS EXPECTED TO BE FOR ON POLYPEPTIDE CHAIN ONLY.
+    :param pdf:
+    :return:
+    """
     # SORT ROWS BY CHAIN, RESIDUE SEQUENCE NUMBERING (SEQ ID) THEN ATOM SEQUENCE NUMBERING (A_ID):
     pdf.reset_index(drop=True, inplace=True)
-    pdf = pdf.sort_values([CIF.S_asym_id.value,
-                           CIF.S_seq_id.value,
-                           CIF.A_id.value], ignore_index=True)
+    pdf = pdf.sort_values([CIF.S_seq_id.value, CIF.A_id.value], ignore_index=True)
     return pdf
 
 
 def _cast_objects_to_stringdtype(pdf: pd.DataFrame) -> pd.DataFrame:
+    """
+    IMPORTANT: THIS IS EXPECTED TO BE FOR ON POLYPEPTIDE CHAIN ONLY.
+    :param pdf:
+    :return:
+    """
     cols_to_cast = [CIF.S_mon_id.value,
                     CIF.A_label_comp_id.value,
                     CIF.A_label_atom_id.value,
@@ -155,9 +167,10 @@ def _cast_objects_to_stringdtype(pdf: pd.DataFrame) -> pd.DataFrame:
 def _cast_number_strings_to_numeric_types(pdf_merged: pd.DataFrame) -> pd.DataFrame:
     """
     Cast the strings of coordinates which are floats to numeric datatype.
+    IMPORTANT: THIS IS EXPECTED TO BE FOR ON POLYPEPTIDE CHAIN ONLY.
     Cast the strings of integers in `S_seq_id`, `A_label_seq_id`, `S_pdb_seq_num` and `A_id` to numeric, then Int64.
     :param pdf_merged: Data containing columns to cast. It is a dataframe of `_atom_site` and `_pdbx_poly_seq_scheme`
-    mmCIF fields merged and with all 'HETATM' rows already removed.
+    mmCIF fields merged, and with all 'HETATM' rows already removed.
     :return: Data with number strings cast to corresponding numeric types.
     """
     # CAST STRINGS OF FLOATS TO NUMERIC:
@@ -179,6 +192,11 @@ def _cast_number_strings_to_numeric_types(pdf_merged: pd.DataFrame) -> pd.DataFr
 
 
 def _reorder_columns(pdf_merged: pd.DataFrame) -> pd.DataFrame:
+    """
+    IMPORTANT: THIS IS EXPECTED TO BE FOR ON POLYPEPTIDE CHAIN ONLY.
+    :param pdf_merged:
+    :return:
+    """
     return pdf_merged[[
         CIF.S_seq_id.value,         # RESIDUE POSITION      - JOIN TO S_label_seq_id, SORT ON THIS, KEEP IN DF.
         CIF.A_label_seq_id.value,   # RESIDUE POSITION      - JOIN TO S_seq_id, THEN REMOVE IT.
@@ -187,8 +205,8 @@ def _reorder_columns(pdf_merged: pd.DataFrame) -> pd.DataFrame:
         CIF.S_mon_id.value,         # RESIDUE (3-letter)    - USE FOR SANITY-CHECK AGAINST A_label_comp_id, KEEP IN DF.
         CIF.A_label_comp_id.value,  # RESIDUE (3-letter)    - USED TO SANITY-CHECK WITH S_mon_id, THEN REMOVE IT.
         CIF.A_label_atom_id.value,  # ATOM                  - KEEP IN DF.
-        CIF.A_label_asym_id.value,  # CHAIN                 - JOIN ON THIS, SORT ON THIS, THEN REMOVE IT.
-        CIF.S_asym_id.value,        # CHAIN                 - JOIN ON THIS, SORT ON THIS, KEEP IN DF.
+        CIF.A_label_asym_id.value,  # CHAIN                 - JUST REMOVE
+        CIF.S_asym_id.value,        # CHAIN                 - JUST KEEP
         CIF.A_Cartn_x.value,        # COORDINATES           - X-COORDINATES
         CIF.A_Cartn_y.value,        # COORDINATES           - Y-COORDINATES
         CIF.A_Cartn_z.value,        # COORDINATES           - Z-COORDINATES
@@ -199,6 +217,7 @@ def _reorder_columns(pdf_merged: pd.DataFrame) -> pd.DataFrame:
 def _join_atomsite_to_polyseq(atomsite: pd.DataFrame, polyseq: pd.DataFrame) -> pd.DataFrame:
     """
     Join dataframes corresponding to `_atom_site` and `_pdbx_poly_seq_scheme` fields, on protein sequence number.
+    IMPORTANT: THIS IS EXPECTED TO BE FOR ON POLYPEPTIDE CHAIN ONLY.
     :param atomsite:
     :param polyseq:
     :return:
@@ -207,9 +226,7 @@ def _join_atomsite_to_polyseq(atomsite: pd.DataFrame, polyseq: pd.DataFrame) -> 
     return pd.merge(
         left=polyseq,
         right=atomsite,
-        # left_on=[CIF.S_seq_id.value, CIF.S_asym_id.value],
         left_on=[CIF.S_seq_id.value],
-        # right_on=[CIF.A_label_seq_id.value, CIF.A_label_asym_id.value],
         right_on=[CIF.A_label_seq_id.value],
         how='outer'
     )
@@ -261,7 +278,7 @@ def _extract_fields_from_atom_site(mmcif: dict) -> pd.DataFrame:
     label_atom_ids = mmcif[_atom_site + CIF.A_label_atom_id.value[2:]]  # ATOMS
     label_comp_ids = mmcif[_atom_site + CIF.A_label_comp_id.value[2:]]  # RESIDUE (3-LETTER)
     label_asym_ids = mmcif[_atom_site + CIF.A_label_asym_id.value[2:]]  # CHAIN
-    label_seq_ids = mmcif[_atom_site + CIF.A_label_seq_id.value[2:]]      # RESIDUE POSITION
+    label_seq_ids = mmcif[_atom_site + CIF.A_label_seq_id.value[2:]]    # RESIDUE POSITION
     x_coords = mmcif[_atom_site + CIF.A_Cartn_x.value[2:]]              # CARTESIAN X COORDS
     y_coords = mmcif[_atom_site+ CIF.A_Cartn_y.value[2:]]               # CARTESIAN Y COORDS
     z_coords = mmcif[_atom_site + CIF.A_Cartn_z.value[2:]]              # CARTESIAN Z COORDS
@@ -320,17 +337,17 @@ def _get_mmcif_data(pdb_id: str, relpath_to_raw_cif: str) -> dict:
         print(f'Did not find this CIF locally ({relpath_to_raw_cif}). Attempting to read {pdb_id} directly from '
               f'https://files.rcsb.org/download/{pdb_id}')
 
-        def _fetch_mmcif_from_pdb_api_and_write_locally(pdb_id: str) -> None:
+        def _fetch_mmcif_from_pdb_api_and_write(_pdb_id: str, relpath_dst_cif: str) -> None:
             """
             Fetch raw mmCIF data from API (expected hosted at 'https://files.rcsb.org/download/') using given PDB id, and write
             out to flat file.
-            :param pdb_id: Alphanumeric 4-character Protein Databank Identifier. e.g. '1OJ6'.
+            :param _pdb_id: Alphanumeric 4-character Protein Databank Identifier. e.g. '1OJ6'.
             """
-            response = api.call_for_cif_with_pdb_id(pdb_id)
-            mmcif_file = f'../data/big_data_to_git_ignore/cifs_single_domain_prots/{pdb_id}.cif'
-            with open(mmcif_file, 'w') as file:
+            response = api.call_for_cif_with_pdb_id(_pdb_id)
+            # relpath_dst_cif = f'../data/big_data_to_git_ignore/cifs_single_domain_prots/{pdb_id}.cif'
+            with open(relpath_dst_cif, 'w') as file:
                 file.write(response.text)
-        _fetch_mmcif_from_pdb_api_and_write_locally(pdb_id)
+        _fetch_mmcif_from_pdb_api_and_write(_pdb_id=pdb_id, relpath_dst_cif=relpath_to_raw_cif)
         mmcif = MMCIF2Dict(relpath_to_raw_cif)
     return mmcif
 
@@ -341,19 +358,19 @@ def parse_cif(pdb_id: str, relpath_to_cifs_dir: str) -> List[pd.DataFrame]:
     `_pdbx_poly_seq_scheme` and `_atom_site`.
     :param pdb_id: Alphanumeric 4-character Protein Databank Identifier. e.g. '1OJ6'.
     :param relpath_to_cifs_dir: Relative path to local raw mmCIF file, e.g. 'path/to/1OJ6' (MUST INCLUDE PDB ID).
-    :return: Necessary fields extracted from raw mmCIF (from local copy or API) and joined in one table. This is a
-    list of one or more results for each chain found in this mmCIF.
+    :return: 8 necessary fields extracted from raw mmCIF (from local copy or API) and joined in one table.
+    This is a list of one or more results for each chain found in this mmCIF.
     """
     mmcif_dict = _get_mmcif_data(pdb_id, relpath_to_cifs_dir)
     polyseq_pdf = _extract_fields_from_poly_seq(mmcif_dict)
     atomsite_pdf = _extract_fields_from_atom_site(mmcif_dict)
     atomsite_pdf = _remove_hetatm_rows(atomsite_pdf)
     # GENERATE A LIST OF TUPLES, EACH TUPLE IS THE ATOMSITE AND POLYSEQ DATA FOR A SINGLE CHAIN
-    all_chains = _split_up_by_chain(atomsite_pdf, polyseq_pdf)
+    all_chains_pdf = _split_up_by_chain(atomsite_pdf, polyseq_pdf)
 
     parsed_cif_by_chain = []
-    for chain in all_chains:
-        atomsite_pdf, polyseq_pdf = chain
+    for chain_pdf in all_chains_pdf:
+        atomsite_pdf, polyseq_pdf = chain_pdf
         joined_pdf = _join_atomsite_to_polyseq(atomsite_pdf, polyseq_pdf)
         joined_pdf = _reorder_columns(joined_pdf)
         joined_pdf = _cast_number_strings_to_numeric_types(joined_pdf)
@@ -362,14 +379,14 @@ def parse_cif(pdb_id: str, relpath_to_cifs_dir: str) -> List[pd.DataFrame]:
         joined_pdf = _replace_low_occupancy_coords_with_nans(joined_pdf)
         joined_pdf = _process_missing_data(joined_pdf, impute=False)
 
-        # ONLY KEEP THESE EIGHT COLUMNS, AND IN THIS ORDER:
-        joined_pdf = joined_pdf[[CIF.S_asym_id.value,        # CHAIN                * `A_label_asym_id`
-                                 CIF.S_seq_id.value,         # RESIDUE POSITION     * `A_label_seq_id`
-                                 CIF.S_mon_id.value,         # RESIDUE              * `A_label_comp`
-                                 CIF.A_id.value,             # ATOM POSITION        **
-                                 CIF.A_label_atom_id.value,  # ATOM                 **
-                                 CIF.A_Cartn_x.value,        # X COORDINATES        ***
-                                 CIF.A_Cartn_y.value,        # Y COORDINATES        ***
-                                 CIF.A_Cartn_z.value]]       # Z COORDINATES        ***
+        # 8 COLUMNS TO KEEP:
+        joined_pdf = joined_pdf[[CIF.S_asym_id.value,        # CHAIN
+                                 CIF.S_seq_id.value,         # RESIDUE POSITION
+                                 CIF.S_mon_id.value,         # RESIDUE NAME (3-LETTER)
+                                 CIF.A_id.value,             # ATOM POSITION
+                                 CIF.A_label_atom_id.value,  # ATOM NAME
+                                 CIF.A_Cartn_x.value,
+                                 CIF.A_Cartn_y.value,
+                                 CIF.A_Cartn_z.value]]
         parsed_cif_by_chain.append(joined_pdf)
     return parsed_cif_by_chain
