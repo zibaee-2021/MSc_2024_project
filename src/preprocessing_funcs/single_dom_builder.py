@@ -176,7 +176,7 @@ def _assert_cif_count_equals_pdb_id_count(pdb_ids_len: int):
 # NOTE - THIS ONLY NEEDS TO BE CALLED ONCE:
 if __name__ == '__main__':
     path_cath_domain_list = '../data/dataset/CATH/cath-domain-list.txt'
-    path_singl_dom_prots = '../../data/dataset/CATH/cath_573_single_domain_prots.csv'
+    path_singl_dom_prots = '../../data/dataset/big_files_to_git_ignore/CATH/cath_573_single_domain_prots.csv'
     pdbids = parse_single_dom_prots_and_write_csv(path_cath_list=path_cath_domain_list,
                                                   path_single_dom_prots=path_singl_dom_prots)
     dst_path = '../data/dataset/big_files_to_git_ignore/cifs_single_domain_prots/'
