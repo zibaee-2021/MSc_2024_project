@@ -2,11 +2,13 @@
 # the other functions a bit tidier.
 import glob
 import os
+from typing import List
 import json
 import pandas as pd
 import torch
 import yaml
 from typing import Tuple
+from src.enums import CIF
 from src.preprocessing_funcs import api_caller as api
 
 
@@ -65,22 +67,23 @@ def write_list_to_space_separated_txt_file(list_to_write: list, file_name: str) 
 
 def write_enumerations_json(fname: str, dict_to_write: dict) -> None:
     fname = fname.removesuffix('.json')
-    write_to_json_to_data_dir(fname=f'enumerations/{fname}.json', dict_to_write=dict_to_write)
+    _write_to_json_to_data_dir(fname=f'enumerations/{fname}.json', dict_to_write=dict_to_write)
 
 
-def _read_enumerations_json(fname: str) -> dict:
+def read_enumerations_json(fname: str) -> dict:
     fname = fname.removesuffix('.json')
-    return read_json_from_data_dir(fname=f'enumerations/{fname}.json')
+    return _read_json_from_data_dir(fname=f'enumerations/{fname}.json')
 
 
 def read_enumeration_mappings() -> Tuple[dict, dict, dict]:
-    residues_atoms_enumerated = _read_enumerations_json(fname='residues_atoms_no_hydrogens')
-    atoms_enumerated = _read_enumerations_json(fname='unique_atoms_only_no_hydrogens')
-    residues_enumerated = _read_enumerations_json(fname=f'residues')
+    residues_atoms_enumerated = read_enumerations_json(fname='residues_atoms_no_hydrogens')
+    residues_atoms_enumerated = {eval(k): v for k, v in residues_atoms_enumerated.items()}
+    atoms_enumerated = read_enumerations_json(fname='unique_atoms_only_no_hydrogens')
+    residues_enumerated = read_enumerations_json(fname=f'residues')
     return residues_atoms_enumerated, atoms_enumerated, residues_enumerated
 
 
-def write_to_json_to_data_dir(fname: str, dict_to_write: dict):
+def _write_to_json_to_data_dir(fname: str, dict_to_write: dict):
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
     fname = fname.removeprefix('/').removesuffix('.json')
     relpath_json = f'../data/{fname}.json'
@@ -121,7 +124,7 @@ def _remove_null_entries(pdbids_fasta_json: dict):
 
 
 def read_nonnull_fastas_from_json_to_dict(fname: str) -> dict:
-    pdbids_fasta_json = read_json_from_data_dir(fname=f'FASTA/{fname}')
+    pdbids_fasta_json = _read_json_from_data_dir(fname=f'FASTA/{fname}')
     pdbids_fasta_json = _remove_null_entries(pdbids_fasta_json)
     return pdbids_fasta_json
 
@@ -155,57 +158,60 @@ def save_torch_tensor(pt: torch.Tensor, dst_path: str):
     _restore_original_working_dir(cwd)
 
 
-def write_tokenised_cif_to_flatfile(pdb_id: str, pdf: pd.DataFrame, dst_data_dir=None, flatfiles=None):
+def write_tokenised_cif_to_flatfile(pdb_id: str, pdfs: List[pd.DataFrame], dst_data_dir=None, flatfiles=None):
     """
-    Write dataframe of single protein with columns CIF.S_seq_id, CIF.S_mon_id, CIF.A_id, CIF.A_label_atom_id,
-    ColNames.MEAN_CORR_X, ColNames.MEAN_CORR_Y, ColNames.MEAN_CORR_Z to flat file(s) in local relative dir
-    'data/tokenised/' or to the top-level general-use data dir.
+    Write dataframe of single protein, and single chain, with columns CIF.S_seq_id, CIF.S_mon_id, CIF.A_id,
+    CIF.A_label_atom_id, ColNames.MEAN_CORR_X, ColNames.MEAN_CORR_Y, ColNames.MEAN_CORR_Z to flat file(s) in local
+    relative dir 'data/tokenised/' or to the top-level general-use data dir.
     :param pdb_id: pdb/cif id.
-    :param pdf: Dataframe to write to flat file(s).
+    :param pdfs: List of dataframes to write to flat file(s). One dataframe per polypeptide chain.
     :param dst_data_dir: Relative path to destination dir of flatfile of tokenised cif. (Will be called from either
     `diffSock/test`, `diffSock/src/preprocessing_funcs` or `diffSock/src/diffusion`. The responsibility for determining
     the relative destination path is left to the caller).
-    :param flatfiles: List of file formats (e.g. ['ssv', 'csv', 'tsv'], or string of one format, otherwise ssv by
-    default).
+    :param flatfiles: List of file formats (e.g. ['ssv', 'csv', 'tsv'], or string of one format, otherwise just
+    one ssv file per protein and chain, by default). E.g. Chain 'A' for PDB id '10J6' is written to `10J6_A.ssv`.
     """
-    if flatfiles is None:
-        flatfiles = ['ssv']
-    elif isinstance(flatfiles, str):
-        flatfiles = [flatfiles]
+    for pdf in pdfs:
+        if flatfiles is None:
+            flatfiles = ['ssv']
+        elif isinstance(flatfiles, str):
+            flatfiles = [flatfiles]
+        cwd = ''  # to return to at end of this function.
+        if not dst_data_dir:  # i.e. use the top-level general-use `data` dir & define relpath from data_layer
+            # Store cwd to return to at end. Change current dir to data layer:
+            print(f'You did not pass any destination dir path for writing the tokenised cif flat flatfile to. '
+                  f'Therefore it will be written to the top-level data dir (`diffSock/data/tokenised`).')
+            cwd = _chdir_to_data_layer()
+            dst_data_dir = '../data/tokenised/'
+        else:
+            os.makedirs(dst_data_dir, exist_ok=True)
 
-    cwd = ''
+        chain = pdf[CIF.S_asym_id.value].unique()
+        chain = chain[0]
+        for flatfile in flatfiles:
+            sep = ' '
+            if flatfile == 'tsv':
+                sep = '\t'
+            elif flatfile == 'csv':
+                sep = ','
+            # pdf.to_csv(path_or_buf=f'../data/tokenised/{pdb_id}.csv', sep=sep, index=False, na_rep='null')
+            dst_data_dir = dst_data_dir.removesuffix('/')
+            pdb_id = pdb_id.removesuffix('.cif')
+            pdf.to_csv(path_or_buf=f'{dst_data_dir}/{pdb_id}_{chain}.{flatfile}', sep=sep, index=False)
 
-    if not dst_data_dir:  # i.e. use the top-level general-use `data` dir & define relpath from data_layer
-        # Store cwd to return to at end. Change current dir to data layer:
-        print(f'You did not pass any destination dir path for writing the tokenised cif flat flatfile to. '
-              f'Therefore it will be written to the top-level data dir (`diffSock/data/tokenised`).')
-        cwd = _chdir_to_data_layer()
-        dst_data_dir = '../data/tokenised/'
-    else:
-        os.makedirs(dst_data_dir, exist_ok=True)
+        # # For a more human-readable set of column-names:
+        # pdf_easy_read = pdf.rename(columns={CIF.S_seq_id.value: 'SEQ_ID',
+        #                                     CIF.S_mon_id.value: 'RESIDUES',
+        #                                     CIF.A_id.value: 'ATOM_ID',
+        #                                     CIF.A_label_atom_id.value: 'ATOMS',
+        #                                     ColNames.MEAN_CORR_X.value: 'X',
+        #                                     ColNames.MEAN_CORR_Y.value: 'Y',
+        #                                     ColNames.MEAN_CORR_Z.value: 'Z'})
+        # pdf_easy_read.to_csv(path_or_buf=f'../data/tokenised/easyRead_{pdb_id}.tsv', sep='\t',
+        # index=False, na_rep='null')
 
-    for flatfile in flatfiles:
-        sep = ' '
-        if flatfile == 'tsv':
-            sep = '\t'
-        elif flatfile == 'csv':
-            sep = ','
-        # pdf.to_csv(path_or_buf=f'../data/tokenised/{pdb_id}.csv', sep=sep, index=False, na_rep='null')
-        dst_data_dir = dst_data_dir.removesuffix('/')
-        pdf.to_csv(path_or_buf=f'{dst_data_dir}/{pdb_id}.{flatfile}', sep=sep, index=False)
-
-    # # For a more human-readable set of column-names:
-    # pdf_easy_read = pdf.rename(columns={CIF.S_seq_id.value: 'SEQ_ID',
-    #                                     CIF.S_mon_id.value: 'RESIDUES',
-    #                                     CIF.A_id.value: 'ATOM_ID',
-    #                                     CIF.A_label_atom_id.value: 'ATOMS',
-    #                                     ColNames.MEAN_CORR_X.value: 'X',
-    #                                     ColNames.MEAN_CORR_Y.value: 'Y',
-    #                                     ColNames.MEAN_CORR_Z.value: 'Z'})
-    # pdf_easy_read.to_csv(path_or_buf=f'../data/tokenised/easyRead_{pdb_id}.tsv', sep='\t', index=False, na_rep='null')
-
-    if not dst_data_dir:
-        _restore_original_working_dir(cwd)
+        if not dst_data_dir:
+            _restore_original_working_dir(cwd)
 
 
 def read_tokenised_cif_ssv_to_pdf(pdb_id: str, relpath_to_tokenised_dir: str) -> pd.DataFrame:
@@ -220,17 +226,17 @@ def read_tokenised_cif_ssv_to_pdf(pdb_id: str, relpath_to_tokenised_dir: str) ->
     """
     os.makedirs(relpath_to_tokenised_dir, exist_ok=True)
     relpath_to_tokenised_dir = relpath_to_tokenised_dir.removesuffix('/').removeprefix('/')
-    path_cif_ssv = f'{relpath_to_tokenised_dir}/{pdb_id}.ssv'
+    path_cif_ssv = f'{relpath_to_tokenised_dir}/{pdb_id}_A.ssv'
     print(f'Attempting to read {path_cif_ssv}')
     pdf = pd.read_csv(path_cif_ssv, sep=' ')
     return pdf
 
 
-def read_json_from_data_dir(fname: str) -> dict:
+def _read_json_from_data_dir(fname: str) -> dict:
     """
-    Read given json file from diffSock/data/{fname}.
+    Read given json file from diffSock/data/{fname} to a Python dict.
     :param fname: File name of json file to read. IMPORTANT: Subdir paths are expected to be included.
-    e.g. 'aa_atoms_ennumerated/fname.json' without starting forward slash.
+    e.g. 'enumerations/fname.json' without starting forward slash.
     :return: The read-in json file, as a Python dict.
     """
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
@@ -239,14 +245,14 @@ def read_json_from_data_dir(fname: str) -> dict:
     assert os.path.exists(relpath_json)
     try:
         with open(relpath_json, 'r') as json_f:
-            f = json.load(json_f)
+            my_dict = json.load(json_f)
     except FileNotFoundError:
-        print(f'{f} does not exist.')
+        print(f'{my_dict} does not exist.')
     except Exception as e:
         print(f"An error occurred: {e}")
 
     _restore_original_working_dir(cwd)
-    return f
+    return my_dict
 
 
 def read_lst_file_from_data_dir(fname):
@@ -302,5 +308,5 @@ def _manually_write_aa_atoms_to_data_dir(path: str) -> None:
 
 # if __name__ == '__main__':
 # # This only needs to be run once:
-#     dh._manually_write_aa_atoms_to_data_dir(path='../data/aa_atoms_enumerated/aa_atoms.json')
+#     dh._manually_write_aa_atoms_to_data_dir(path='../data/enumerations/aa_atoms.json')
 
