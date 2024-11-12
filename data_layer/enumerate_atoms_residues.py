@@ -4,7 +4,7 @@ NOTE: THE THREE FUNCTIONS IN THIS MODULE NEED ONLY BE CALLED **ONCE**.
 Create enumerated collections of the amino acids, the atoms and the atoms for each amino acid.
 Store in dicts and save to `../data/enumerations`.
 
-(Atom names manually collected from https://www.ebi.ac.uk/pdbe-srv/pdbechem/atom/list/ARG to TRP)
+(Atom names MANUALLY collected from https://www.ebi.ac.uk/pdbe-srv/pdbechem/atom/list/ARG to TRP)
 """
 from data_layer import data_handler as dh
 import json
