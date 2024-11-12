@@ -52,24 +52,28 @@ mean_corrected_z      # Z COORDINATES FOR EACH ATOM SUBTRACTED BY THE MEAN OF XY
 
 
 import os
+from typing import List
 import pandas as pd
 from src.preprocessing_funcs import cif_parser as parser
 from data_layer import data_handler as dh
 from src.enums import ColNames, CIF, PolypeptideAtoms
 
 
-def _assign_mean_corrected_coordinates(pdf: pd.DataFrame) -> pd.DataFrame:
-    # SUBTRACT EACH COORDINATE BY THE MEAN OF ALL 3 PER ATOM:
-    pdf.loc[:, ColNames.MEAN_COORDS.value] = pdf[[CIF.A_Cartn_x.value,
-                                                          CIF.A_Cartn_y.value,
-                                                          CIF.A_Cartn_z.value]].mean(axis=1)
-    pdf.loc[:, ColNames.MEAN_CORR_X.value] = pdf[CIF.A_Cartn_x.value] - pdf[ColNames.MEAN_COORDS.value]
-    pdf.loc[:, ColNames.MEAN_CORR_Y.value] = pdf[CIF.A_Cartn_y.value] - pdf[ColNames.MEAN_COORDS.value]
-    pdf.loc[:, ColNames.MEAN_CORR_Z.value] = pdf[CIF.A_Cartn_z.value] - pdf[ColNames.MEAN_COORDS.value]
-    expected_num_of_cols = 18
-    assert len(pdf.columns) == expected_num_of_cols, \
-        f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf.columns)}'
-    return pdf
+def _assign_mean_corrected_coordinates(pdfs: List[pd.DataFrame]) -> List[pd.DataFrame]:
+    result_pdfs = list()
+    for pdf in pdfs:
+        # SUBTRACT EACH COORDINATE BY THE MEAN OF ALL 3 PER ATOM:
+        pdf.loc[:, ColNames.MEAN_COORDS.value] = pdf[[CIF.A_Cartn_x.value,
+                                                              CIF.A_Cartn_y.value,
+                                                              CIF.A_Cartn_z.value]].mean(axis=1)
+        pdf.loc[:, ColNames.MEAN_CORR_X.value] = pdf[CIF.A_Cartn_x.value] - pdf[ColNames.MEAN_COORDS.value]
+        pdf.loc[:, ColNames.MEAN_CORR_Y.value] = pdf[CIF.A_Cartn_y.value] - pdf[ColNames.MEAN_COORDS.value]
+        pdf.loc[:, ColNames.MEAN_CORR_Z.value] = pdf[CIF.A_Cartn_z.value] - pdf[ColNames.MEAN_COORDS.value]
+        expected_num_of_cols = 18
+        assert len(pdf.columns) == expected_num_of_cols, \
+            f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf.columns)}'
+        result_pdfs.append(pdf)
+    return result_pdfs
 
 
 def _enumerate_residues_atoms(pdf: pd.DataFrame) -> pd.DataFrame:
@@ -81,7 +85,9 @@ def _enumerate_residues_atoms(pdf: pd.DataFrame) -> pd.DataFrame:
     :return: Given dataframe with two new columns holding the enumerated residue-atom pairs data, as well as a column
     holding the intermediate data of residue-atom pairs. Expected to have 14 columns.
     """
-    residues_atoms_enumerated = dh._read_enumerations_json(fname='residues_atoms_no_hydrogens')
+    residues_atoms_enumerated = dh.read_enumerations_json(fname='residues_atoms_no_hydrogens')
+    # CAST THE STRING REPRESENTATION OF A TUPLE TO AN ACTUAL TUPLE FOR KEY TO WORK IN MAPPING:
+    residues_atoms_enumerated = {eval(k): v for k, v in residues_atoms_enumerated.items()}
     # FIRST MAKE NEW COLUMN OF RESIDUE-ATOM PAIRS. E.G. CONTAINS ('ASP':'C'), ('ASP':'CA'), ETC:
     pdf[ColNames.AA_ATOM_PAIR.value] = list(zip(pdf[CIF.S_mon_id.value],
                                                 pdf[CIF.A_label_atom_id.value]))
@@ -105,7 +111,7 @@ def _enumerate_atoms(pdf: pd.DataFrame) -> pd.DataFrame:
     :return: Given dataframe with one new column holding the enumerated atoms data. Expected to have 12 columns.
     """
     # MAKE NEW COLUMN FOR ENUMERATED ATOMS ('C', 'CA', ETC), USING JSON->DICT, CAST TO INT:
-    atoms_enumerated = dh._read_enumerations_json(fname='unique_atoms_only_no_hydrogens')
+    atoms_enumerated = dh.read_enumerations_json(fname='unique_atoms_only_no_hydrogens')
     pdf[ColNames.ATOM_LABEL_NUM.value] = (pdf[CIF.A_label_atom_id.value]
                                           .map(atoms_enumerated)
                                           .astype('Int64'))
@@ -118,7 +124,7 @@ def _enumerate_atoms(pdf: pd.DataFrame) -> pd.DataFrame:
 def _enumerate_residues(pdf: pd.DataFrame) -> pd.DataFrame:
     # MAKE NEW COLUMN FOR ENUMERATED RESIDUES, USING JSON->DICT, CAST TO INT.
     # `residues_enumerated` DICT KEY AND `S_mon_id` COLUMN VALUES MAP VIA 3-LETTER RESIDUE NAMES:
-    residues_enumerated = dh._read_enumerations_json(fname=f'residues')
+    residues_enumerated = dh.read_enumerations_json(fname=f'residues')
     pdf.loc[:, ColNames.AA_LABEL_NUM.value] = (pdf[CIF.S_mon_id.value]
                                                    .map(residues_enumerated)
                                                    .astype('Int64'))
@@ -129,53 +135,73 @@ def _enumerate_residues(pdf: pd.DataFrame) -> pd.DataFrame:
     return pdf
 
 
-def _enumerate_atoms_and_residues(pdf: pd.DataFrame) -> pd.DataFrame:
+def _enumerate_atoms_and_residues(pdfs: List[pd.DataFrame]) -> List[pd.DataFrame]:
     """
     Enumerate residues, atoms, and residue-atoms pairs of given protein CIF data, and store to new columns in given
     dataframe. Currently hard-coded to only use atom data that lacks all hydrogen atoms.
-    :param pdf: Dataframe of one protein CIF, containing atoms to enumerate to new columns.
+    :param pdfs: List of dataframes of one protein CIF, per chain, containing atoms to enumerate to new columns.
     :return: Dataframe with new columns of enumerated data for residues, atoms, and residue-atoms pairs.
     """
-    pdf = _enumerate_residues(pdf)
-    pdf = _enumerate_atoms(pdf)
-    pdf = _enumerate_residues_atoms(pdf)
-    return pdf
+    result_pdfs = list()
+    for pdf in pdfs:
+        pdf = _enumerate_residues(pdf)
+        pdf = _enumerate_atoms(pdf)
+        pdf = _enumerate_residues_atoms(pdf)
+        result_pdfs.append(pdf)
+    return result_pdfs
 
 
-def _assign_backbone_index_to_all_residue_rows(pdf: pd.DataFrame) -> pd.DataFrame:
-    # ASSIGN INDEX OF CHOSEN BACKBONE ATOM (ALPHA-CARBON) FOR ALL ROWS IN EACH ROW-WISE-RESIDUE SUBSETS:
-    for S_seq_id, group in pdf.groupby(CIF.S_seq_id.value):  # GROUP BY RESIDUE POSITION VALUE
-        # GET ATOM INDEX ('A_id') WHERE ATOM ('A_label_atom_id') IS 'CA' IN THIS RESIDUE GROUP.
-        a_id_of_CA = group.loc[group[CIF.A_label_atom_id.value] == CIF.ALPHA_CARBON.value, CIF.A_id.value]
+def _assign_backbone_index_to_all_residue_rows(pdfs: List[pd.DataFrame], pdb_id: str) -> List[pd.DataFrame]:
+    result_pdfs = list()
+    for pdf in pdfs:
+        # ASSIGN INDEX OF CHOSEN BACKBONE ATOM (ALPHA-CARBON) FOR ALL ROWS IN EACH ROW-WISE-RESIDUE SUBSETS:
+        for S_seq_id, group in pdf.groupby(CIF.S_seq_id.value):  # GROUP BY RESIDUE POSITION VALUE
+            # GET ATOM INDEX ('A_id') WHERE ATOM ('A_label_atom_id') IS 'CA' IN THIS RESIDUE GROUP.
+            a_id_of_CA = group.loc[group[CIF.A_label_atom_id.value] == CIF.ALPHA_CARBON.value, CIF.A_id.value]
+            chains = pdf[CIF.S_asym_id.value].unique()[0]
+            # CHECK THERE'S AT LEAST ONE 'CA' IN THIS GROUP:
+            if a_id_of_CA.empty:
+                print(f"No 'CA' for residue {S_seq_id} in {pdb_id}, chain {chains}")
+                positions_of_all_bb_atoms = group.loc[group[ColNames.BACKBONE_SIDECHAIN.value]
+                                                      == 'bb', CIF.A_id.value].to_numpy()
+                max_bb_position = max(positions_of_all_bb_atoms)
+                most_Cterminal_bb_atom = group.loc[group[CIF.A_id.value]
+                                                   == max_bb_position, CIF.A_label_atom_id.value].values[0]
+                print(f'Therefore, selecting most C-terminal position of another backbone atom for this residue. '
+                      f'Non-CA backbone atoms are at {str(list(positions_of_all_bb_atoms))}. '
+                      f"So {max_bb_position} is selected. This atom is '{most_Cterminal_bb_atom}'.")
+                if positions_of_all_bb_atoms.size == 0:
+                    print(f'There are no backbone atoms at all! (Residue {S_seq_id}, pdb {pdb_id}, chain {chains}. '
+                          f'Ignoring this for now but a decision needs to be made about whether to remove '
+                          f'this residue all together or if it is ok to substitute in the position of a side-chain '
+                          f'atom.')
+                    continue
+                # raise ValueError(f'No {CIF.ALPHA_CARBON.value} found in {CIF.A_label_atom_id.value} for group '
+                #                  f'{group[CIF.S_seq_id.value].iloc[0]}')
+            else:
+                a_id = a_id_of_CA.iloc[0]
 
-        # CHECK THERE'S AT LEAST ONE 'CA' IN THIS GROUP:
-        if a_id_of_CA.empty:
-            print(f'Currently no CA for this residue {S_seq_id}')
-            continue
-            # raise ValueError(f'No {CIF.ALPHA_CARBON.value} found in {CIF.A_label_atom_id.value} for group '
-            #                  f'{group[CIF.S_seq_id.value].iloc[0]}')
-        else:
-            a_id = a_id_of_CA.iloc[0]
-
-            # ASSIGN THIS ATOM INDEX TO BB_INDEX ('bb_index') FOR ALL ROWS IN THIS GROUP:
-            pdf.loc[group.index, ColNames.BB_INDEX.value] = a_id
-
-    # CAST NEW COLUMN TO INT64 (FOR CONSISTENCY):
-    pdf[ColNames.BB_INDEX.value] = pd.to_numeric(pdf[ColNames.BB_INDEX.value], errors='coerce')
-    pdf[ColNames.BB_INDEX.value] = pdf[ColNames.BB_INDEX.value].astype('Int64')
-    return pdf
+                # ASSIGN THIS ATOM INDEX TO BB_INDEX ('bb_index') FOR ALL ROWS IN THIS GROUP:
+                pdf.loc[group.index, ColNames.BB_INDEX.value] = a_id
+        # CAST NEW COLUMN TO INT64 (FOR CONSISTENCY):
+        pdf[ColNames.BB_INDEX.value] = pd.to_numeric(pdf[ColNames.BB_INDEX.value], errors='coerce')
+        pdf[ColNames.BB_INDEX.value] = pdf[ColNames.BB_INDEX.value].astype('Int64')
+        result_pdfs.append(pdf)
+    return result_pdfs
 
 
-def _make_column_to_indicate_backbone_or_sidechain(pdf: pd.DataFrame) -> pd.DataFrame:
-    # TODO: test this filter step to create new column with 'bb' or 'sc' works or not.
-    # MAKE NEW COLUMN TO INDICATE IF ATOM IS FROM POLYPEPTIDE BACKBONE ('bb) OR SIDE-CHAIN ('sc'):
-    pdf.loc[:, ColNames.BACKBONE_SIDECHAIN.value] = (pdf[CIF.A_label_atom_id.value]
-                                                         .isin(PolypeptideAtoms.BACKBONE.value)
-                                                         .replace({True: 'bb', False: 'sc'}))
-    expected_num_of_cols = 9
-    assert len(pdf.columns) == expected_num_of_cols, \
-        f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf.columns)}'
-    return pdf
+def _make_new_column_for_backbone_or_sidechain_label(pdfs: List[pd.DataFrame]) -> List[pd.DataFrame]:
+    result_pdfs = list()
+    for pdf in pdfs:
+        # MAKE NEW COLUMN TO INDICATE IF ATOM IS FROM POLYPEPTIDE BACKBONE ('bb) OR SIDE-CHAIN ('sc'):
+        pdf.loc[:, ColNames.BACKBONE_SIDECHAIN.value] = (pdf[CIF.A_label_atom_id.value]
+                                                          .isin(PolypeptideAtoms.BACKBONE.value)
+                                                          .replace({True: 'bb', False: 'sc'}))
+        expected_num_of_cols = 9
+        assert len(pdf.columns) == expected_num_of_cols, \
+            f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf.columns)}'
+        result_pdfs.append(pdf)
+    return result_pdfs
 
 
 def parse_tokenise_and_write_cif_to_flatfile(pdb_ids=None, flatfile_format_to_write: str = 'ssv',
@@ -203,25 +229,26 @@ def parse_tokenise_and_write_cif_to_flatfile(pdb_ids=None, flatfile_format_to_wr
     if isinstance(pdb_ids, str):
         pdb_ids = [pdb_ids]
     for pdb_id in pdb_ids:
+        pdb_id = pdb_id.removesuffix('.cif')
         # IF ALREADY PARSED AND SAVED AS FLATFILE, JUST READ IT IN:
-        cif_tokenised_ssv = f'{relpath_to_dst_dir}/{pdb_id}.{flatfile_format_to_write}'
+        cif_tokenised_ssv = f'{relpath_to_dst_dir}/{pdb_id}_A.{flatfile_format_to_write}'
         if os.path.exists(cif_tokenised_ssv):
-            pdf_cif = dh.read_tokenised_cif_ssv_to_pdf(pdb_id=pdb_id, relpath_to_tokenised_dir=relpath_to_dst_dir)
+            list_of_cif_pdfs = dh.read_tokenised_cif_ssv_to_pdf(pdb_id=pdb_id,
+                                                                relpath_to_tokenised_dir=relpath_to_dst_dir)
         else:
             # OTHERWISE GET THE CIF DATA (EITHER LOCALLY OR VIA API)
             relpath_to_cifs_dir = relpath_to_cifs_dir.removesuffix('/').removeprefix('/')
             # PARSE mmCIF TO EXTRACT 14 FIELDS, TO FILTER, IMPUTE, SORT AND JOIN ON, RETURNING AN 8-COLUMN DATAFRAME:
-            pdf_cif = parser.parse_cif(pdb_id=pdb_id, relpath_to_cifs_dir=relpath_to_cifs_dir)
-
-            pdf_cif = _make_column_to_indicate_backbone_or_sidechain(pdf_cif)
-            pdf_cif = _assign_backbone_index_to_all_residue_rows(pdf_cif)
-            pdf_cif = _enumerate_atoms_and_residues(pdf_cif)
-            pdf_cif = _assign_mean_corrected_coordinates(pdf_cif)
-
-            dh.write_tokenised_cif_to_flatfile(pdb_id, pdf_cif,
+            # (THIS RETURNS A LIST OF DATAFRAMES, ONE PER POLYPEPTIDE CHAIN).
+            list_of_cif_pdfs = parser.parse_cif(pdb_id=pdb_id, relpath_to_cifs_dir=relpath_to_cifs_dir)
+            list_of_cif_pdfs = _make_new_column_for_backbone_or_sidechain_label(list_of_cif_pdfs)
+            list_of_cif_pdfs = _assign_backbone_index_to_all_residue_rows(list_of_cif_pdfs, pdb_id)
+            list_of_cif_pdfs = _enumerate_atoms_and_residues(list_of_cif_pdfs)
+            list_of_cif_pdfs = _assign_mean_corrected_coordinates(list_of_cif_pdfs)
+            dh.write_tokenised_cif_to_flatfile(pdb_id, list_of_cif_pdfs,
                                                dst_data_dir=relpath_to_dst_dir,
                                                flatfiles=flatfile_format_to_write)
-        return pdf_cif
+        return list_of_cif_pdfs
 
 
 if __name__ == '__main__':
@@ -229,7 +256,7 @@ if __name__ == '__main__':
     # write_tokenised_cif_to_csv(pdb_ids='4itq')
     print(os.getcwd())
     # Being called from here, which is in the subdir `preprocessing_funcs` so paths must be specified
-    parse_tokenise_and_write_cif_to_flatfile(pdb_ids='1OJ6',
-                                             relpath_to_cifs_dir='../diffusion/diff_data/cif/',
-                                             relpath_to_dst_dir='../diffusion/diff_data/tokenised/')
-    pass
+    # parse_tokenise_and_write_cif_to_flatfile(pdb_ids='1OJ6',
+    #                                          relpath_to_cifs_dir='../diffusion/diff_data/cif/',
+    #                                          relpath_to_dst_dir='../diffusion/diff_data/tokenised/')
+    # pass
