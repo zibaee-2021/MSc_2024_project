@@ -210,7 +210,7 @@ def write_tokenised_cif_to_flatfile(pdb_id: str, pdfs: List[pd.DataFrame], dst_d
             _restore_original_working_dir(cwd)
 
 
-def read_tokenised_cif_ssv_to_pdf(pdb_id: str, relpath_to_tokenised_dir: str) -> pd.DataFrame:
+def read_tokenised_cif_ssv_to_pdf(pdb_id: str, relpath_to_tokenised_dir: str) -> List[pd.DataFrame]:
     """
     Read pre-tokenised flatfile (i.e. ssv) of cif for given pdb id, from either `src/diffusion/diff_data/tokenised`or
     top-level `data/tokenised`. The reason for having option of data path is simply a workaround to problems when
@@ -316,6 +316,6 @@ def _manually_write_aa_atoms_to_data_dir(path: str) -> None:
 
 
 # if __name__ == '__main__':
-# # This only needs to be run once:
-#     dh._manually_write_aa_atoms_to_data_dir(path='../data/enumerations/residues_atoms.json')
+#     # THIS NEED ONLY BE RUN ONCE, TO GENERATE THE JSON FILE.
+#     _manually_write_aa_atoms_to_data_dir(path='../data/residues_atoms/per_residue_atoms.json')
 
