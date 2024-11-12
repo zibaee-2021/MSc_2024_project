@@ -10,9 +10,10 @@ from data_layer import data_handler as dh
 import json
 import os
 import ast
+from typing import Tuple
 
 
-def __enumerate_atoms_and_residues():
+def __enumerate_atoms_and_residues() -> Tuple[dict, dict, dict]:
     """
     ONLY CALLED ONCE TO GENERATE DICTS OF ENUMERATION MAPPINGS FOR ATOMS AND RESIDUE-ATOM PAIRS, TO BE USED FOR
     WRITING TO JSON FILES THAT ARE TO BE READ AND USED BY TOKENISER.PY.
@@ -29,6 +30,7 @@ def __enumerate_atoms_and_residues():
         for aa_atom in aa_atoms:
             aa_atom_idx += 1
             residues_atoms_enumerated[(aa, aa_atom)] = aa_atom_idx
+    residues_atoms_enumerated = {str(k): v for k, v in residues_atoms_enumerated.items()}
 
     unique_atoms_only = list(unique_atoms_only)
     unique_atoms_only.sort()
@@ -55,7 +57,15 @@ def _write_enumerated_atoms_without_hydrogens() -> None:
     WRITTEN TO JSON FILES THAT ARE TO BE READ AND USED BY TOKENISER.PY.
     """
     hydrogen_atoms = dh.read_lst_file_from_data_dir('enumerations/hydrogens.lst')
-    residues_atoms_enumerated, unique_atoms_only_enumerated, _residues_unused = dh.read_enumeration_mappings()
+
+    def _read_enumeration_mappings():
+        _residues_atoms_enumerated = dh.read_enumerations_json(fname='residues_atoms')
+        # _residues_atoms_enumerated = {eval(k): v for k, v in _residues_atoms_enumerated.items()}
+        _atoms_enumerated = dh.read_enumerations_json(fname='unique_atoms_only')
+        _residues_enumerated = dh.read_enumerations_json(fname=f'residues')
+        return _residues_atoms_enumerated, _atoms_enumerated, _residues_enumerated
+
+    residues_atoms_enumerated, unique_atoms_only_enumerated, _residues_unused = _read_enumeration_mappings()
 
     unique_atoms_except_h = [k for k in unique_atoms_only_enumerated if k not in hydrogen_atoms]
     for atom in unique_atoms_except_h:
@@ -79,14 +89,13 @@ def _write_enumerated_atoms_without_hydrogens() -> None:
         k = ast.literal_eval(key)
         atm = k[1]
         assert not atm.startswith('H'), (f"Atom '{atm}' starts with 'H', which is a Hydrogen, so the code or "
-                                          f"hydrogens.list file must be amended so that it gets removed above.")
+                                         f"hydrogens.list file must be amended so that it gets removed above.")
     dh.write_enumerations_json(fname='residues_atoms_no_hydrogens', dict_to_write=residues_atoms_except_h)
 
 
-if __name__ == '__main__':
-    pass
+# if __name__ == '__main__':
+    # # THESE NEED ONLY BE RUN ONCE, TO GENERATE THE JSON FILE(S):
     # # This only needs to be done once:
     # _write_enumerated_atoms_and_residues()
-
     # # This only needs to be done once:
     # _write_enumerated_atoms_without_hydrogens()
