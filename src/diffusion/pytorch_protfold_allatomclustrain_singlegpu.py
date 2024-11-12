@@ -196,8 +196,6 @@ def load_dataset():
         sum_d += np.sqrt((target_coords ** 2).sum(axis=-1)).sum()
         nn += target_coords.shape[0]
 
-            diff = target_coords[1:] - target_coords[:-1]
-            distances = np.linalg.norm(diff, axis=1)
         diff = target_coords[1:] - target_coords[:-1]
         distances = np.linalg.norm(diff, axis=1)
 
