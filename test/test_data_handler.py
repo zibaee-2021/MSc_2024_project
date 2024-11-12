@@ -9,7 +9,7 @@ class TestDataHandler(TestCase):
 
     def test_read_json_from_data_dir(self):
         fname = 'enumerations/residues.json'
-        f = dh.read_json_from_data_dir(fname)
+        f = dh._read_json_from_data_dir(fname)
         expected = {'ALA': 0,
                     'CYS': 1,
                     'ASP': 2,
