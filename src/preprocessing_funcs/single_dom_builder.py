@@ -1,6 +1,6 @@
 """
-This module needs to only be run once. It writes out 573 cifs_single_domain_prots using the PDB ids that are identified by CATH to be for
-single-domain proteins.
+This module needs to only be run once. It writes out cifs_573_single_domain_prots using the PDB ids that are
+identified by CATH to be for single-domain proteins.
 I have filtered these down further:
  - only class 1, 2 or 3 proteins
  - only with X-ray structures, resolutions < 4 angstroms
@@ -161,12 +161,12 @@ def parse_single_dom_prots_and_write_csv(path_cath_list: str, path_single_dom_pr
 def _assert_cif_count_equals_pdb_id_count(pdb_ids_len: int):
     """
     Assert number of `.cif` files in
-    `diffSock/data/dataset/big_files_to_git_ignore/cifs_single_domain_prots/` is as number of PDB ids used to make the
-    API calls that were used to fetch the mmCIFs.
+    `diffSock/data/dataset/big_files_to_git_ignore/cifs_573_single_domain_prots/` is as number of PDB ids used to make
+    the API calls that were used to fetch the mmCIFs.
     :param pdb_ids_len: Number of PDB ids for single-domain proteins extracted from CATH data resource.
     """
     print(f'There were {pdb_ids_len} PDB ids used to fetch mmCIF files.')
-    cifs_path = '../data/dataset/big_files_to_git_ignore/cifs_single_domain_prots/'
+    cifs_path = '../data/dataset/big_files_to_git_ignore/cifs_573_single_domain_prots/'
     cifs = glob.glob(os.path.join(cifs_path, '*.cif'))
     cifs = [cif for cif in cifs if os.path.isfile(cif)]
     print(f'There are {len(cifs)} `.cif` files in {cifs_path}.')
@@ -179,6 +179,6 @@ if __name__ == '__main__':
     path_singl_dom_prots = '../../data/dataset/big_files_to_git_ignore/CATH/cath_573_single_domain_prots.csv'
     pdbids = parse_single_dom_prots_and_write_csv(path_cath_list=path_cath_domain_list,
                                                   path_single_dom_prots=path_singl_dom_prots)
-    dst_path = '../data/dataset/big_files_to_git_ignore/cifs_single_domain_prots/'
+    dst_path = '../data/dataset/big_files_to_git_ignore/cifs_573_single_domain_prots/'
     dh.make_api_calls_to_fetch_mmcif_and_write_locally(pdb_ids=pdbids, dst_path=dst_path)
     _assert_cif_count_equals_pdb_id_count(len(pdbids))
