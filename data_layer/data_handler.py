@@ -1,7 +1,8 @@
 # Placeholder file for script that will contain all the functions that read/write from/to `data` subdirs, to just make
 # the other functions a bit tidier.
-import glob
 import os
+from enum import Enum
+import glob
 import re
 from typing import List
 import json
@@ -11,6 +12,24 @@ import yaml
 from typing import Tuple
 from src.enums import CIF, ColNames
 from src.preprocessing_funcs import api_caller as api
+
+
+class Path(Enum):
+    data_pdbid_dir = '../data/PDBid'
+    sd_573_cifs_dir = '../data/dataset/big_files_to_git_ignore/SD_573_CIFs'
+    enumeration_dir = 'enumeration'
+    data_dir = '../data'
+    fasta_dir = 'FASTA'
+    data_fasta_dir = '../data/FASTA'
+    data_tokenised_dir = '../data/tokenised'
+    aa_atoms_yaml = '../data/yaml/residues_atoms.yaml'
+    data_per_aa_atoms_json = '../data/residues_atoms/per_residue_atoms.json'
+
+
+class Filename(Enum):
+    aa_atoms_no_h = 'residues_atoms_no_hydrogens'
+    atoms_no_h = 'unique_atoms_only_no_hydrogens'
+    aa = 'residues'
 
 
 def _chdir_to_data_layer():
@@ -31,8 +50,7 @@ def _restore_original_working_dir(cwd: str):
 
 def read_list_of_pdbids_from_text_file(filename: str):
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer.
-    path = '../data/pdb_ids_list'
-    path_file = os.path.join(path, filename)
+    path_file = os.path.join(Path.data_pdbid_dir.value, filename)
     with open(path_file, 'r') as f:
         pdb_ids = f.read()
     pdbids = pdb_ids.split()
@@ -42,8 +60,8 @@ def read_list_of_pdbids_from_text_file(filename: str):
 
 def get_list_of_pdbids_of_local_single_domain_cifs() -> list:
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
-    cifs = glob.glob(os.path.join('../data/dataset/big_files_to_git_ignore/cifs_573_single_domain_prots', '*.cif'))
-    path_cifs = [cif for cif in cifs if os.path.isfile(cif)]
+    cifs = glob.glob(os.path.join(Path.sd_573_cifs_dir.value, '*.cif'))
+    path_cifs = [cif.upper() for cif in cifs if os.path.isfile(cif)]
     pdb_id_list = []
 
     for path_cif in path_cifs:
@@ -61,33 +79,33 @@ def get_list_of_pdbids_of_local_single_domain_cifs() -> list:
 def write_list_to_space_separated_txt_file(list_to_write: list, file_name: str) -> None:
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
     space_sep_str = ' '.join(list_to_write)
-    with open(f'../data/{file_name}', 'w') as f:
+    with open(f'{Path.data_dir.value}/{file_name}', 'w') as f:
         f.write(space_sep_str)
     _restore_original_working_dir(cwd)
 
 
 def write_enumerations_json(fname: str, dict_to_write: dict) -> None:
     fname = fname.removesuffix('.json')
-    _write_to_json_to_data_dir(fname=f'enumerations/{fname}.json', dict_to_write=dict_to_write)
+    _write_to_json_to_data_dir(fname=f'{Path.enumeration_dir.value}/{fname}.json', dict_to_write=dict_to_write)
 
 
 def read_enumerations_json(fname: str) -> dict:
     fname = fname.removesuffix('.json')
-    return _read_json_from_data_dir(fname=f'enumerations/{fname}.json')
+    return _read_json_from_data_dir(fname=f'{Path.enumeration_dir.value}/{fname}.json')
 
 
 def read_enumeration_mappings() -> Tuple[dict, dict, dict]:
-    residues_atoms_enumerated = read_enumerations_json(fname='residues_atoms_no_hydrogens')
+    residues_atoms_enumerated = read_enumerations_json(fname=Filename.aa_atoms_no_h.value)
     residues_atoms_enumerated = {eval(k): v for k, v in residues_atoms_enumerated.items()}
-    atoms_enumerated = read_enumerations_json(fname='unique_atoms_only_no_hydrogens')
-    residues_enumerated = read_enumerations_json(fname=f'residues')
+    atoms_enumerated = read_enumerations_json(fname=Filename.atoms_no_h.value)
+    residues_enumerated = read_enumerations_json(fname=Filename.aa.value)
     return residues_atoms_enumerated, atoms_enumerated, residues_enumerated
 
 
 def _write_to_json_to_data_dir(fname: str, dict_to_write: dict):
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
     fname = fname.removeprefix('/').removesuffix('.json')
-    relpath_json = f'../data/{fname}.json'
+    relpath_json = f'{Path.data_dir.value}/{fname}.json'
 
     with open(relpath_json, 'w') as json_f:
         json.dump(dict_to_write, json_f, indent=4)
@@ -99,7 +117,7 @@ def read_aa_atoms_yaml() -> Tuple[list, dict]:
     aas_atoms = dict()
     aas = list()
 
-    with open('../data/yamls/residues_atoms.yaml', 'r') as stream:
+    with open(Path.aa_atoms_yaml.value, 'r') as stream:
         try:
             atoms_aas = yaml.load(stream, Loader=yaml.Loader)
             aas = atoms_aas['ROOT']['AAs']
@@ -114,7 +132,7 @@ def read_aa_atoms_yaml() -> Tuple[list, dict]:
 def write_pdb_uniprot_fasta_recs_to_json(recs: dict, filename: str) -> None:
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
     fname = filename.removesuffix('.json')
-    with open(f'../data/FASTA/{fname}.json', 'w') as json_f:
+    with open(f'{Path.data_fasta_dir.value}/{fname}.json', 'w') as json_f:
         json.dump(recs, json_f, indent=4)  # Works ok (despite warning that it expected SupportsWrite[str], not TextIO).
     _restore_original_working_dir(cwd)
 
@@ -125,7 +143,7 @@ def _remove_null_entries(pdbids_fasta_json: dict):
 
 
 def read_nonnull_fastas_from_json_to_dict(fname: str) -> dict:
-    pdbids_fasta_json = _read_json_from_data_dir(fname=f'FASTA/{fname}')
+    pdbids_fasta_json = _read_json_from_data_dir(fname=f'{Path.fasta_dir.value}/{fname}')
     pdbids_fasta_json = _remove_null_entries(pdbids_fasta_json)
     return pdbids_fasta_json
 
@@ -178,7 +196,7 @@ def write_tokenised_cif_to_flatfile(pdb_id: str, pdfs: List[pd.DataFrame], dst_d
             print(f'You did not pass any destination dir path for writing the tokenised cif flat flatfile to. '
                   f'Therefore it will be written to the top-level data dir (`diffSock/data/tokenised`).')
             cwd = _chdir_to_data_layer()
-            dst_data_dir = '../data/tokenised/'
+            dst_data_dir = Path.data_tokenised_dir.value
         else:
             os.makedirs(dst_data_dir, exist_ok=True)
 
@@ -250,7 +268,7 @@ def _read_json_from_data_dir(fname: str) -> dict:
     """
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
     fname = fname.removeprefix('/').removesuffix('.json')
-    relpath_json = f'../data/{fname}.json'
+    relpath_json = f'{Path.data_dir.value}/{fname}.json'
     assert os.path.exists(relpath_json)
     try:
         with open(relpath_json, 'r') as json_f:
@@ -267,7 +285,7 @@ def _read_json_from_data_dir(fname: str) -> dict:
 def read_lst_file_from_data_dir(fname):
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
     fname = fname.removeprefix('/').removesuffix('.lst')
-    relpath_lst = f'../data/{fname}.lst'
+    relpath_lst = f'{Path.data_dir.value}/{fname}.lst'
     assert os.path.exists(relpath_lst)
     try:
         with open(relpath_lst, 'r') as lst_f:
@@ -317,5 +335,5 @@ def _manually_write_aa_atoms_to_data_dir(path: str) -> None:
 
 # if __name__ == '__main__':
 #     # THIS NEED ONLY BE RUN ONCE, TO GENERATE THE JSON FILE.
-#     _manually_write_aa_atoms_to_data_dir(path='../data/residues_atoms/per_residue_atoms.json')
+#     _manually_write_aa_atoms_to_data_dir(path=Path.data_per_aa_atoms_json.value)
 

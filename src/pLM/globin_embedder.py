@@ -1,9 +1,14 @@
+from enum import Enum
 from data_layer import data_handler as dh
 import plm_embedder as pe
 
 
+class Filename(Enum):
+    pdbid_fasta_5globs = 'PDBid_sp_FASTA_5_Globins'
+
+
 def generate_ankh_base_embeddings_of_5_globins_from_fastas_of_pdbids():
-    globins_pdb_fastas = dh.read_nonnull_fastas_from_json_to_dict(fname='pdbids_sp_fastas_globins_5')
+    globins_pdb_fastas = dh.read_nonnull_fastas_from_json_to_dict(fname=Filename.pdbid_fasta_5globs.value)
     tokeniser, eval_model = pe.load_tokeniser_and_eval_model(model_name=pe.HFModelName.ANKH_BASE.value)
     globins_pdbid_raw_tok_emb = pe.generate_embeddings_from_fastas_of_pdbids(tokeniser=tokeniser,
                                                                              eval_model=eval_model,

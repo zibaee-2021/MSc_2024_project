@@ -1,15 +1,19 @@
 import json
-import fasta_reader as reader
-from data_layer import data_handler as dh
+from enum import Enum
+import FASTA_reader as fasta_r
+
+
+class Paths(Enum):
+    per_residue_atoms_json = '../../data/residues_atoms/per_residue_atoms.json'
 
 
 def _get_aa_to_atom_map() -> dict:
-    aa_atoms_path = '../../data/atoms/per_residue_atoms.json'
+    relpath_json_f = Paths.per_residue_atoms_json.value
     try:
-        with open(aa_atoms_path, 'r') as json_f:
+        with open(relpath_json_f, 'r') as json_f:
             aa_to_atoms_map = json.load(json_f)
     except FileNotFoundError:
-        print(f'{aa_atoms_path} does not exist.')
+        print(f'{relpath_json_f} does not exist.')
     except Exception as e:
         print(f"An error occurred: {e}")
     return aa_to_atoms_map
@@ -21,7 +25,7 @@ def translate_aa_to_atoms(uniprot_ids=None) -> dict:
     :param uniprot_ids: Single uniprot id, list of uniprot_ids, or None by default. Most likely is a list of ids.
     :return: The atomic sequence, of amino acid sequence, mapped to its Uniprot id.
     """
-    fasta_id_seqs = reader.read_fasta_sequences(uniprot_ids=uniprot_ids)
+    fasta_id_seqs = fasta_r.read_fasta_sequences(uniprot_ids=uniprot_ids)
     aa_to_atoms_map = _get_aa_to_atom_map()
     id_to_atomic_sequence = dict()
 

@@ -10,7 +10,7 @@ import api_caller as api
 
 
 class Paths(Enum):
-    relpath_fastas = '../../data/FASTA'
+    fasta_dir = '../../data/FASTA'
 
 
 def read_fasta_sequences(uniprot_ids=None) -> dict:
@@ -30,8 +30,8 @@ def read_fasta_sequences(uniprot_ids=None) -> dict:
     if not uniprot_ids:
         uniprot_ids = []
         print(f"No FASTA files were specified, "
-              f"so all FASTA files found at '{Paths.relpath_fastas.value}' will be read in.")
-        fasta_files = glob.glob(os.path.join(Paths.relpath_fastas.value, '*'))
+              f"so all FASTA files found at '{Paths.fasta_dir.value}' will be read in.")
+        fasta_files = glob.glob(os.path.join(Paths.fasta_dir.value, '*'))
         for fasta_file in fasta_files:
             fasta_id_faa = os.path.basename(fasta_file)
             fasta_id = os.path.splitext(fasta_id_faa)[0]
@@ -39,7 +39,7 @@ def read_fasta_sequences(uniprot_ids=None) -> dict:
 
     for fasta_id in uniprot_ids:
 
-        fasta_path = os.path.join(Paths.relpath_fastas.value, fasta_id)
+        fasta_path = os.path.join(Paths.fasta_dir.value, fasta_id)
         fasta_path_faa = f'{fasta_path}.faa'
 
         try:

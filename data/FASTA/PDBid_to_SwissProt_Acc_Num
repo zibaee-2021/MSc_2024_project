@@ -1,0 +1,31 @@
+`IdMapper` class in pdb_to_sp_fasta_mapper.py is taken from  https://www.uniprot.org/help/id_mapping.
+
+Out of the 12 methods in IdMapper(), my function `call_uniprot_api_for_acc_ids_and_sp_fasta()` calls:
+`submit_id_mapping()`,
+`check_id_mapping_results_ready()`,
+`get_id_mapping_results_link()`,
+`get_id_mapping_results_search()`,
+
+Those 4 functions call the following 5 `IdMapper` private methods:
+`_decode_results()`,
+`_print_progress_batches()`,
+`_get_batch()`,
+`_get_next_link()`,
+`_check_response()`,
+
+The file format is json, so `_get_xml_namespace()` and `_merge_xml_results()` are never called.
+And `_combine_batches()` never seems to be called.
+
+-------
+
+The output is a json file, written to 'data/FASTA/PDBid_sp_FASTA...json'
+It has the PDB ids as keys to values that are nested key-values corresponding to one (verified) Swiss-Prot record.
+The nested key-values are:
+ "sp_acc_id": primary accession number
+ "fasta": FASTA protein sequence
+ "length": length of the FASTA protein sequence
+
+ If instead the PDBid maps to a null, it means there are no Swiss-Prot records for this protein. There may be Trembl
+ sequences, but as these are not verified, they are not included.
+ So, the name of the json file may be considered misleading, because it's only a count of the number of PDB ids
+ submitted, not the number of Swiss-Prot FASTA sequences retrieved.
