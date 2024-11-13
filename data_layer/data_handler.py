@@ -148,10 +148,12 @@ def read_nonnull_fastas_from_json_to_dict(fname: str) -> dict:
     return pdbids_fasta_json
 
 
-def make_api_calls_to_fetch_mmcif_and_write_locally(pdb_id: str, dst_path: str):
+def make_api_calls_to_fetch_mmcif_and_write_locally(pdb_id: str, cif_dst_dir: str):
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
     non_200_count = 0
-    mmcif_file = f'{dst_path}{pdb_id}.cif'
+    cif_dst_dir = cif_dst_dir.removesuffix('/').removeprefix('/')
+    pdb_id = pdb_id.removesuffix('.cif')
+    mmcif_file = f'{cif_dst_dir}/{pdb_id}.cif'
     if os.path.exists(mmcif_file):
         print(f'{mmcif_file} already exists. No API call required.')
     else:
