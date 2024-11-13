@@ -120,11 +120,12 @@ def load_dataset():
         target_pdbid = line.rstrip().split()[0]
         dh.make_api_calls_to_fetch_mmcif_and_write_locally(pdb_id=target_pdbid, dst_path=PATH_TO_CIF_DIR)
         sp = []
-        # READ PRE-PARSED & TOKENISED DATA, OR COMPUTE IT FROM SCRATCH. RETURN AS LIST OF DATAFRAMES, ONE PER CHAIN:
+        # JUST READ IN PRE-PARSED & PRE-TOKENISED DATA. OTHERWISE PERFORM ALL FROM SCRATCH.
+        # RETURNS LIST OF DATAFRAMES, ONE PER CHAIN:
         pdf_target_per_chain = (
             tk.parse_tokenise_and_write_cif_to_flatfile(pdb_id=target_pdbid, relpath_to_dst_dir='diff_data/tokenised'))
 
-        # FOR THE TIME-BEING, I WILL JUST USE ONE CHAIN FROM EACH PROTEIN, AND IGNORE THE OTHERS:
+        # FOR TIME-BEING, JUST USE THE ONE ('A') CHAIN FROM EACH PROTEIN, IGNORING ANY OTHER CHAINS:
         pdf_target = pdf_target_per_chain[0]
 
         # GET MEAN-CORRECTED COORDINATES VIA 'mean_corrected_x', '_y', '_z' TO 3-ELEMENT LIST:
