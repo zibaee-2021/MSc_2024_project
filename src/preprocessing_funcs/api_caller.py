@@ -39,7 +39,7 @@ def call_for_fasta_with_fasta_id(accession_id: str) -> requests.Response:
     """
     Send GET request to 'https://www.uniprot.org/uniprot/{fasta_id}' with UniProt identifier of interest.
     :param accession_id: UniProt 'Accession' identifier. Usually a 6- or 10-character alphanumeric code, e.g. 'P12345'.
-    :return: Response code 200 and text data for given  id, or error code such as 404.
+    :return: Response code 200 and text data for given id, or error code such as 404.
     """
     response = None
     accession_id = accession_id.upper()  # MUST BE UPPER-CASE
