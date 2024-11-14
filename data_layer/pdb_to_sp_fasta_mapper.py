@@ -221,7 +221,7 @@ def call_uniprot_api_for_acc_ids_and_sp_fasta(pdb_ids):
 
 
 class Filename(Enum):
-    sd_globins_txt = 'SD_globins.txt'
+    sd_globins_txt = 'SD_Globins.txt'
     pdbid_fasta_globs = 'PDBid_sp_FASTA_Globins'
 
 
