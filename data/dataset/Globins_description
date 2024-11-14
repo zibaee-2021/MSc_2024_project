@@ -1,0 +1,76 @@
+1ECA                Erythrocruorin (in different ligand states)
+                    (Extracellular respiratory proteins found in annelids and arthropods that are
+                    assembled from as many as 180 subunit into hexagonal bilayers)
+Method:             X-RAY DIFFRACTION
+Resolution:         1.40 Å
+
+2DN1                Haemoglobin (oxy form)
+Species:            Homo sapiens
+Method:             X-RAY DIFFRACTION
+Resolution:         1.25 Å
+R-Value Observed:   0.195
+
+2DN2                Haemoglobin (deoxy form)
+Species:            Homo sapiens
+Method:             X-RAY DIFFRACTION
+Resolution:         1.25 Å
+R-Value Observed:   0.179
+
+1OJ6                Neuroglobin
+Species:            Homo sapiens
+Method:             X-RAY DIFFRACTION
+Resolution:         1.95 Å
+R-Value Free:       0.233
+R-Value Work:       0.178
+R-Value Observed:   0.178
+
+1V5H                Cytoglobin (ferric form)
+Species:            Homo sapiens
+Method:             X-RAY DIFFRACTION
+Resolution:         2.40 Å
+R-Value Free:       0.250
+R-Value Work:       0.248
+R-Value Observed:   0.248
+
+1MBN                Myoglobin
+Species:            Physeter catodon (sperm whale)
+Method:             X-RAY DIFFRACTION
+Resolution:         2.00 Å
+R not given
+
+104M                Myoglobin n-butyl isocyanide pH 7.0
+Species:            Physeter catodon (sperm whale)
+Method:             X-RAY DIFFRACTION
+Resolution:         1.71 Å
+R-Value Free:       0.225
+R-Value Work:       0.154
+R-Value Observed:   0.154
+
+4C0N                Non-symbiotic haemoglobin
+                    (non-leguminous plants, and can be over-expressed in stressed plants)
+Species:            Arabidopsis thaliana
+Method:             X-RAY DIFFRACTION
+Resolution:         1.77 Å
+R-Value Free:       0.205
+R-Value Work:       0.186
+R-Value Observed:   0.187
+
+2GDM                Leghemoglobin (OXY)
+Species:            Lupinus luteus (root nodules of leguminous plants)
+Method:             X-RAY DIFFRACTION
+Resolution:         1.7 Å
+R not given
+
+1GDI                Ferric complexes Leghemoglobin with isoquinoline
+Species:            Lupinus luteus (a flowering plant)
+Method:             X-RAY DIFFRACTION
+Resolution:         1.80 Å
+R-Value Observed:   0.183
+
+2WY4                globin
+Species:            Campylobacter jejuni (bacteria)
+Method:             X-RAY DIFFRACTION
+Resolution:         1.35 Å
+R-Value Free:       0.209
+R-Value Work:       0.178
+R-Value Observed:   0.180
