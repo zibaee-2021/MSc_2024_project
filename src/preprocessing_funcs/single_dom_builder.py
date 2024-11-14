@@ -67,6 +67,13 @@ import pandas as pd
 from data_layer import data_handler as dh
 
 
+class Path(Enum):
+    data_big_573_sd_dir = '../data/dataset/big_files_to_git_ignore/cifs_573_single_domain_prots'
+    data_big_cath_domain_list_txt = '../data/dataset/big_files_to_git_ignore/CATH/cath-domain-list.txt'
+    data_big_cath_573_sd_csv = '../../data/dataset/big_files_to_git_ignore/CATH/cath_573_SD_prots.csv'
+    data_big_573_sd_cifs_dir = '../data/dataset/big_files_to_git_ignore/SD_573_CIFs'
+
+
 class Cols(Enum):
     DomainID = 'DomainID'
     C = 'Class'
@@ -84,7 +91,7 @@ class Cols(Enum):
     PDB_ID = 'PDB_Id'
 
 
-def parse_single_dom_prots_and_write_csv(path_cath_list: str, path_single_dom_prots: str) -> list:
+def parse_single_dom_prots_and_write_csv(path_cath_list: str, path_single_dom_prot_csv: str) -> list:
     regex_one_or_more_whitespace_chars = r'\s+'
     pdf = pd.read_csv(path_cath_list,
                       skiprows=16,
@@ -147,11 +154,11 @@ def parse_single_dom_prots_and_write_csv(path_cath_list: str, path_single_dom_pr
     pdf_single_dom_prots = pdf_single_dom_prots[~pdf_single_dom_prots[[Cols.A.value,
                                                                        Cols.T.value,
                                                                        Cols.H.value]].duplicated(keep=False)]
-    pdf_single_dom_prots.to_csv(path_single_dom_prots, index=False)  # 573 proteins
+    pdf_single_dom_prots.to_csv(path_single_dom_prot_csv, index=False)  # 573 proteins
 
     pdf_573prots = None
-    if os.path.exists(path_single_dom_prots):
-        pdf_573prots = pd.read_csv(path_single_dom_prots)
+    if os.path.exists(path_single_dom_prot_csv):
+        pdf_573prots = pd.read_csv(path_single_dom_prot_csv)
 
     if pdf_573prots:
         print(f'Number of domain ids = {pdf_573prots.shape[0]}')
@@ -166,20 +173,16 @@ def _assert_cif_count_equals_pdb_id_count(pdb_ids_len: int):
     :param pdb_ids_len: Number of PDB ids for single-domain proteins extracted from CATH data resource.
     """
     print(f'There were {pdb_ids_len} PDB ids used to fetch mmCIF files.')
-    cifs_path = '../data/dataset/big_files_to_git_ignore/cifs_573_single_domain_prots/'
-    cifs = glob.glob(os.path.join(cifs_path, '*.cif'))
+    cifs = glob.glob(os.path.join(f'{Path.data_big_573_sd_dir.value}/', '*.cif'))
     cifs = [cif for cif in cifs if os.path.isfile(cif)]
-    print(f'There are {len(cifs)} `.cif` files in {cifs_path}.')
+    print(f'There are {len(cifs)} `.cif` files in {Path.data_big_573_sd_dir.value}.')
     assert len(cifs) == pdb_ids_len
 
 
 # NOTE - THIS ONLY NEEDS TO BE CALLED ONCE:
 if __name__ == '__main__':
-    path_cath_domain_list = '../data/dataset/CATH/cath-domain-list.txt'
-    path_singl_dom_prots = '../../data/dataset/big_files_to_git_ignore/CATH/cath_573_single_domain_prots.csv'
-    pdbids = parse_single_dom_prots_and_write_csv(path_cath_list=path_cath_domain_list,
-                                                  path_single_dom_prots=path_singl_dom_prots)
-    dst_path = '../data/dataset/big_files_to_git_ignore/cifs_573_single_domain_prots/'
+    pdbids = parse_single_dom_prots_and_write_csv(path_cath_list=Path.data_big_cath_domain_list_txt.value,
+                                                  path_single_dom_prot_csv=Path.data_big_cath_573_sd_csv.value)
     for pdbid in pdbids:
-        dh.make_api_calls_to_fetch_mmcif_and_write_locally(pdb_id=pdbid, dst_path=dst_path)
+        dh.make_api_calls_to_fetch_mmcif_and_write_locally(pdb_id=pdbid, cif_dst_dir=Path.data_big_573_sd_cifs_dir.value)
     _assert_cif_count_equals_pdb_id_count(len(pdbids))
