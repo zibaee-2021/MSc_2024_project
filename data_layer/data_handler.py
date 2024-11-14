@@ -265,7 +265,7 @@ def _read_json_from_data_dir(fname: str) -> dict:
     """
     Read given json file from diffSock/data/{fname} to a Python dict.
     :param fname: File name of json file to read. IMPORTANT: Subdir paths are expected to be included.
-    e.g. 'enumerations/fname.json' without starting forward slash.
+    e.g. 'enumeration/fname.json' without starting forward slash.
     :return: The read-in json file, as a Python dict.
     """
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer

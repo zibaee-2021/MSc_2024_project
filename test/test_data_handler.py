@@ -8,7 +8,7 @@ from src.preprocessing_funcs import data_validator as dv
 class TestDataHandler(TestCase):
 
     def test_read_json_from_data_dir(self):
-        fname = 'enumerations/residues.json'
+        fname = 'enumeration/residues.json'
         f = dh._read_json_from_data_dir(fname)
         expected = {'ALA': 0,
                     'CYS': 1,
@@ -33,7 +33,7 @@ class TestDataHandler(TestCase):
         self.assertDictEqual(expected, f)
 
     def test_read_lst_file_from_data_dir(self):
-        fname = 'enumerations/hydrogens.lst'
+        fname = 'enumeration/hydrogens.lst'
         f = dh.read_lst_file_from_data_dir(fname)
         expected = ['H', 'H2', 'HA', 'HA2', 'HA3', 'HB', 'HB1', 'HB2', 'HB3', 'HD1', 'HD2', 'HD3', 'HD11', 'HD12',
                     'HD13', 'HD21', 'HD22', 'HD23', 'HE', 'HE1', 'HE2', 'HE3', 'HE21', 'HE22', 'HG', 'HG1', 'HG2',

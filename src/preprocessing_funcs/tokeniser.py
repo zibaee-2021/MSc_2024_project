@@ -78,7 +78,7 @@ def _assign_mean_corrected_coordinates(pdfs: List[pd.DataFrame]) -> List[pd.Data
 
 def _enumerate_residues_atoms(pdf: pd.DataFrame) -> pd.DataFrame:
     """
-    Enumerate residue-atom pairs of CIF for one protein, by mapping via pre-written json at `data/enumerations`. Add
+    Enumerate residue-atom pairs of CIF for one protein, by mapping via pre-written json at `data/enumeration`. Add
     this enumeration to a new column `aa_atom_label_num`. It serves as the tokenised form of polypeptide residue-atom
     pairs for this protein, to be read later to `aaatomcodes` array.
     :param pdf: Dataframe of one protein CIF, containing atoms to enumerate to new column.
@@ -104,7 +104,7 @@ def _enumerate_residues_atoms(pdf: pd.DataFrame) -> pd.DataFrame:
 
 def _enumerate_atoms(pdf: pd.DataFrame) -> pd.DataFrame:
     """
-    Enumerate atoms of CIF for one protein, by mapping via pre-written json at `data/enumerations`. Add
+    Enumerate atoms of CIF for one protein, by mapping via pre-written json at `data/enumeration`. Add
     this enumeration to a new column `atom_label_num`. It serves as the tokenised form of polypeptide atoms for this
     protein, to be read later to `atomcodes` array.
     :param pdf: Dataframe of one protein CIF, containing atoms to enumerate to new column.

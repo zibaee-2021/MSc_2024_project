@@ -15,7 +15,7 @@ from data_layer import data_handler as dh
 
 
 class Path(Enum):
-    enumeration_h_list = 'enumerations/hydrogens.lst'
+    enumeration_h_list = 'enumeration/hydrogens.lst'
 
 
 class Filename(Enum):
