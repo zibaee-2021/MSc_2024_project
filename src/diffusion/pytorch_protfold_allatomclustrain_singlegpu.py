@@ -118,7 +118,7 @@ def load_dataset():
     for line in targetfile:  # It is expected that there is only one pdb id per line.
 
         target_pdbid = line.rstrip().split()[0]
-        dh.make_api_calls_to_fetch_mmcif_and_write_locally(pdb_id=target_pdbid, dst_path=PATH_TO_CIF_DIR)
+        dh.make_api_calls_to_fetch_mmcif_and_write_locally(pdb_id=target_pdbid, cif_dst_dir=PATH_TO_CIF_DIR)
         sp = []
         # JUST READ IN PRE-PARSED & PRE-TOKENISED DATA. OTHERWISE PERFORM ALL FROM SCRATCH.
         # RETURNS LIST OF DATAFRAMES, ONE PER CHAIN:
