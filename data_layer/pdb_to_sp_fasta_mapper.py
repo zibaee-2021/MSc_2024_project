@@ -221,7 +221,7 @@ def call_uniprot_api_for_acc_ids_and_sp_fasta(pdb_ids):
 
 
 class Filename(Enum):
-    sd_5_globins_txt = 'SD_5_globins.txt'
+    sd_globins_txt = 'SD_globins.txt'
     pdbid_fasta_5globs = 'PDBid_sp_FASTA_5_Globins'
 
 
@@ -232,6 +232,6 @@ if __name__ == '__main__':
     # dh.write_pdb_uniprot_fasta_recs_to_json(swissprot_records, filename='pdbids_sp_fastas')
 
     # READ LIST OF PDB IDS OF GLOBINS FROM TEXT FILE:
-    pdbids_sd_5_globins = dh.read_list_of_pdbids_from_text_file(filename=Filename.sd_5_globins_txt.value)
+    pdbids_sd_5_globins = dh.read_list_of_pdbids_from_text_file(filename=Filename.sd_globins_txt.value)
     swissprot_globins = call_uniprot_api_for_acc_ids_and_sp_fasta(pdbids_sd_5_globins)
     dh.write_pdb_uniprot_fasta_recs_to_json(swissprot_globins, filename=Filename.pdbid_fasta_5globs.value)
