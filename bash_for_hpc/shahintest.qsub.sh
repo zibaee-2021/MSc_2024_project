@@ -17,9 +17,9 @@ pwd
 source ~/.bashrc
 source ~/miniconda3/bin/activate shahin_msc24
 
-export PYTHONPATH=$PYTHONPATH:~/diffSock
-export PYTHONPATH=$PYTHONPATH:~/miniconda3/envs/diffSock/lib/python3.12/site-packages
+export PYTHONPATH=$PYTHONPATH:~/diffSock_HPC
+export PYTHONPATH=$PYTHONPATH:~/miniconda3/envs/shahin_msc24/lib/python3.12/site-packages
 
 #!/usr/bin/env python3
-#python3 ~/diffSock/helloworld_for_HPC.py
-python3 ~/diffSock/rnatrain/hello_from_rnatrain.py
+#python3 ~/diffSock_HPC/helloworld_for_HPC.py
+python3 ~/diffSock_HPC/rnatrain_DJ_code/hello_from_rnatrain.py
