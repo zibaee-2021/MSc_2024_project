@@ -68,7 +68,6 @@ from data_layer import data_handler as dh
 
 
 class Path(Enum):
-    data_big_573_sd_dir = '../data/dataset/big_files_to_git_ignore/cifs_573_single_domain_prots'
     data_big_cath_domain_list_txt = '../data/dataset/big_files_to_git_ignore/CATH/cath-domain-list.txt'
     data_big_cath_573_sd_csv = '../../data/dataset/big_files_to_git_ignore/CATH/cath_573_SD_prots.csv'
     data_big_573_sd_cifs_dir = '../data/dataset/big_files_to_git_ignore/SD_573_CIFs'
@@ -173,9 +172,9 @@ def _assert_cif_count_equals_pdb_id_count(pdb_ids_len: int):
     :param pdb_ids_len: Number of PDB ids for single-domain proteins extracted from CATH data resource.
     """
     print(f'There were {pdb_ids_len} PDB ids used to fetch mmCIF files.')
-    cifs = glob.glob(os.path.join(f'{Path.data_big_573_sd_dir.value}/', '*.cif'))
+    cifs = glob.glob(os.path.join(f'{Path.data_big_573_sd_cifs_dir.value}/', '*.cif'))
     cifs = [cif for cif in cifs if os.path.isfile(cif)]
-    print(f'There are {len(cifs)} `.cif` files in {Path.data_big_573_sd_dir.value}.')
+    print(f'There are {len(cifs)} `.cif` files in {Path.data_big_573_sd_cifs_dir.value}.')
     assert len(cifs) == pdb_ids_len
 
 
