@@ -29,5 +29,8 @@ conda activate shahin_msc24
 #export PYTHONPATH=$PYTHONPATH:~/miniconda3/envs/shahin_msc24/lib/python3.12/site-packages
 #export LD_LIBRARY_PATH=~/miniconda3/envs/shahin_msc24/lib:$LD_LIBRARY_PATH
 
+# Set the CUDA_LAUNCH_BLOCKING environment variable for debugging
+export CUDA_LAUNCH_BLOCKING=1
+
 cd ~/diffSock_HPC/rnatrain_DJ_code || exit
 python pytorch_rnafold_allatomclustrain_singlegpu.py
