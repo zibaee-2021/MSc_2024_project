@@ -56,6 +56,7 @@ AAS_CODES_3_LETTER = 'aas_enumerated'
 
 # lst file name:
 PROT_TRAIN_CLUSTERS = 'prot_train_clusters'
+PROT_TRAIN_573_SD = 'SD_573'
 
 # paths:
 PATH_TO_CIF_DIR = '../src/diffusion/diff_data/cif/'
@@ -112,12 +113,15 @@ def load_dataset():
     nn = 0
 
     # GET THE LIST OF PDB NAMES FOR PROTEINS TO TOKENISE:
-    targetfile = _read_lst_file_from_src_diff_dir(fname=PROT_TRAIN_CLUSTERS)
+    # list_to_read = PROT_TRAIN_CLUSTERS
+    list_to_read = PROT_TRAIN_573_SD
+    targetfile = _read_lst_file_from_src_diff_dir(fname=list_to_read)
     train_list_per_chain, validation_list_per_chain = [], []
 
     for line in targetfile:  # It is expected that there is only one pdb id per line.
 
         target_pdbid = line.rstrip().split()[0]
+        # WON'T CALL API IF FILE ALREADY IN LOCAL `diff_data/cif` DIR (LARGE NUMBERS ARE MANUALLY MOVED HERE):
         dh.make_api_calls_to_fetch_mmcif_and_write_locally(pdb_id=target_pdbid, cif_dst_dir=PATH_TO_CIF_DIR)
         sp = []
         # JUST READ IN PRE-PARSED & PRE-TOKENISED DATA. OTHERWISE PERFORM ALL FROM SCRATCH.
