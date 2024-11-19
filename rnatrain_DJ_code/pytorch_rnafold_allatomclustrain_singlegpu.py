@@ -461,7 +461,6 @@ def main():
 
 
 if __name__ == "__main__":
-    import pandas
     import numpy
     import torch
     import einops
@@ -485,7 +484,6 @@ if __name__ == "__main__":
     print(f'result.stdout.decode(): {result.stdout.decode()}')
 
     print(f'torch.__version__={torch.__version__}')
-    print(f'pandas.__version__={pandas.__version__}')
     print(f'numpy.__version__={numpy.__version__}')
     print(f'einops.__version__={einops.__version__}')
     print(f'torch.__version__={torch.__version__}')
