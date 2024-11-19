@@ -1,6 +1,6 @@
 """
-This module needs to only be run once. It writes out cifs_573_single_domain_prots using the PDB ids that are
-identified by CATH to be for single-domain proteins.
+This module needs to only be run once. It writes out 'SD_573_CIFs' using the PDB ids that are identified by CATH
+to be for single-domain proteins.
 I have filtered these down further:
  - only class 1, 2 or 3 proteins
  - only with X-ray structures, resolutions < 4 angstroms
@@ -69,8 +69,8 @@ from data_layer import data_handler as dh
 
 class Path(Enum):
     data_big_cath_domain_list_txt = '../data/dataset/big_files_to_git_ignore/CATH/cath-domain-list.txt'
-    data_big_cath_573_sd_csv = '../../data/dataset/big_files_to_git_ignore/CATH/cath_573_SD_prots.csv'
-    data_big_573_sd_cifs_dir = '../data/dataset/big_files_to_git_ignore/SD_573_CIFs'
+    SD_573_CIFs_csv = '../../data/dataset/big_files_to_git_ignore/CATH/SD_573_CIFs.csv'
+    SD_573_CIFs_dir = '../data/dataset/big_files_to_git_ignore/SD_573_CIFs'
 
 
 class Cols(Enum):
@@ -167,21 +167,21 @@ def parse_single_dom_prots_and_write_csv(path_cath_list: str, path_single_dom_pr
 def _assert_cif_count_equals_pdb_id_count(pdb_ids_len: int):
     """
     Assert number of `.cif` files in
-    `diffSock/data/dataset/big_files_to_git_ignore/cifs_573_single_domain_prots/` is as number of PDB ids used to make
+    `diffSock/data/dataset/big_files_to_git_ignore/SD_573_CIFs/` is as number of PDB ids used to make
     the API calls that were used to fetch the mmCIFs.
     :param pdb_ids_len: Number of PDB ids for single-domain proteins extracted from CATH data resource.
     """
     print(f'There were {pdb_ids_len} PDB ids used to fetch mmCIF files.')
-    cifs = glob.glob(os.path.join(f'{Path.data_big_573_sd_cifs_dir.value}/', '*.cif'))
+    cifs = glob.glob(os.path.join(f'{Path.SD_573_CIFs_dir.value}/', '*.cif'))
     cifs = [cif for cif in cifs if os.path.isfile(cif)]
-    print(f'There are {len(cifs)} `.cif` files in {Path.data_big_573_sd_cifs_dir.value}.')
+    print(f'There are {len(cifs)} `.cif` files in {Path.SD_573_CIFs_dir.value}.')
     assert len(cifs) == pdb_ids_len
 
 
 # NOTE - THIS ONLY NEEDS TO BE CALLED ONCE:
 if __name__ == '__main__':
     pdbids = parse_single_dom_prots_and_write_csv(path_cath_list=Path.data_big_cath_domain_list_txt.value,
-                                                  path_single_dom_prot_csv=Path.data_big_cath_573_sd_csv.value)
+                                                  path_single_dom_prot_csv=Path.SD_573_CIFs_csv.value)
     for pdbid in pdbids:
-        dh.make_api_calls_to_fetch_mmcif_and_write_locally(pdb_id=pdbid, cif_dst_dir=Path.data_big_573_sd_cifs_dir.value)
+        dh.make_api_calls_to_fetch_mmcif_and_write_locally(pdb_id=pdbid, cif_dst_dir=Path.SD_573_CIFs_dir.value)
     _assert_cif_count_equals_pdb_id_count(len(pdbids))

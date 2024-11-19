@@ -1,11 +1,12 @@
 """
 TOKENISER.PY
-    - CALLS CIF PARSER TO READ IN AND PARSE THE CIF FILE TO EXTRACT THE FOLLOWING 16 FIELDS. WRITE TO ssv FLATFILE.
-    - ENUMERATES ATOMS AND AMINO ACID RESIDUES.
-    - SUBTRACTS COORDINATES BY THEIR MEAN COORDINATE VALUES PER ATOM.
+    - CALL `cif_parser.py` TO READ IN AND PARSE mmCIF FILE(S) TO EXTRACT THE 14 FIELDS.
+    - WRITE TO .SSV FLATFILE.
+    - ENUMERATE ATOMS AND AMINO ACID RESIDUES.
+    - SUBTRACT COORDINATES BY THEIR MEAN COORDINATE VALUES PER ATOM.
 ----------------------------------------------------------------------------------------------------------------------
 The following 14 mmCIF fields are extracted from the raw mmCIF files, parsed and tokenised into a dataframe.
-These 14 fields are:
+The 14 fields are:
 
 _atom_site:
     group_PDB           # 'ATOM' or 'HETATM'    - FILTER ON THIS, THEN REMOVE IT.
