@@ -569,4 +569,36 @@ def main():
 
 
 if __name__ == "__main__":
+
+    import pandas
+    import numpy
+    import torch
+    import einops
+
+    # Print the active Conda environment (if any)
+    print("Conda environment:", os.environ.get("CONDA_DEFAULT_ENV"))
+
+    # Print the environment paths
+    print("Environment PATH:", os.environ.get("PATH"))
+
+    print(f'PyTorch CUDA version: {torch.version.cuda}')
+    print(f'IS CUDA available: {torch.cuda.is_available()}')
+    if torch.cuda.is_available():
+        print(f'CUDA devices: {torch.cuda.device_count()}')
+        for i in range(torch.cuda.device_count()):
+            print(f'Device {i}: {torch.cuda.get_device_name(i)}')
+
+    import subprocess
+    # result = subprocess.run(['nvcc', '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    result = subprocess.run(['which', 'nvcc'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    print(f'result.stdout.decode(): {result.stdout.decode()}')
+
+    print(f'torch.__version__={torch.__version__}')
+    print(f'pandas.__version__={pandas.__version__}')
+    print(f'numpy.__version__={numpy.__version__}')
+    print(f'einops.__version__={einops.__version__}')
+    print(f'torch.__version__={torch.__version__}')
+    print(f'sys.version = {sys.version}')
+
     main()
+
