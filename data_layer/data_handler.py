@@ -76,10 +76,22 @@ def get_list_of_pdbids_of_local_single_domain_cifs() -> list:
 # def get_list_of_uniprotids_of_locally_downloaded_cifs():
 
 
-def write_list_to_space_separated_txt_file(list_to_write: list, file_name: str) -> None:
+def write_list_to_lst_file(list_to_write: list, fname: str) -> None:
+    fname = fname.removesuffix('.lst')
+    fname = fname + '.lst'
+    cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
+    with open(f'{Path.data_dir.value}/{fname}', 'w') as f:
+        for item in list_to_write:
+            f.write(f'{item}\n')
+    _restore_original_working_dir(cwd)
+
+
+def write_list_to_space_separated_txt_file(list_to_write: list, fname: str) -> None:
+    fname = fname.removesuffix('.txt')
+    fname = fname + '.txt'
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
     space_sep_str = ' '.join(list_to_write)
-    with open(f'{Path.data_dir.value}/{file_name}', 'w') as f:
+    with open(f'{Path.data_dir.value}/{fname}', 'w') as f:
         f.write(space_sep_str)
     _restore_original_working_dir(cwd)
 
