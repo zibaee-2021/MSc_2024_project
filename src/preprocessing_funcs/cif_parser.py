@@ -20,10 +20,11 @@ Bio.PDB.MMCIF2Dict.MMCIF2Dict(cif) to map to the fields in the raw mmCIF files, 
 
 Extract 14 fields from the two joined fields. Output a list of 8-column dataframes, one per chain:
 
-'A_' = `_atom_site`; 'S_' = `_pdbx_poly_seq_scheme`.
+'A_' = `_atom_site`.
+'S_' = `_pdbx_poly_seq_scheme`.
 
 A_group_PDB             # 'ATOM' or 'HETATM'    - FILTER ON THIS.                                           THEN REMOVE
-S_pdb_seq_num.value,    # RESIDUE POSITION      -                                                           JUST REMOVE
+S_pdb_seq_num.value,    # RESIDUE POSITION      - (NOT USED)                                                JUST REMOVE
 A_label_seq_id.value,   # RESIDUE POSITION      - USED TO JOIN WITH S_seq_id.                               THEN REMOVE
 A_label_comp_id.value,  # RESIDUE (3-LETTER)    - USED TO SANITY-CHECK WITH S_mon_id.                       THEN REMOVE
 A_label_asym_id.value,  # CHAIN                 - JOIN ON THIS, SORT ON THIS.                               THEN REMOVE

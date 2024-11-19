@@ -27,6 +27,8 @@ _pdbx_poly_seq_scheme:
 
 ----------------------------------------------------------------------------------------------------------------------
 The output of the current `parse_tokenise_cif_write_flatfile()` function is a 17-column dataframe.
+'_atom_site' is abbreviated to 'A_' prefix.
+'_pdbx_poly_seq_scheme' is abbreviated to 'S_' prefix.
 These 17 columns are:
 
 A_label_asym_id       # CHAIN                 - JOIN ON THIS, SORT ON THIS, KEEP IN DF.
@@ -46,7 +48,6 @@ mean_xyz              # MEAN OF COORDINATES   - MEAN OF X, Y, Z COORDINATES FOR 
 mean_corrected_x      # X COORDINATES FOR EACH ATOM SUBTRACTED BY THE MEAN OF XYZ COORDINATES, ROW-WISE. KEEP IN DF.
 mean_corrected_y      # Y COORDINATES FOR EACH ATOM SUBTRACTED BY THE MEAN OF XYZ COORDINATES, ROW-WISE. KEEP IN DF.
 mean_corrected_z      # Z COORDINATES FOR EACH ATOM SUBTRACTED BY THE MEAN OF XYZ COORDINATES, ROW-WISE. KEEP IN DF.
-
 
 """
 
