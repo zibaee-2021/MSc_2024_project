@@ -16,11 +16,13 @@ date
 pwd
 
 echo 'nvidia-smi:'; nvidia-smi
+echo 'which nvcc': which nvcc
 echo 'nvcc --version:'; nvcc --version
 echo 'which python: '; which python
 echo 'python --version:'; python --version
 
 conda activate shahin_msc24
+conda list | grep -i "cuda\|cudnn\|torch"
 #!/usr/bin/env bash
 #source ~/.bashrc
 #source ~/miniconda3/bin/activate shahin_msc24
