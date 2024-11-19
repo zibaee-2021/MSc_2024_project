@@ -17,9 +17,9 @@ pwd
 source ~/.bashrc
 source ~/miniconda3/bin/activate shahin_msc24
 
-# Limit MKL threads to prevent memory issues - suggested as a possible solution to memory errors by ChatGPT
-export MKL_NUM_THREADS=1
-export OMP_NUM_THREADS=1
+## Limit MKL threads to prevent memory issues - suggested as a possible solution to memory errors by ChatGPT
+#export MKL_NUM_THREADS=1
+#export OMP_NUM_THREADS=1
 
 export PYTHONPATH=$PYTHONPATH:~/diffSock_HPC
 export PYTHONPATH=$PYTHONPATH:~/miniconda3/envs/shahin_msc24/lib/python3.12/site-packages
