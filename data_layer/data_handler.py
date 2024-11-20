@@ -3,6 +3,7 @@
 import os
 from enum import Enum
 import glob
+import shutil
 import re
 from typing import List
 import json
@@ -24,12 +25,14 @@ class Path(Enum):
     data_tokenised_dir = '../data/tokenised'
     aa_atoms_yaml = '../data/yaml/residues_atoms.yaml'
     data_per_aa_atoms_json = '../data/residues_atoms/per_residue_atoms.json'
+    diff_data_cif_dir = '../src/diffusion/diff_data/mmCIF'
 
 
 class Filename(Enum):
     aa_atoms_no_h = 'residues_atoms_no_hydrogens'
     atoms_no_h = 'unique_atoms_only_no_hydrogens'
     aa = 'residues'
+    CIF_ext = 'cif'
 
 
 def _chdir_to_data_layer():
@@ -46,6 +49,55 @@ def _chdir_to_data_layer():
 
 def _restore_original_working_dir(cwd: str):
     os.chdir(cwd)
+
+
+def _make_pdbid_uppercase(fpath: str) -> str:
+    dir_name, base_name = os.path.split(fpath)
+    fname, dot_ext = os.path.splitext(base_name)
+    fname = fname.upper()
+    return os.path.join(dir_name, f'{fname}{dot_ext}')
+
+
+def copy_files_over(path_src_dir: str, path_dst_dir: str, file_ext: str) -> int:
+    if not os.path.exists(path_src_dir):
+        raise ValueError(f"Directory '{path_src_dir}' you're trying to copy from can't be found.")
+    if not file_ext:
+        raise ValueError('File extension must be given.')
+    file_ext = file_ext.removeprefix('.')
+
+    os.makedirs(path_dst_dir, exist_ok=True)
+    files = glob.glob(os.path.join(path_src_dir, f'*{file_ext}'))
+    file_count = 0
+    if not files:
+        print(f"No files with extension '{file_ext}' found in '{path_src_dir}'.")
+        return file_count
+    for fpath in files:
+        fname = os.path.basename(fpath)
+        dest_path = os.path.join(path_dst_dir, fname)
+        dest_path = _make_pdbid_uppercase(dest_path)
+        shutil.copy(fpath, dest_path)
+        print(f'Copied: {fpath} -> {dest_path}')
+    file_count = len(files)
+    return file_count
+
+
+def copy_cifs_from_bigfilefolder_to_diff_data():
+    cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer.
+    file_count = copy_files_over(path_src_dir=Path.sd_573_cifs_dir.value,
+                                 path_dst_dir=Path.diff_data_cif_dir.value,
+                                 file_ext=Filename.CIF_ext.value)
+    print(f"Number of '.{Filename.CIF_ext.value}' files copied over = {file_count}")
+    _restore_original_working_dir(cwd)
+
+
+def clear_diffdatacif_dir() -> None:
+    """
+    Note: As we're likely dealing with less than 10,000 files, I am not using Linux via subprocess, which would be:
+    ```subprocess.run(['rm', '-rf', f'{directory_path}/*'], check=True, shell=True)```
+    """
+    for cif_file in os.listdir(Path.diff_data_cif_dir.value):
+        cif_path = os.path.join(Path.diff_data_cif_dir.value, cif_file)
+        os.unlink(cif_path)
 
 
 def read_list_of_pdbids_from_text_file(filename: str):
@@ -348,6 +400,9 @@ def _manually_write_aa_atoms_to_data_dir(path: str) -> None:
 
 
 # if __name__ == '__main__':
+
+    # copy_cifs_from_bigfilefolder_to_diff_data()
+    # clear_diffdatacif_dir()
 #     # THIS NEED ONLY BE RUN ONCE, TO GENERATE THE JSON FILE.
 #     _manually_write_aa_atoms_to_data_dir(path=Path.data_per_aa_atoms_json.value)
 
