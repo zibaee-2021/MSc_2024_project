@@ -207,7 +207,7 @@ def _make_new_column_for_backbone_or_sidechain_label(pdfs: List[pd.DataFrame]) -
 
 
 def parse_tokenise_and_write_cif_to_flatfile(pdb_id: str, flatfile_format_to_write: str = 'ssv',
-                                             relpath_to_cifs_dir='diff_data/cif',
+                                             relpath_to_cifs_dir='diff_data/mmCIF',
                                              relpath_to_dst_dir='diff_data/tokenised') -> List[pd.DataFrame]:
     """
     Parse, then tokenise structure-related information in mmCIF files for proteins as specified by their PDB
@@ -218,7 +218,7 @@ def parse_tokenise_and_write_cif_to_flatfile(pdb_id: str, flatfile_format_to_wri
     :param pdb_id: PDB identifier for protein data to tokenise.
     :param flatfile_format_to_write: Write to ssv, csv or tsv. Use ssv by default.
     :param relpath_to_cifs_dir: Relative path to source dir of the raw cif files to be parsed and tokenised.
-    Uses `src/diffusion/diff_data/cif` subdir by default, because expecting call from `src/diffusion`.
+    Uses `src/diffusion/diff_data/mmCIF` subdir by default, because expecting call from `src/diffusion`.
     :param relpath_to_dst_dir: Relative path to destination dir for the parsed and tokenised cif as a flat file.
     Use `src/diffusion/diff_data/tokenised` by default, because expecting call from `src/diffusion`.
     :return: Parsed and tokenised cif file as dataframe which is also written to a flatfile (ssv by default)

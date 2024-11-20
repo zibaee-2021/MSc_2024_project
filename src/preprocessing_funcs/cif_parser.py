@@ -345,7 +345,7 @@ def _get_mmcif_data(pdb_id: str, relpath_to_raw_cif: str) -> dict:
             :param _pdb_id: Alphanumeric 4-character Protein Databank Identifier. e.g. '1OJ6'.
             """
             response = api.call_for_cif_with_pdb_id(_pdb_id)
-            # relpath_dst_cif = f'../data/big_data_to_git_ignore/cifs_single_domain_prots/{pdb_id}.cif'
+            # relpath_dst_cif = f'../data/big_data_to_git_ignore/SD_573_CIFs/{pdb_id}.cif'
             with open(relpath_dst_cif, 'w') as file:
                 file.write(response.text)
         _fetch_mmcif_from_pdb_api_and_write(_pdb_id=pdb_id, relpath_dst_cif=relpath_to_raw_cif)

@@ -59,7 +59,7 @@ PROT_TRAIN_CLUSTERS = 'prot_train_clusters'
 PROT_TRAIN_573_SD = 'SD_573'
 
 # paths:
-PATH_TO_CIF_DIR = '../src/diffusion/diff_data/cif/'
+PATH_TO_CIF_DIR = '../src/diffusion/diff_data/mmCIF/'
 PATH_TO_TOKENISED_DIR = 'diff_data/tokenised/'
 PATH_TO_EMB_DIR = 'diff_data/emb/'
 # OUTPUT FILE NAMES:
@@ -121,7 +121,7 @@ def load_dataset():
     for line in targetfile:  # It is expected that there is only one pdb id per line.
 
         target_pdbid = line.rstrip().split()[0]
-        # WON'T CALL API IF FILE ALREADY IN LOCAL `diff_data/cif` DIR (LARGE NUMBERS ARE MANUALLY MOVED HERE):
+        # WON'T CALL API IF FILE ALREADY IN LOCAL `diff_data/mmCIF` DIR (LARGE NUMBERS ARE MANUALLY MOVED HERE):
         dh.make_api_calls_to_fetch_mmcif_and_write_locally(pdb_id=target_pdbid, cif_dst_dir=PATH_TO_CIF_DIR)
         sp = []
         # JUST READ IN PRE-PARSED & PRE-TOKENISED DATA. OTHERWISE PERFORM ALL FROM SCRATCH.
