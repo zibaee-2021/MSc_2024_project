@@ -54,11 +54,25 @@ mean_corrected_z      # Z COORDINATES FOR EACH ATOM SUBTRACTED BY THE MEAN OF XY
 
 
 import os
+from enum import Enum
 from typing import List
 import pandas as pd
 from src.preprocessing_funcs import cif_parser as parser
 from data_layer import data_handler as dh
 from src.enums import ColNames, CIF, PolypeptideAtoms
+
+
+class Path(Enum):
+    relpath_diffdata_tokenised_dir = '../diffusion/diff_data/tokenised'
+    relpath_diffdata_sd573_lst = '../diffusion/diff_data/SD_573.lst'
+    relpath_diffdata_cif_dir = '../diffusion/diff_data/mmCIF'
+
+
+class Filename(Enum):
+    aa_atoms_no_h = 'residues_atoms_no_hydrogens'
+    atoms_no_h = 'unique_atoms_only_no_hydrogens'
+    aa = 'residues'
+    CIF_ext = 'cif'
 
 
 def _assign_mean_corrected_coordinates(pdfs: List[pd.DataFrame]) -> List[pd.DataFrame]:
@@ -87,7 +101,7 @@ def _enumerate_residues_atoms(pdf: pd.DataFrame) -> pd.DataFrame:
     :return: Given dataframe with two new columns holding the enumerated residue-atom pairs data, as well as a column
     holding the intermediate data of residue-atom pairs. Expected to have 14 columns.
     """
-    residues_atoms_enumerated = dh.read_enumerations_json(fname='residues_atoms_no_hydrogens')
+    residues_atoms_enumerated = dh.read_enumerations_json(fname=Filename.aa_atoms_no_h.value)
     # CAST THE STRING REPRESENTATION OF A TUPLE TO AN ACTUAL TUPLE FOR KEY TO WORK IN MAPPING:
     residues_atoms_enumerated = {eval(k): v for k, v in residues_atoms_enumerated.items()}
     # FIRST MAKE NEW COLUMN OF RESIDUE-ATOM PAIRS. E.G. CONTAINS ('ASP':'C'), ('ASP':'CA'), ETC:
@@ -113,7 +127,7 @@ def _enumerate_atoms(pdf: pd.DataFrame) -> pd.DataFrame:
     :return: Given dataframe with one new column holding the enumerated atoms data. Expected to have 12 columns.
     """
     # MAKE NEW COLUMN FOR ENUMERATED ATOMS ('C', 'CA', ETC), USING JSON->DICT, CAST TO INT:
-    atoms_enumerated = dh.read_enumerations_json(fname='unique_atoms_only_no_hydrogens')
+    atoms_enumerated = dh.read_enumerations_json(fname=Filename.atoms_no_h.value)
     pdf[ColNames.ATOM_LABEL_NUM.value] = (pdf[CIF.A_label_atom_id.value]
                                           .map(atoms_enumerated)
                                           .astype('Int64'))
@@ -126,7 +140,7 @@ def _enumerate_atoms(pdf: pd.DataFrame) -> pd.DataFrame:
 def _enumerate_residues(pdf: pd.DataFrame) -> pd.DataFrame:
     # MAKE NEW COLUMN FOR ENUMERATED RESIDUES, USING JSON->DICT, CAST TO INT.
     # `residues_enumerated` DICT KEY AND `S_mon_id` COLUMN VALUES MAP VIA 3-LETTER RESIDUE NAMES:
-    residues_enumerated = dh.read_enumerations_json(fname=f'residues')
+    residues_enumerated = dh.read_enumerations_json(fname=Filename.aa.value)
     pdf.loc[:, ColNames.AA_LABEL_NUM.value] = (pdf[CIF.S_mon_id.value]
                                                    .map(residues_enumerated)
                                                    .astype('Int64'))
@@ -206,20 +220,22 @@ def _make_new_column_for_backbone_or_sidechain_label(pdfs: List[pd.DataFrame]) -
     return result_pdfs
 
 
-def parse_tokenise_and_write_cif_to_flatfile(pdb_id: str, flatfile_format_to_write: str = 'ssv',
-                                             relpath_to_cifs_dir='diff_data/mmCIF',
-                                             relpath_to_dst_dir='diff_data/tokenised') -> List[pd.DataFrame]:
+def parse_tokenise_write_cif_to_flatfile(pdb_id: str,
+                                         relpath_cif_dir: str,
+                                         relpath_dst_dir: str,
+                                         flatfile_format_to_write: str = 'ssv') -> List[pd.DataFrame]:
     """
     Parse, then tokenise structure-related information in mmCIF files for proteins as specified by their PDB
     entries (`pdb_ids`) - unique Protein Data Bank identifiers.
     Write the tokenised sequence and structure data to flat files (ssv by default) in `tokenised` subdir.
     Parsing involves extracting required fields from mmCIF files to dataframes.
     Tokenising involves enumerating atoms and residues, and mean-adjusting x, y, z coordinates.
+    If the PDB has more than one chain, just use the one chain (or the longest chain??? TODO)
     :param pdb_id: PDB identifier for protein data to tokenise.
     :param flatfile_format_to_write: Write to ssv, csv or tsv. Use ssv by default.
-    :param relpath_to_cifs_dir: Relative path to source dir of the raw cif files to be parsed and tokenised.
+    :param relpath_cif_dir: Relative path to source dir of the raw cif files to be parsed and tokenised.
     Uses `src/diffusion/diff_data/mmCIF` subdir by default, because expecting call from `src/diffusion`.
-    :param relpath_to_dst_dir: Relative path to destination dir for the parsed and tokenised cif as a flat file.
+    :param relpath_dst_dir: Relative path to destination dir for the parsed and tokenised cif as a flat file.
     Use `src/diffusion/diff_data/tokenised` by default, because expecting call from `src/diffusion`.
     :return: Parsed and tokenised cif file as dataframe which is also written to a flatfile (ssv by default)
     at `src/diffusion/diff_data/tokenised`. List of dataframes, one per chain.
@@ -230,32 +246,43 @@ def parse_tokenise_and_write_cif_to_flatfile(pdb_id: str, flatfile_format_to_wri
     flatfile_format_to_write = flatfile_format_to_write.removeprefix('.').lower()
     pdb_id = pdb_id.removesuffix('.cif')
     # IF ALREADY PARSED AND SAVED AS FLATFILE, JUST READ IT IN:
-    cif_tokenised_ssv = f'{relpath_to_dst_dir}/{pdb_id}_A.{flatfile_format_to_write}'
+    cif_tokenised_ssv = f'{relpath_dst_dir}/{pdb_id}_A.{flatfile_format_to_write}'
     if os.path.exists(cif_tokenised_ssv):
         list_of_cif_pdfs_per_chain = dh.read_tokenised_cif_ssv_to_pdf(pdb_id=pdb_id,
-                                                                      relpath_to_tokenised_dir=relpath_to_dst_dir)
+                                                                      relpath_to_tokenised_dir=relpath_dst_dir)
     else:
         # OTHERWISE GET THE CIF DATA (EITHER LOCALLY OR VIA API)
-        relpath_to_cifs_dir = relpath_to_cifs_dir.removesuffix('/').removeprefix('/')
+        relpath_cif_dir = relpath_cif_dir.removesuffix('/').removeprefix('/')
         # PARSE mmCIF TO EXTRACT 14 FIELDS, TO FILTER, IMPUTE, SORT AND JOIN ON, RETURNING AN 8-COLUMN DATAFRAME:
         # (THIS RETURNS A LIST OF DATAFRAMES, ONE PER POLYPEPTIDE CHAIN).
-        list_of_cif_pdfs_per_chain = parser.parse_cif(pdb_id=pdb_id, relpath_to_cifs_dir=relpath_to_cifs_dir)
+        list_of_cif_pdfs_per_chain = parser.parse_cif(pdb_id=pdb_id, relpath_to_cifs_dir=relpath_cif_dir)
         list_of_cif_pdfs_per_chain = _make_new_column_for_backbone_or_sidechain_label(list_of_cif_pdfs_per_chain)
         list_of_cif_pdfs_per_chain = _assign_backbone_index_to_all_residue_rows(list_of_cif_pdfs_per_chain, pdb_id)
         list_of_cif_pdfs_per_chain = _enumerate_atoms_and_residues(list_of_cif_pdfs_per_chain)
         list_of_cif_pdfs_per_chain = _assign_mean_corrected_coordinates(list_of_cif_pdfs_per_chain)
+        # This is temporary hack for making the code write just one chain (first one) to flatfile. TODO
+        list_of_cif_pdfs_per_chain = [list_of_cif_pdfs_per_chain[0]]
         dh.write_tokenised_cif_to_flatfile(pdb_id, list_of_cif_pdfs_per_chain,
-                                           dst_data_dir=relpath_to_dst_dir,
+                                           dst_data_dir=relpath_dst_dir,
                                            flatfiles=flatfile_format_to_write)
     return list_of_cif_pdfs_per_chain
 
 
-if __name__ == '__main__':
+def __read_lst_file_from_src_diff_dir(fname: str) -> list:
+    try:
+        with open(fname, 'r') as lst_f:
+            pdb_list = [line.strip() for line in lst_f]
+    except FileNotFoundError:
+        print(f'{lst_f} does not exist.')
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    return pdb_list
 
-    # write_tokenised_cif_to_csv(pdb_ids='4itq')
-    print(os.getcwd())
-    # Being called from here, which is in the subdir `preprocessing_funcs` so paths must be specified
-    # parse_tokenise_and_write_cif_to_flatfile(pdb_ids='1OJ6',
-    #                                          relpath_to_cifs_dir='../diffusion/diff_data/cif/',
-    #                                          relpath_to_dst_dir='../diffusion/diff_data/tokenised/')
-    # pass
+
+if __name__ == '__main__':
+    _pdb_list = __read_lst_file_from_src_diff_dir(fname=Path.relpath_diffdata_sd573_lst.value)
+    for pdbid in _pdb_list:  # expecting only one PDB id per line.
+        pdbid = pdbid.rstrip().split()[0]
+        parse_tokenise_write_cif_to_flatfile(pdb_id=pdbid,
+                                             relpath_cif_dir=Path.relpath_diffdata_cif_dir.value,
+                                             relpath_dst_dir=Path.relpath_diffdata_tokenised_dir.value)
