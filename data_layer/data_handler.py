@@ -244,7 +244,7 @@ def write_tokenised_cif_to_flatfile(pdb_id: str, pdfs: List[pd.DataFrame], dst_d
     CIF.A_label_atom_id, ColNames.MEAN_CORR_X, ColNames.MEAN_CORR_Y, ColNames.MEAN_CORR_Z to flat file(s) in local
     relative dir 'src/diffusion/diff_data/tokenised/' or to the top-level `data` dir.
     :param pdb_id: PDB id.
-    :param pdfs: List of dataframes to write to flat file(s). One dataframe per polypeptide chain.
+    :param pdfs: List of dataframes to write to flat file(s). One dataframe per polypeptide chain. TODO: hacked to one.
     :param dst_data_dir: Relative path to destination dir of flatfile of tokenised cif. (Will be called from either
     `diffSock/test`, `diffSock/src/preprocessing_funcs` or `diffSock/src/diffusion`. The responsibility for determining
     the relative destination path is left to the caller).
