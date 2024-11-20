@@ -29,10 +29,12 @@ _pdbx_poly_seq_scheme:
 
 import sys
 import os
+from enum import Enum
 import time
 import random
 from math import sqrt, log
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -46,29 +48,25 @@ from src.preprocessing_funcs import tokeniser as tk
 from src.enums import ColNames, CIF
 
 
-# INPUT FILE NAMES:
-# json file names:
-AA_ATOMS_CODES = 'aas_atoms_enumerated'
-AA_ATOMS_CODES_NO_H = 'aas_atoms_enumerated_no_hydrogens'
-ATOMS_ONLY_CODES = 'unique_atoms_only_enumerated'
-ATOMS_ONLY_CODES_NO_H = 'unique_atoms_only_enumerated_no_hydrogens'
-AAS_CODES_1_LETTER = 'FASTA_aas_enumerated'
-AAS_CODES_3_LETTER = 'aas_enumerated'
+class Path(Enum):
+    relpath_bigdata_cif_dir_from_dh = '../data/dataset/big_files_to_git_ignore/SD_573_CIFs'
+    relpath_bigdata_tokenised_dir_from_dh = '../data/dataset/big_files_to_git_ignore/tokenised_573'
+    relpath_diffdata_cir = 'diff_data/mmCIF'
+    relpath_diffdata_emb = 'diff_data/emb'
+    relpath_diffdata_tokenised = 'diff_data/tokenised'
+    relpath_diffdata_10_Globins_PDBid_lst = 'globins_10.lst'
+    relpath_diffdata_573_SD_PDBid_lst = 'SD_573.lst'
 
 # lst file name:
-PROT_TRAIN_CLUSTERS = 'prot_train_clusters'
-PROT_TRAIN_573_SD = 'SD_573'
+PROT_TRAIN_CLUSTERS = 'globins_10.lst'
+PROT_TRAIN_573_SD = 'SD_573.lst'
 
-# paths:
-PATH_TO_CIF_DIR = '../src/diffusion/diff_data/mmCIF/'
-PATH_TO_TOKENISED_DIR = 'diff_data/tokenised/'
-PATH_TO_EMB_DIR = 'diff_data/emb/'
-# OUTPUT FILE NAMES:
-PROT_E2E_MODEL_PT = 'prot_e2e_model.pt'
-# CAN BE INPUT OR OUTPUT:
-PROT_E2E_MODEL_TRAIN_PT = 'prot_e2e_model_train.pt'
-CHECKPOINT_PT = 'checkpoint.pt'
-
+class Filename(Enum):
+    # OUTPUT FILE NAMES:
+    prot_e2e_prot_model_pt = 'prot_e2e_model.pt'
+    # CAN BE INPUT OR OUTPUT:
+    prot_e2e_prot_model_train_pt = 'prot_e2e_model_train.pt'
+    checkpoint_pt = 'checkpoint.pt'
 
 os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 # BATCH_SIZE = 32
@@ -76,27 +74,12 @@ BATCH_SIZE = 8
 # NSAMPLES = 24
 NSAMPLES = 12
 SIGDATA = 16
-        
+
 RESTART_FLAG = True
 FINETUNE_FLAG = False
 
 
-def _read_lst_file_from_src_diff_dir(fname):
-    fname = fname.removeprefix('/').removesuffix('.lst')
-    relpath_lst = f'{fname}.lst'
-    assert os.path.exists(relpath_lst)
-    try:
-        with open(relpath_lst, 'r') as lst_f:
-            f = [line.strip() for line in lst_f]
-    except FileNotFoundError:
-        print(f'{lst_f} does not exist.')
-    except Exception as e:
-        print(f"An error occurred: {e}")
-    return f
-
-
-# Load dataset function remains the same
-def load_dataset():
+def load_dataset(use_pretokenised_cif_ssv: bool):
 
     train_list = []
     validation_list = []
@@ -114,25 +97,42 @@ def load_dataset():
     nn = 0
 
     # GET THE LIST OF PDB NAMES FOR PROTEINS TO TOKENISE:
-    # list_to_read = PROT_TRAIN_CLUSTERS
-    list_to_read = PROT_TRAIN_573_SD
-    targetfile = _read_lst_file_from_src_diff_dir(fname=list_to_read)
+    # targetfile_lst_path = Path.relpath_diffdata_10_Globins_PDBid_lst.value
+    targetfile_lst_path = Path.relpath_diffdata_573_SD_PDBid_lst.value
+    assert os.path.exists(targetfile_lst_path)
+    targetfile = ''
+    try:
+        with open(targetfile_lst_path, 'r') as lst_f:
+            targetfile = [line.strip() for line in lst_f]
+    except FileNotFoundError:
+        print(f'{lst_f} does not exist.')
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
     train_list_per_chain, validation_list_per_chain = [], []
 
     for line in targetfile:  # It is expected that there is only one pdb id per line.
 
         target_pdbid = line.rstrip().split()[0]
-        # WON'T CALL API IF FILE ALREADY IN LOCAL `diff_data/mmCIF` DIR (LARGE NUMBERS ARE MANUALLY MOVED HERE):
-        dh.make_api_calls_to_fetch_mmcif_and_write_locally(pdb_id=target_pdbid, cif_dst_dir=PATH_TO_CIF_DIR)
-        sp = []
-        # JUST READ IN PRE-PARSED & PRE-TOKENISED DATA. OTHERWISE PERFORM ALL FROM SCRATCH.
-        # RETURNS LIST OF DATAFRAMES, ONE PER CHAIN:
-        pdf_target_per_chain = (
-            tk.parse_tokenise_and_write_cif_to_flatfile(pdb_id=target_pdbid, relpath_to_dst_dir='diff_data/tokenised'))
 
-        # FOR TIME-BEING, JUST USE THE ONE ('A') CHAIN FROM EACH PROTEIN, IGNORING ANY OTHER CHAINS:
-        pdf_target = pdf_target_per_chain[0]
+        if not use_pretokenised_cif_ssv:
+            # WON'T CALL API IF FILE ALREADY IN LOCAL `diff_data/mmCIF` DIR (LARGE NUMBERS ARE MANUALLY MOVED HERE):
+            dh.make_api_calls_to_fetch_mmcif_and_write_locally(pdb_id=target_pdbid,
+                                                               cif_dst_dir=Path.relpath_bigdata_cif_dir_from_dh.value)
+            sp = []
+            # JUST READ IN PRE-PARSED & PRE-TOKENISED DATA. OTHERWISE PERFORM ALL FROM SCRATCH.
+            # RETURNS LIST OF DATAFRAMES, ONE PER CHAIN:
+            # THE CODE EXPECTS THE CIFS TO BE IN THE HIDDEN DATASET DIR NOT IN DIFF_DATA:
+            pdf_target_per_chain = (
+                tk.parse_tokenise_write_cif_to_flatfile(pdb_id=target_pdbid,
+                                                        relpath_cif_dir= Path.relpath_bigdata_cif_dir_from_dh.value,
+                                                        relpath_dst_dir=Path.relpath_bigdata_tokenised_dir_from_dh.value))
 
+            # FOR TIME-BEING, JUST USE THE ONE ('A') CHAIN FROM EACH PROTEIN, IGNORING ANY OTHER CHAINS:
+            pdf_target = pdf_target_per_chain[0]
+
+        else:
+            pdf_target = pd.read_csv(f'{Path.relpath_diffdata_tokenised.value}/{target_pdbid}.ssv', sep=' ')
         # GET MEAN-CORRECTED COORDINATES VIA 'mean_corrected_x', '_y', '_z' TO 3-ELEMENT LIST:
         coords = pdf_target[[ColNames.MEAN_CORR_X.value, ColNames.MEAN_CORR_Y.value, ColNames.MEAN_CORR_Z.value]].values
 
@@ -166,7 +166,7 @@ def load_dataset():
             continue
 
         # READ PRE-COMPUTED EMBEDDING OF THIS PROTEIN:
-        pdb_embed = torch.load(f'{PATH_TO_EMB_DIR}{target_pdbid}.pt')
+        pdb_embed = torch.load(f'{Path.relpath_diffdata_emb.value}/{target_pdbid}.pt')
 
         # AND MAKE SURE IT HAS SAME NUMBER OF RESIDUES AS THE PARSED-TOKENISED SEQUENCE FROM MMCIF:
         # **** THIS WON'T BE THE CASE BECAUSE MY EMBEDDINGS WERE MADE FROM FULL PROTEIN SEQUENCE.
@@ -318,7 +318,7 @@ class DMPDataset(Dataset):
         target = sample[4]
         target_coords = sample[5]
 
-        embed = torch.load(f'{PATH_TO_EMB_DIR}{target}.pt')
+        embed = torch.load(f'{Path.relpath_diffdata_emb.value}/{target}.pt')
         
         # length = ntseq.shape[0]
         length = aaseq.shape[0]
@@ -391,7 +391,7 @@ class DMPDataset(Dataset):
         return sample
 
 
-def main():
+def main(use_pretokenised_cif_ssv=True):
     global BATCH_SIZE
     
     # Create neural network model
@@ -405,7 +405,7 @@ def main():
 
     # Load the dataset
     print("Loading data...")
-    train_list, validation_list = load_dataset()
+    train_list, validation_list = load_dataset(use_pretokenised_cif_ssv)
 
     ntrain = len(train_list)
     nvalidation = len(validation_list)
@@ -444,7 +444,7 @@ def main():
 
     if RESTART_FLAG:
         try:
-            pretrained_dict = torch.load(PROT_E2E_MODEL_TRAIN_PT, map_location='cuda')
+            pretrained_dict = torch.load(Filename.prot_e2e_prot_model_train_pt.value, map_location='cuda')
             model_dict = network.state_dict()
             pretrained_dict = {k: v for k, v in pretrained_dict.items() if (k in model_dict) and (model_dict[k].shape == pretrained_dict[k].shape)}
             network.load_state_dict(pretrained_dict, strict=False)
@@ -452,7 +452,7 @@ def main():
             pass
 
         try:
-            checkpoint = torch.load(CHECKPOINT_PT)
+            checkpoint = torch.load(Filename.checkpoint_pt.value)
             start_iteration = checkpoint['iteration']
             val_err_min = checkpoint['val_err_min']
             print("Checkpoint file loaded.")
@@ -562,15 +562,15 @@ def main():
 
             if val_err < val_err_min:
                 val_err_min = val_err
-                torch.save(network.state_dict(), PROT_E2E_MODEL_PT)
+                torch.save(network.state_dict(), Filename.prot_e2e_prot_model_pt.value)
                 print("Saving model...", flush=True)
                     
-            torch.save(network.state_dict(), PROT_E2E_MODEL_TRAIN_PT)
+            torch.save(network.state_dict(), Filename.prot_e2e_prot_model_train_pt.value)
 
             torch.save({
                 'epoch': epoch,
                 'val_err_min': val_err_min,
-            }, CHECKPOINT_PT)
+            }, Filename.checkpoint_pt.value)
 
 
 if __name__ == "__main__":
@@ -605,5 +605,5 @@ if __name__ == "__main__":
     print(f'torch.__version__={torch.__version__}')
     print(f'sys.version = {sys.version}')
 
-    main()
+    main(use_pretokenised_cif_ssv=True)
 
