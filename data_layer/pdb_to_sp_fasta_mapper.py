@@ -10,6 +10,26 @@ from requests.adapters import HTTPAdapter, Retry
 from data_layer import data_handler as dh
 
 
+class UniprotKey(Enum):
+    FROM_DB = 'PDB'
+    TO_DB = 'UniProtKB'
+    FAILED = 'failedIds'
+    RESULTS = 'results'
+    FROM = 'from'
+    PDBID = 'pdb_id'
+    TO = 'to'
+    ENTRYTYPE = 'entryType'
+    PRIM_ACC = 'primaryAccession'
+    SEQ = 'sequence'
+    VALUE = 'value'
+    LEN = 'length'
+
+    SP = 'Swiss-Prot'
+    TR = 'TrEMBL'
+    SP_ACC_ID = 'sp_acc_id'
+    FASTA = 'fasta'
+
+
 class IdMapper:
     """
     These 12 functions were copy-pasted from https://www.uniprot.org/help/id_mapping
@@ -150,24 +170,9 @@ class IdMapper:
         return results
 
 
-class UniprotKey(Enum):
-    FROM_DB = 'PDB'
-    TO_DB = 'UniProtKB'
-    FAILED = 'failedIds'
-    RESULTS = 'results'
-    FROM = 'from'
-    PDBID = 'pdb_id'
-    TO = 'to'
-    ENTRYTYPE = 'entryType'
-    PRIM_ACC = 'primaryAccession'
-    SEQ = 'sequence'
-    VALUE = 'value'
-    LEN = 'length'
-
-    SP = 'Swiss-Prot'
-    TR = 'TrEMBL'
-    SP_ACC_ID = 'sp_acc_id'
-    FASTA = 'fasta'
+class Filename(Enum):
+    sd_globins_txt = 'SD_Globins.txt'
+    pdbid_fasta_globs = 'PDBid_sp_FASTA_Globins'
 
 
 def call_uniprot_api_for_acc_ids_and_sp_fasta(pdb_ids):
@@ -218,11 +223,6 @@ def call_uniprot_api_for_acc_ids_and_sp_fasta(pdb_ids):
         print(f'Number of TrEMBL recs = {trembl_count}.')  # (Expecting 250 x TrEMBL from the 573 sd proteins cifs).
         print(f'Number of Swiss-Prot recs = {swissprot_count}.')  # (Expecting 363 x Swiss-Prot from the 573).
         return swissprot_recs
-
-
-class Filename(Enum):
-    sd_globins_txt = 'SD_Globins.txt'
-    pdbid_fasta_globs = 'PDBid_sp_FASTA_Globins'
 
 
 if __name__ == '__main__':
