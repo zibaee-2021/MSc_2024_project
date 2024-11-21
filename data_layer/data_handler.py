@@ -314,11 +314,11 @@ def write_tokenised_cif_to_flatfile(pdb_id: str, pdfs: List[pd.DataFrame], dst_d
 
 def read_tokenised_cif_ssv_to_pdf(pdb_id: str, relpath_tokenised_dir: str) -> List[pd.DataFrame]:
     """
-    Read pre-tokenised flatfile (i.e. ssv) of cif for given pdb id, from either `src/diffusion/diff_data/tokenised`or
+    Read pre-tokenised flatfile (i.e. ssv) of cif for given PDB id, from either `src/diffusion/diff_data/tokenised`or
     top-level `data/tokenised`. The reason for having option of data path is simply a workaround to problems when
-    reading from top-level data dir.
-    :param pdb_id: Pdb id of protein.
-    :param relpath_to_tokenised_dir: Relative path to the ssv holding the tokenised CIF data.
+    reading from top-level data dir on HPC.
+    :param pdb_id: PDB id of protein.
+    :param relpath_tokenised_dir: Relative path to the ssv holding the tokenised CIF data.
     E.g. `src/diffusion/diff_data/tokenised`, or `data/tokenised`.
     :return: Pre-tokenised CIF, stored as a ssv flatfile, read back into dataframe.
     """
