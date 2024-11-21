@@ -234,10 +234,9 @@ def _make_new_column_for_backbone_or_sidechain_label(pdfs: List[pd.DataFrame]) -
     return result_pdfs
 
 
-def parse_tokenise_write_cif_to_flatfile(
-                                         relpath_cif_dir: str,
-                                         relpath_dst_dir: str,
-                                         flatfile_format_to_write: str = FileExt.ssv.value) -> List[pd.DataFrame]:
+def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir: str, relpath_dst_dir: str,
+                                          flatfile_format_to_write: str = FileExt.ssv.value,
+                                          pdb_id: str = None) -> List[pd.DataFrame]:
     """
     Parse, then tokenise structure-related information in mmCIF files for proteins as specified by their PDB
     entries (`pdb_ids`) - unique Protein Data Bank identifiers.
@@ -245,9 +244,10 @@ def parse_tokenise_write_cif_to_flatfile(
     Parsing involves extracting required fields from mmCIF files to dataframes.
     Tokenising involves enumerating atoms and residues, and mean-adjusting x, y, z coordinates.
     If the PDB has more than one chain, just use the one chain (or the longest chain??? TODO)
-    :param pdb_id: PDB identifier for protein data to tokenise.
-    :param flatfile_format_to_write: Write to ssv, csv or tsv. Use ssv by default.
     :param relpath_cif_dir: Relative path to source dir of the raw cif files to be parsed and tokenised.
+    :param relpath_dst_dir: Relative path to destination dir for the parsed and tokenised cif as a flat file.
+    :param flatfile_format_to_write: Write to ssv, csv or tsv. Use ssv by default.
+    :param pdb_id: <OPTIONAL> PDB id of a given protein to parse and tokenised. (Used for testing).
     Uses `src/diffusion/diff_data/mmCIF` subdir by default, because expecting call from `src/diffusion`.
     :param relpath_dst_dir: Relative path to destination dir for the parsed and tokenised cif as a flat file.
     Use `src/diffusion/diff_data/tokenised` by default, because expecting call from `src/diffusion`.
@@ -257,7 +257,13 @@ def parse_tokenise_write_cif_to_flatfile(
     'A_Cartn_y', 'A_Cartn_z', 'aa_label_num', 'bb_or_sc', 'bb_index', 'atom_label_num', 'aa_atom_tuple',
     'aa_atom_label_num', 'mean_xyz', 'mean_corrected_x', 'mean_corrected_y', 'mean_corrected_z'].
     """
-    _pdb_list = __read_lst_file_from_src_diff_dir(fname=Path.relpath_diffdata_sd573_lst.value)
+    if pdb_id:
+        _pdb_list = [pdb_id]
+    else:
+        _pdb_list = __read_lst_file_from_src_diff_dir(fname=Path.relpath_diffdata_sd573_lst.value)
+
+    list_of_cif_pdfs_per_chain = []
+
     for pdb_id in _pdb_list:  # expecting only one PDB id per line.
         pdb_id = pdb_id.rstrip().split()[0]
         flatfile_format_to_write = flatfile_format_to_write.removeprefix('.').lower()
