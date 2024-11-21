@@ -66,6 +66,7 @@ N - CA - C = 0 and OXT
 
 
 # AMINO ACID ATOMS USING FORMAT FROM EMBL-EBI WEBSITE. (EXCLUDING INDIVIDUAL HYDROGENS).
+# (THERE ARE 38 NON-HYDROGEN ATOM ANNOTATIONS FOR POLYPEPTIDES)
 class PolypeptideAtoms(Enum):
 
     BACKBONE = ('C', 'CA', 'N', 'O', 'OXT')  # AKA "MAIN-CHAIN"
@@ -73,3 +74,23 @@ class PolypeptideAtoms(Enum):
     SIDECHAIN = ('CB', 'CD', 'CD1', 'CD2', 'CE', 'CE1', 'CE2', 'CE3', 'CG', 'CG1', 'CG2', 'CH2', 'CZ', 'CZ2',
                        'CZ3', 'ND1', 'ND2', 'NE', 'NE1', 'NE2', 'NH1', 'NH2', 'NZ', 'OD1', 'OD2', 'OE1', 'OE2', 'OG',
                        'OG1', 'OG2', 'OH', 'SD', 'SG')
+
+
+# (THERE ARE 27 ATOM ANNOTATIONS FOR POLYNUCLEOTIDES)
+class NucleotideAtoms(Enum):
+    BACKBONE = ("P", "OP1", "OP2", "OP3", "C1'", "C2'", "C3'", "C4'", "O4'", "O3'", "O5'")
+    BASES = ("N1", "N2", "N3", "N4", "N6", "N7", "N9", "C2", "C4", "C5", "C6", "C7", "C8", "O2", "O4", "O6")
+
+# SOURCE: CHATGPT4O
+# ATOMS OF THE SUGAR-PHOSPHATE BACKBONE:
+    # BACKBONE_PHOSPHATE GROUP = ('P', 'OP1', 'OP2', 'OP3')
+    # BACKBONE_SUGAR_GROUP  = ("C1'", "C2'", "C3'", "C4'", "O4'", "O3'", "O5'")  # RIBOSE OR DEOXYRIBOSE
+
+# ATOMS OF THE NUCLEOTIDE BASES (NON-BACKBONE):
+# PURINES:
+    # ADENINE = N1, C2, N3, C4, C5, C6, N6, N7, C8, N9
+    # GUANINE = N1, C2, N2, N3, C4, C5, C6, O6, N7, C8, N9
+# PYRIMIDINES:
+    # THYMINE = N1, C2, O2, N3, C4, O4, C5, C7, C6
+    # CYTOSINE = N1, C2, O2, N3, C4, N4, C5, C6
+    # URACIL = N1, C2, O2, N3, C4, O4, C5, C6
