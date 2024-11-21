@@ -75,8 +75,8 @@ class Filename(Enum):
 
 
 class FileExt(Enum):
-    dot_CIF_ext = '.cif'
-    ssv_ext = 'ssv'
+    dot_CIF = '.cif'
+    ssv = 'ssv'
 
 
 def _assign_mean_corrected_coordinates(pdfs: List[pd.DataFrame]) -> List[pd.DataFrame]:
@@ -228,10 +228,10 @@ def _make_new_column_for_backbone_or_sidechain_label(pdfs: List[pd.DataFrame]) -
     return result_pdfs
 
 
-def parse_tokenise_write_cif_to_flatfile(pdb_id: str,
+def parse_tokenise_write_cif_to_flatfile(
                                          relpath_cif_dir: str,
                                          relpath_dst_dir: str,
-                                         flatfile_format_to_write: str = FileExt.ssv_ext.value) -> List[pd.DataFrame]:
+                                         flatfile_format_to_write: str = FileExt.ssv.value) -> List[pd.DataFrame]:
     """
     Parse, then tokenise structure-related information in mmCIF files for proteins as specified by their PDB
     entries (`pdb_ids`) - unique Protein Data Bank identifiers.
