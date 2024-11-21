@@ -132,9 +132,9 @@ def load_dataset(use_pretokenised_cif_ssv: bool):
             # RETURNS LIST OF DATAFRAMES, ONE PER CHAIN:
             # THE CODE EXPECTS THE CIFS TO BE IN THE HIDDEN DATASET DIR NOT IN DIFF_DATA:
             pdf_target_per_chain = (
-                tk.parse_tokenise_write_cif_to_flatfile(pdb_id=target_pdbid,
-                                                        relpath_cif_dir= Path.relpath_bigdata_cif_dir_from_dh.value,
-                                                        relpath_dst_dir=Path.relpath_bigdata_tokenised_dir_from_dh.value))
+                tk.parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=Path.relpath_bigdata_cif_dir_from_dh.value,
+                                                         relpath_dst_dir=Path.relpath_bigdata_tokenised_dir_from_dh.value,
+                                                         pdb_id=target_pdbid))
 
             # FOR TIME-BEING, JUST USE THE ONE ('A') CHAIN FROM EACH PROTEIN, IGNORING ANY OTHER CHAINS:
             pdf_target = pdf_target_per_chain[0]
