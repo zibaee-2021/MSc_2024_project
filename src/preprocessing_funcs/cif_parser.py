@@ -188,7 +188,7 @@ def _cast_number_strings_to_numeric_types(pdf_merged: pd.DataFrame) -> pd.DataFr
                 CIF.A_Cartn_y.value,
                 CIF.A_Cartn_z.value,
                 CIF.A_occupancy.value]:
-        pdf_merged[col] = pd.to_numeric(pdf_merged[col], errors='coerce')
+        pdf_merged.loc[:, col] = pd.to_numeric(pdf_merged[col], errors='coerce')
 
     # CAST STRINGS OF INTS TO NUMERIC AND THEN TO INTEGERS:
     list_of_cols_to_cast = [CIF.S_seq_id.value,        # RESIDUE POSITION
@@ -196,8 +196,8 @@ def _cast_number_strings_to_numeric_types(pdf_merged: pd.DataFrame) -> pd.DataFr
                             CIF.S_pdb_seq_num.value,   # RESIDUE POSITION
                             CIF.A_id.value]            # ATOM POSITION
     for col_to_cast in list_of_cols_to_cast:
-        pdf_merged[col_to_cast] = pd.to_numeric(pdf_merged[col_to_cast], errors='coerce')
-        pdf_merged[col_to_cast] = pdf_merged[col_to_cast].astype('Int64')
+        pdf_merged.loc[:, col_to_cast] = pd.to_numeric(pdf_merged[col_to_cast], errors='coerce')
+        pdf_merged.loc[:, col_to_cast] = pdf_merged[col_to_cast].astype('Int64')
     return pdf_merged
 
 
