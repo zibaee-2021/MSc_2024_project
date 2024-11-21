@@ -249,7 +249,6 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir: str, relpath_dst_dir:
     :param flatfile_format_to_write: Write to ssv, csv or tsv. Use ssv by default.
     :param pdb_id: <OPTIONAL> PDB id of a given protein to parse and tokenised. (Used for testing).
     Uses `src/diffusion/diff_data/mmCIF` subdir by default, because expecting call from `src/diffusion`.
-    :param relpath_dst_dir: Relative path to destination dir for the parsed and tokenised cif as a flat file.
     Use `src/diffusion/diff_data/tokenised` by default, because expecting call from `src/diffusion`.
     :return: Parsed and tokenised cif file as dataframe which is also written to a flatfile (ssv by default)
     at `src/diffusion/diff_data/tokenised`. List of dataframes, one per chain.
