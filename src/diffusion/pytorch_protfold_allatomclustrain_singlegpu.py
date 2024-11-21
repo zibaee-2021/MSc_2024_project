@@ -57,9 +57,10 @@ class Path(Enum):
     relpath_diffdata_10_Globins_PDBid_lst = 'globins_10.lst'
     relpath_diffdata_573_SD_PDBid_lst = 'SD_573.lst'
 
-# lst file name:
+
 PROT_TRAIN_CLUSTERS = 'globins_10.lst'
 PROT_TRAIN_573_SD = 'SD_573.lst'
+
 
 class Filename(Enum):
     # OUTPUT FILE NAMES:
@@ -67,6 +68,13 @@ class Filename(Enum):
     # CAN BE INPUT OR OUTPUT:
     prot_e2e_prot_model_train_pt = 'prot_e2e_model_train.pt'
     checkpoint_pt = 'checkpoint.pt'
+
+
+class FileExt(Enum):
+    ssv = 'ssv'
+    dot_ssv = '.ssv'
+    dot_pt = '.pt'
+
 
 os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 # BATCH_SIZE = 32
@@ -132,7 +140,8 @@ def load_dataset(use_pretokenised_cif_ssv: bool):
             pdf_target = pdf_target_per_chain[0]
 
         else:
-            pdf_target = pd.read_csv(f'{Path.relpath_diffdata_tokenised.value}/{target_pdbid}.ssv', sep=' ')
+            pdf_target = pd.read_csv(f'{Path.relpath_diffdata_tokenised.value}/'
+                                     f'{target_pdbid}{FileExt.dot_ssv.value}', sep=' ')
         # GET MEAN-CORRECTED COORDINATES VIA 'mean_corrected_x', '_y', '_z' TO 3-ELEMENT LIST:
         coords = pdf_target[[ColNames.MEAN_CORR_X.value, ColNames.MEAN_CORR_Y.value, ColNames.MEAN_CORR_Z.value]].values
 
@@ -166,7 +175,7 @@ def load_dataset(use_pretokenised_cif_ssv: bool):
             continue
 
         # READ PRE-COMPUTED EMBEDDING OF THIS PROTEIN:
-        pdb_embed = torch.load(f'{Path.relpath_diffdata_emb.value}/{target_pdbid}.pt')
+        pdb_embed = torch.load(f'{Path.relpath_diffdata_emb.value}/{target_pdbid}{FileExt.dot_pt.value}')
 
         # AND MAKE SURE IT HAS SAME NUMBER OF RESIDUES AS THE PARSED-TOKENISED SEQUENCE FROM MMCIF:
         # **** THIS WON'T BE THE CASE BECAUSE MY EMBEDDINGS WERE MADE FROM FULL PROTEIN SEQUENCE.
@@ -318,7 +327,7 @@ class DMPDataset(Dataset):
         target = sample[4]
         target_coords = sample[5]
 
-        embed = torch.load(f'{Path.relpath_diffdata_emb.value}/{target}.pt')
+        embed = torch.load(f'{Path.relpath_diffdata_emb.value}/{target}{FileExt.dot_pt.value}')
         
         # length = ntseq.shape[0]
         length = aaseq.shape[0]
