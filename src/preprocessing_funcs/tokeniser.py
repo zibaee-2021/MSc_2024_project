@@ -72,7 +72,11 @@ class Filename(Enum):
     aa_atoms_no_h = 'residues_atoms_no_hydrogens'
     atoms_no_h = 'unique_atoms_only_no_hydrogens'
     aa = 'residues'
-    CIF_ext = 'cif'
+
+
+class FileExt(Enum):
+    dot_CIF_ext = '.cif'
+    ssv_ext = 'ssv'
 
 
 def _assign_mean_corrected_coordinates(pdfs: List[pd.DataFrame]) -> List[pd.DataFrame]:
@@ -223,7 +227,7 @@ def _make_new_column_for_backbone_or_sidechain_label(pdfs: List[pd.DataFrame]) -
 def parse_tokenise_write_cif_to_flatfile(pdb_id: str,
                                          relpath_cif_dir: str,
                                          relpath_dst_dir: str,
-                                         flatfile_format_to_write: str = 'ssv') -> List[pd.DataFrame]:
+                                         flatfile_format_to_write: str = FileExt.ssv_ext.value) -> List[pd.DataFrame]:
     """
     Parse, then tokenise structure-related information in mmCIF files for proteins as specified by their PDB
     entries (`pdb_ids`) - unique Protein Data Bank identifiers.
@@ -244,7 +248,7 @@ def parse_tokenise_write_cif_to_flatfile(pdb_id: str,
     'aa_atom_label_num', 'mean_xyz', 'mean_corrected_x', 'mean_corrected_y', 'mean_corrected_z'].
     """
     flatfile_format_to_write = flatfile_format_to_write.removeprefix('.').lower()
-    pdb_id = pdb_id.removesuffix('.cif')
+    pdb_id = pdb_id.removesuffix(FileExt.dot_CIF_ext.value)
     # IF ALREADY PARSED AND SAVED AS FLATFILE, JUST READ IT IN:
     cif_tokenised_ssv = f'{relpath_dst_dir}/{pdb_id}_A.{flatfile_format_to_write}'
     if os.path.exists(cif_tokenised_ssv):
