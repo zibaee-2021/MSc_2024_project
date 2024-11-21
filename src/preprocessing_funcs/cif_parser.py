@@ -56,12 +56,14 @@ def _remove_rows_with_missing_x_coords(pdf: pd.DataFrame) -> pd.DataFrame:
     :return:
     """
     missing_count = pdf[CIF.A_Cartn_x.value].isna().sum()
-    print(f'BEFORE removing them, there are {missing_count} rows with missing values in column'
-          f' {CIF.A_Cartn_x.value}')
+    if missing_count > 0:
+        print(f'BEFORE removing them, there are {missing_count} rows with missing values in column'
+              f' {CIF.A_Cartn_x.value}')
     pdf = pdf.dropna(how='any', axis=0, inplace=False, subset=[CIF.A_Cartn_x.value])
     missing_count = pdf[CIF.A_Cartn_x.value].isna().sum()
-    print(f'AFTER removing them, there are {missing_count} rows with missing values in column'
-          f' {CIF.A_Cartn_x.value}')
+    if missing_count > 0:
+        print(f'AFTER removing them, there are {missing_count} rows with missing values in column'
+              f' {CIF.A_Cartn_x.value}')
     return pdf
 
 
@@ -124,16 +126,18 @@ def _replace_low_occupancy_coords_with_nans(pdf: pd.DataFrame) -> pd.DataFrame:
     :return: Given dataframe parsed according to occupancy metric.
     """
     missing_count = pdf[CIF.A_Cartn_x.value].isna().sum()
-    print(f'BEFORE replacing low occupancy rows with NAN, '
-          f'there are {missing_count} rows with missing values in column {CIF.A_Cartn_x.value}.')
+    if missing_count > 0:
+        print(f'BEFORE replacing low occupancy rows with NAN, '
+              f'there are {missing_count} rows with missing values in column {CIF.A_Cartn_x.value}.')
 
     pdf[CIF.A_Cartn_x.value] = np.where(pdf[CIF.A_occupancy.value] <= 0.5, np.nan, pdf[CIF.A_Cartn_x.value])
     pdf[CIF.A_Cartn_y.value] = np.where(pdf[CIF.A_occupancy.value] <= 0.5, np.nan, pdf[CIF.A_Cartn_y.value])
     pdf[CIF.A_Cartn_z.value] = np.where(pdf[CIF.A_occupancy.value] <= 0.5, np.nan, pdf[CIF.A_Cartn_z.value])
 
     missing_count = pdf[CIF.A_Cartn_x.value].isna().sum()
-    print(f'AFTER replacing low occupancy rows with NAN, '
-          f'there are {missing_count} rows with missing values in column {CIF.A_Cartn_x.value}.')
+    if missing_count > 0:
+        print(f'AFTER replacing low occupancy rows with NAN, '
+              f'there are {missing_count} rows with missing values in column {CIF.A_Cartn_x.value}.')
     return pdf
 
 
@@ -253,16 +257,18 @@ def _split_up_by_chain(atomsite_pdf: pd.DataFrame, polyseq_pdf: pd.DataFrame) ->
 
 def _remove_hetatm_rows(atomsite_pdf: pd.DataFrame) -> pd.DataFrame:
     missing_count = atomsite_pdf[CIF.A_Cartn_x.value].isna().sum()
-    print(f"BEFORE removing 'HETATM' rows, there are {missing_count} rows with missing values in column "
-          f"{CIF.A_Cartn_x.value}.")
+    if missing_count > 0:
+        print(f"BEFORE removing 'HETATM' rows, there are {missing_count} rows with missing values in column "
+              f"{CIF.A_Cartn_x.value}.")
 
     atomsite_pdf = atomsite_pdf.drop(atomsite_pdf[atomsite_pdf[CIF.A_group_PDB.value] == CIF.HETATM.value].index)
     # OR KEEP ONLY ROWS WITH 'ATOM' GROUP. NOT SURE IF ONE APPROACH IS BETTER THAN THE OTHER:
     # atom_site_pdf = atom_site_pdf[atom_site_pdf.A_group_PDB == 'ATOM']
 
     missing_count = atomsite_pdf[CIF.A_Cartn_x.value].isna().sum()
-    print(f"AFTER removing 'HETATM' rows, there are {missing_count} rows with missing values in column "
-          f"{CIF.A_Cartn_x.value}.")
+    if missing_count > 0:
+        print(f"AFTER removing 'HETATM' rows, there are {missing_count} rows with missing values in column "
+              f"{CIF.A_Cartn_x.value}.")
     return atomsite_pdf
 
 
