@@ -225,9 +225,8 @@ def _make_new_column_for_backbone_or_sidechain_label(pdfs: List[pd.DataFrame]) -
     result_pdfs = list()
     for pdf in pdfs:
         # MAKE NEW COLUMN TO INDICATE IF ATOM IS FROM POLYPEPTIDE BACKBONE ('bb) OR SIDE-CHAIN ('sc'):
-        pdf.loc[:, ColNames.BACKBONE_SIDECHAIN.value] = (pdf[CIF.A_label_atom_id.value]
-                                                          .isin(PolypeptideAtoms.BACKBONE.value)
-                                                          .replace({True: 'bb', False: 'sc'}))
+        pdf.loc[:, ColNames.BB_OR_SC.value] = np.select([is_backbone_atom, is_sidechain_atom],
+                                                        [ColValue.bb.value, ColValue.sc.value], default=pd.NaT)
         expected_num_of_cols = 9
         assert len(pdf.columns) == expected_num_of_cols, \
             f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf.columns)}'
