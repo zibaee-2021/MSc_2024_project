@@ -178,20 +178,24 @@ def _assign_backbone_index_to_all_residue_rows(pdfs: List[pd.DataFrame], pdb_id:
         for S_seq_id, group in pdf.groupby(CIF.S_seq_id.value):  # GROUP BY RESIDUE POSITION VALUE
             # GET ATOM INDEX ('A_id') WHERE ATOM ('A_label_atom_id') IS 'CA' IN THIS RESIDUE GROUP.
             a_id_of_CA = group.loc[group[CIF.A_label_atom_id.value] == CIF.ALPHA_CARBON.value, CIF.A_id.value]
-            chains = pdf[CIF.S_asym_id.value].unique()[0]
+            chain = pdf[CIF.S_asym_id.value].unique()[0]
             # CHECK THERE'S AT LEAST ONE 'CA' IN THIS GROUP:
             if a_id_of_CA.empty:
-                print(f"No 'CA' for residue {S_seq_id} in {pdb_id}, chain {chains}")
+                print(f"No 'CA' for residue {S_seq_id} in {pdb_id}, chain {chain}")
                 positions_of_all_bb_atoms = group.loc[group[ColNames.BACKBONE_SIDECHAIN.value]
                                                       == 'bb', CIF.A_id.value].to_numpy()
+                if not positions_of_all_bb_atoms:
+                    print(f'No backbone atoms at all in chain={chain} of PDBid={pdb_id}.')
+                print(f'Positions of all other backbone atoms for this residue = {positions_of_all_bb_atoms}')
                 max_bb_position = max(positions_of_all_bb_atoms)
+                print(f'Position chosen of backbone atom={max_bb_position}')
                 most_Cterminal_bb_atom = group.loc[group[CIF.A_id.value]
                                                    == max_bb_position, CIF.A_label_atom_id.value].values[0]
                 print(f'Therefore, selecting most C-terminal position of another backbone atom for this residue. '
                       f'Non-CA backbone atoms are at {str(list(positions_of_all_bb_atoms))}. '
                       f"So {max_bb_position} is selected. This atom is '{most_Cterminal_bb_atom}'.")
                 if positions_of_all_bb_atoms.size == 0:
-                    print(f'There are no backbone atoms at all! (Residue {S_seq_id}, pdb {pdb_id}, chain {chains}. '
+                    print(f'There are no backbone atoms at all! (Residue {S_seq_id}, pdb {pdb_id}, chain {chain}. '
                           f'Ignoring this for now but a decision needs to be made about whether to remove '
                           f'this residue all together or if it is ok to substitute in the position of a side-chain '
                           f'atom.')
@@ -260,12 +264,13 @@ def parse_tokenise_write_cif_to_flatfile(pdb_id: str,
         # PARSE mmCIF TO EXTRACT 14 FIELDS, TO FILTER, IMPUTE, SORT AND JOIN ON, RETURNING AN 8-COLUMN DATAFRAME:
         # (THIS RETURNS A LIST OF DATAFRAMES, ONE PER POLYPEPTIDE CHAIN).
         list_of_cif_pdfs_per_chain = parser.parse_cif(pdb_id=pdb_id, relpath_to_cifs_dir=relpath_cif_dir)
+        # Temporary hack to tokenise and write just one chain to ssv: TODO decide if/why another chain would be selected
+
+        list_of_cif_pdfs_per_chain = [list_of_cif_pdfs_per_chain[0]]
         list_of_cif_pdfs_per_chain = _make_new_column_for_backbone_or_sidechain_label(list_of_cif_pdfs_per_chain)
         list_of_cif_pdfs_per_chain = _assign_backbone_index_to_all_residue_rows(list_of_cif_pdfs_per_chain, pdb_id)
         list_of_cif_pdfs_per_chain = _enumerate_atoms_and_residues(list_of_cif_pdfs_per_chain)
         list_of_cif_pdfs_per_chain = _assign_mean_corrected_coordinates(list_of_cif_pdfs_per_chain)
-        # This is temporary hack for making the code write just one chain (first one) to flatfile. TODO
-        list_of_cif_pdfs_per_chain = [list_of_cif_pdfs_per_chain[0]]
         dh.write_tokenised_cif_to_flatfile(pdb_id, list_of_cif_pdfs_per_chain,
                                            dst_data_dir=relpath_dst_dir,
                                            flatfiles=flatfile_format_to_write)
