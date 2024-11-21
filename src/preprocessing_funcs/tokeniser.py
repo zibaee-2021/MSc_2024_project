@@ -251,29 +251,32 @@ def parse_tokenise_write_cif_to_flatfile(
     'A_Cartn_y', 'A_Cartn_z', 'aa_label_num', 'bb_or_sc', 'bb_index', 'atom_label_num', 'aa_atom_tuple',
     'aa_atom_label_num', 'mean_xyz', 'mean_corrected_x', 'mean_corrected_y', 'mean_corrected_z'].
     """
-    flatfile_format_to_write = flatfile_format_to_write.removeprefix('.').lower()
-    pdb_id = pdb_id.removesuffix(FileExt.dot_CIF_ext.value)
-    # IF ALREADY PARSED AND SAVED AS FLATFILE, JUST READ IT IN:
-    cif_tokenised_ssv = f'{relpath_dst_dir}/{pdb_id}_A.{flatfile_format_to_write}'
-    if os.path.exists(cif_tokenised_ssv):
-        list_of_cif_pdfs_per_chain = dh.read_tokenised_cif_ssv_to_pdf(pdb_id=pdb_id,
-                                                                      relpath_to_tokenised_dir=relpath_dst_dir)
-    else:
-        # OTHERWISE GET THE CIF DATA (EITHER LOCALLY OR VIA API)
-        relpath_cif_dir = relpath_cif_dir.removesuffix('/').removeprefix('/')
-        # PARSE mmCIF TO EXTRACT 14 FIELDS, TO FILTER, IMPUTE, SORT AND JOIN ON, RETURNING AN 8-COLUMN DATAFRAME:
-        # (THIS RETURNS A LIST OF DATAFRAMES, ONE PER POLYPEPTIDE CHAIN).
-        list_of_cif_pdfs_per_chain = parser.parse_cif(pdb_id=pdb_id, relpath_to_cifs_dir=relpath_cif_dir)
-        # Temporary hack to tokenise and write just one chain to ssv: TODO decide if/why another chain would be selected
+    _pdb_list = __read_lst_file_from_src_diff_dir(fname=Path.relpath_diffdata_sd573_lst.value)
+    for pdb_id in _pdb_list:  # expecting only one PDB id per line.
+        pdb_id = pdb_id.rstrip().split()[0]
+        flatfile_format_to_write = flatfile_format_to_write.removeprefix('.').lower()
+        pdb_id = pdb_id.removesuffix(FileExt.dot_CIF.value)
+        # IF ALREADY PARSED AND SAVED AS FLATFILE, JUST READ IT IN:
+        cif_tokenised_ssv = f'{relpath_dst_dir}/{pdb_id}_A.{flatfile_format_to_write}'
+        if os.path.exists(cif_tokenised_ssv):
+            list_of_cif_pdfs_per_chain = dh.read_tokenised_cif_ssv_to_pdf(pdb_id=pdb_id,
+                                                                          relpath_to_tokenised_dir=relpath_dst_dir)
+        else:
+            # OTHERWISE GET THE CIF DATA (EITHER LOCALLY OR VIA API)
+            relpath_cif_dir = relpath_cif_dir.removesuffix('/').removeprefix('/')
+            # PARSE mmCIF TO EXTRACT 14 FIELDS, TO FILTER, IMPUTE, SORT AND JOIN ON, RETURNING AN 8-COLUMN DATAFRAME:
+            # (THIS RETURNS A LIST OF DATAFRAMES, ONE PER POLYPEPTIDE CHAIN).
+            list_of_cif_pdfs_per_chain = parser.parse_cif(pdb_id=pdb_id, relpath_to_cifs_dir=relpath_cif_dir)
+            # Temporary hack to tokenise and write just one chain to ssv: TODO decide if/why another chain would be selected
 
-        list_of_cif_pdfs_per_chain = [list_of_cif_pdfs_per_chain[0]]
-        list_of_cif_pdfs_per_chain = _make_new_column_for_backbone_or_sidechain_label(list_of_cif_pdfs_per_chain)
-        list_of_cif_pdfs_per_chain = _assign_backbone_index_to_all_residue_rows(list_of_cif_pdfs_per_chain, pdb_id)
-        list_of_cif_pdfs_per_chain = _enumerate_atoms_and_residues(list_of_cif_pdfs_per_chain)
-        list_of_cif_pdfs_per_chain = _assign_mean_corrected_coordinates(list_of_cif_pdfs_per_chain)
-        dh.write_tokenised_cif_to_flatfile(pdb_id, list_of_cif_pdfs_per_chain,
-                                           dst_data_dir=relpath_dst_dir,
-                                           flatfiles=flatfile_format_to_write)
+            list_of_cif_pdfs_per_chain = [list_of_cif_pdfs_per_chain[0]]
+            list_of_cif_pdfs_per_chain = _make_new_column_for_backbone_or_sidechain_label(list_of_cif_pdfs_per_chain)
+            list_of_cif_pdfs_per_chain = _assign_backbone_index_to_all_residue_rows(list_of_cif_pdfs_per_chain, pdb_id)
+            list_of_cif_pdfs_per_chain = _enumerate_atoms_and_residues(list_of_cif_pdfs_per_chain)
+            list_of_cif_pdfs_per_chain = _assign_mean_corrected_coordinates(list_of_cif_pdfs_per_chain)
+            dh.write_tokenised_cif_to_flatfile(pdb_id, list_of_cif_pdfs_per_chain,
+                                               dst_data_dir=relpath_dst_dir,
+                                               flatfiles=flatfile_format_to_write)
     return list_of_cif_pdfs_per_chain
 
 
@@ -289,9 +292,8 @@ def __read_lst_file_from_src_diff_dir(fname: str) -> list:
 
 
 if __name__ == '__main__':
-    _pdb_list = __read_lst_file_from_src_diff_dir(fname=Path.relpath_diffdata_sd573_lst.value)
-    for pdbid in _pdb_list:  # expecting only one PDB id per line.
-        pdbid = pdbid.rstrip().split()[0]
-        parse_tokenise_write_cif_to_flatfile(pdb_id=pdbid,
-                                             relpath_cif_dir=Path.relpath_diffdata_cif_dir.value,
-                                             relpath_dst_dir=Path.relpath_diffdata_tokenised_dir.value)
+    # dh.copy_cifs_from_bigfilefolder_to_diff_data()
+    parse_tokenise_write_cif_to_flatfile(relpath_cif_dir=Path.relpath_diffdata_cif_dir.value,
+                                         relpath_dst_dir=Path.relpath_diffdata_tokenised_dir.value)
+
+    # dh.clear_diffdatacif_dir()

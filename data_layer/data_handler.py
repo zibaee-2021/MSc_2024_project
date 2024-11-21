@@ -42,6 +42,15 @@ class FileExt(Enum):
     csv = 'csv'
     tsv = 'tsv'
     dot_lst = '.lst'
+    dot_json = '.json'
+    dot_txt = '.txt'
+    dot_pt = '.pt'
+
+
+class YamlKey(Enum):
+    root = 'ROOT'
+    aas = 'AAs'
+    atoms_by_aa = 'ATOMS_BY_AA'
 
 
 def _chdir_to_data_layer():
@@ -148,8 +157,8 @@ def write_list_to_lst_file(list_to_write: list, fname: str) -> None:
 
 
 def write_list_to_space_separated_txt_file(list_to_write: list, fname: str) -> None:
-    fname = fname.removesuffix('.txt')
-    fname = fname + '.txt'
+    fname = fname.removesuffix(FileExt.dot_txt.value)
+    fname = fname + FileExt.dot_txt.value
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
     space_sep_str = ' '.join(list_to_write)
     with open(f'{Path.data_dir.value}/{fname}', 'w') as f:
@@ -158,13 +167,14 @@ def write_list_to_space_separated_txt_file(list_to_write: list, fname: str) -> N
 
 
 def write_enumerations_json(fname: str, dict_to_write: dict) -> None:
-    fname = fname.removesuffix('.json')
-    _write_to_json_to_data_dir(fname=f'{Path.enumeration_dir.value}/{fname}.json', dict_to_write=dict_to_write)
+    fname = fname.removesuffix(FileExt.dot_json.value)
+    _write_to_json_to_data_dir(fname=f'{Path.enumeration_dir.value}/{fname}{FileExt.dot_json.value}',
+                               dict_to_write=dict_to_write)
 
 
 def read_enumerations_json(fname: str) -> dict:
-    fname = fname.removesuffix('.json')
-    return _read_json_from_data_dir(fname=f'{Path.enumeration_dir.value}/{fname}.json')
+    fname = fname.removesuffix(FileExt.dot_json.value)
+    return _read_json_from_data_dir(fname=f'{Path.enumeration_dir.value}/{fname}{FileExt.dot_json.value}')
 
 
 def read_enumeration_mappings() -> Tuple[dict, dict, dict]:
@@ -177,8 +187,8 @@ def read_enumeration_mappings() -> Tuple[dict, dict, dict]:
 
 def _write_to_json_to_data_dir(fname: str, dict_to_write: dict):
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
-    fname = fname.removeprefix('/').removesuffix('.json')
-    relpath_json = f'{Path.data_dir.value}/{fname}.json'
+    fname = fname.removeprefix('/').removesuffix(FileExt.dot_json.value)
+    relpath_json = f'{Path.data_dir.value}/{fname}{FileExt.dot_json.value}'
 
     with open(relpath_json, 'w') as json_f:
         json.dump(dict_to_write, json_f, indent=4)
@@ -193,8 +203,8 @@ def read_aa_atoms_yaml() -> Tuple[list, dict]:
     with open(Path.aa_atoms_yaml.value, 'r') as stream:
         try:
             atoms_aas = yaml.load(stream, Loader=yaml.Loader)
-            aas = atoms_aas['ROOT']['AAs']
-            aas_atoms = atoms_aas['ROOT']['ATOMS_BY_AA']
+            aas = atoms_aas[YamlKey.root.value][YamlKey.aas.value]
+            aas_atoms = atoms_aas[YamlKey.root.value][YamlKey.atoms_by_aa.value]
 
         except yaml.YAMLError as exc:
             print(exc)
@@ -204,8 +214,8 @@ def read_aa_atoms_yaml() -> Tuple[list, dict]:
 
 def write_pdb_uniprot_fasta_recs_to_json(recs: dict, filename: str) -> None:
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
-    fname = filename.removesuffix('.json')
-    with open(f'{Path.data_fasta_dir.value}/{fname}.json', 'w') as json_f:
+    fname = filename.removesuffix(FileExt.dot_json.value)
+    with open(f'{Path.data_fasta_dir.value}/{fname}{FileExt.dot_json.value}', 'w') as json_f:
         json.dump(recs, json_f, indent=4)  # Works ok (despite warning that it expected SupportsWrite[str], not TextIO).
     _restore_original_working_dir(cwd)
 
@@ -243,7 +253,7 @@ def make_api_calls_to_fetch_mmcif_and_write_locally(pdb_id: str, cif_dst_dir: st
 
 def save_torch_tensor(pt: torch.Tensor, dst_path: str):
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
-    torch.save(pt, f'{dst_path}.pt')
+    torch.save(pt, f'{dst_path}{FileExt.dot_pt.value}')
     _restore_original_working_dir(cwd)
 
 
@@ -339,8 +349,8 @@ def _read_json_from_data_dir(fname: str) -> dict:
     :return: The read-in json file, as a Python dict.
     """
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
-    fname = fname.removeprefix('/').removesuffix('.json')
-    relpath_json = f'{Path.data_dir.value}/{fname}.json'
+    fname = fname.removeprefix('/').removesuffix(FileExt.dot_json.value)
+    relpath_json = f'{Path.data_dir.value}/{fname}{FileExt.dot_json.value}'
     assert os.path.exists(relpath_json)
     try:
         with open(relpath_json, 'r') as json_f:
