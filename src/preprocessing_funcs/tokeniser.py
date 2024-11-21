@@ -61,6 +61,8 @@ import pandas as pd
 from src.preprocessing_funcs import cif_parser as parser
 from data_layer import data_handler as dh
 from src.enums import ColNames, CIF, PolypeptideAtoms
+# If more than this proportion of residues have no backbone atoms, remove the chain.
+MIN_RATIO_MISSING_BACKBONE_ATOMS = 0.0
 
 
 class Path(Enum):
@@ -221,9 +223,59 @@ def _assign_backbone_index_to_all_residue_rows(pdfs: List[pd.DataFrame], pdb_id:
     return result_pdfs
 
 
+def _only_keep_chains_with_enuf_backbone_atoms(pdfs: List[pd.DataFrame], pdb_id: str) -> List[pd.DataFrame]:
+    """
+    Remove chain(s) from list of chains for this CIF if not more than a specific number of backbone polypeptides.
+    :param pdfs: List of dataframes, one per chain, for one CIF.
+    :param pdb_id: The PDB id of the corresponding CIF data.
+    :return: List of dataframes, one per chain of protein, with any chains removed if they have less than the minimum
+    permitted ratio of missing atoms (arbitrarily chosen for now).
+    """
+    result_pdfs = []
+    for pdf in pdfs:
+        no_bb_count = (pdf
+                       .groupby(CIF.S_seq_id.value)[ColNames.BB_OR_SC.value]
+                       .apply(lambda x: ColValue.bb.value not in x.values)
+                       .sum())
+        total_atom_count = pdf.shape[0]
+        if (no_bb_count / total_atom_count) <= MIN_RATIO_MISSING_BACKBONE_ATOMS:
+            result_pdfs.append(pdf)
+    return result_pdfs
+
+
+def _only_keep_chains_of_polypeptide(pdfs: List[pd.DataFrame], pdb_id: str) -> List[pd.DataFrame]:
+    """
+    Remove chain(s) from list of chains for this CIF if not polypeptide. Takes advantage of output of previous function
+    which assigns to a new column called `bb_or_sc` 'bb' for polypeptide backbone atoms, 'sc' for polypeptide
+    side-chain atoms, otherwise `pd.NaT` which therefore indicates the chain is not polypeptide.
+    (RCSB CIF assigns a different chain to different molecule in a complex, e.g. RNA-protein complex, so if one row in
+    the aforementioned column is `pd.NaT`, you should find that all are `pd.NaT`).
+    :param pdfs: List of dataframes, one per chain, for one CIF.
+    :param pdb_id: The PDB id of the corresponding CIF data.
+    :return: List of dataframes, one per chain of protein, with any non-polypeptide chains removed.
+    """
+    result_pdfs = []
+    for pdf in pdfs:
+        chain = pdf[CIF.S_asym_id.value].iloc[0]
+        atleast_one_row_isna = pdf[ColNames.BB_OR_SC.value].isna().any()
+        all_rows_isna = pdf[ColNames.BB_OR_SC.value].isna().all()
+        if atleast_one_row_isna:
+            print(f'There are atoms in chain={chain} of PDB id={pdb_id} which are not polypeptide atoms, so this chain '
+                  f'will be excluded.')
+            if not all_rows_isna:
+                print(f'It seems that while at least one row in column {ColNames.BB_OR_SC.value} has null, '
+                      f'not all rows are null. This is unexpected and should be investigated further. '
+                      f'(Chain {chain} of PDB id {pdb_id}).')
+        else:
+            result_pdfs.append(pdf)
+    return result_pdfs
+
+
 def _make_new_column_for_backbone_or_sidechain_label(pdfs: List[pd.DataFrame]) -> List[pd.DataFrame]:
     result_pdfs = list()
     for pdf in pdfs:
+        is_backbone_atom = pdf[CIF.A_label_atom_id.value].isin(PolypeptideAtoms.BACKBONE.value)
+        is_sidechain_atom = pdf[CIF.A_label_atom_id.value].isin(PolypeptideAtoms.SIDECHAIN.value)
         # MAKE NEW COLUMN TO INDICATE IF ATOM IS FROM POLYPEPTIDE BACKBONE ('bb) OR SIDE-CHAIN ('sc'):
         pdf.loc[:, ColNames.BB_OR_SC.value] = np.select([is_backbone_atom, is_sidechain_atom],
                                                         [ColValue.bb.value, ColValue.sc.value], default=pd.NaT)
@@ -268,8 +320,8 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir: str, relpath_dst_dir:
         flatfile_format_to_write = flatfile_format_to_write.removeprefix('.').lower()
         pdb_id = pdb_id.removesuffix(FileExt.dot_CIF.value)
         # IF ALREADY PARSED AND SAVED AS FLATFILE, JUST READ IT IN:
-        cif_tokenised_ssv = f'{relpath_dst_dir}/{pdb_id}_A.{flatfile_format_to_write}'
-        if os.path.exists(cif_tokenised_ssv):
+        cif_tokenised_ssv_dir = relpath_dst_dir  # just to clarify dst_dir is the source dir if pre-tokenised.
+        if os.path.exists(cif_tokenised_ssv_dir):
             list_of_cif_pdfs_per_chain = dh.read_tokenised_cif_ssv_to_pdf(pdb_id=pdb_id,
                                                                           relpath_tokenised_dir=cif_tokenised_ssv_dir)
         else:
@@ -285,7 +337,6 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir: str, relpath_dst_dir:
             # Temporary hack to tokenise & write just 1 chain to ssv: TODO decide how to select which chain to use.
 
             list_of_cif_pdfs_per_chain = [list_of_cif_pdfs_per_chain[0]]
-            list_of_cif_pdfs_per_chain = _make_new_column_for_backbone_or_sidechain_label(list_of_cif_pdfs_per_chain)
             list_of_cif_pdfs_per_chain = _assign_backbone_index_to_all_residue_rows(list_of_cif_pdfs_per_chain, pdb_id)
             list_of_cif_pdfs_per_chain = _enumerate_atoms_and_residues(list_of_cif_pdfs_per_chain)
             list_of_cif_pdfs_per_chain = _assign_mean_corrected_coordinates(list_of_cif_pdfs_per_chain)
@@ -308,7 +359,7 @@ def __read_lst_file_from_src_diff_dir(fname: str) -> list:
 
 if __name__ == '__main__':
     # dh.copy_cifs_from_bigfilefolder_to_diff_data()
-    parse_tokenise_write_cif_to_flatfile(relpath_cif_dir=Path.relpath_diffdata_cif_dir.value,
-                                         relpath_dst_dir=Path.relpath_diffdata_tokenised_dir.value)
+    parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=Path.relpath_diffdata_cif_dir.value,
+                                          relpath_dst_dir=Path.relpath_diffdata_tokenised_dir.value)
 
     # dh.clear_diffdatacif_dir()
