@@ -267,14 +267,18 @@ def parse_tokenise_write_cif_to_flatfile(
         cif_tokenised_ssv = f'{relpath_dst_dir}/{pdb_id}_A.{flatfile_format_to_write}'
         if os.path.exists(cif_tokenised_ssv):
             list_of_cif_pdfs_per_chain = dh.read_tokenised_cif_ssv_to_pdf(pdb_id=pdb_id,
-                                                                          relpath_to_tokenised_dir=relpath_dst_dir)
+                                                                          relpath_tokenised_dir=cif_tokenised_ssv_dir)
         else:
             # OTHERWISE GET THE CIF DATA (EITHER LOCALLY OR VIA API)
             relpath_cif_dir = relpath_cif_dir.removesuffix('/').removeprefix('/')
             # PARSE mmCIF TO EXTRACT 14 FIELDS, TO FILTER, IMPUTE, SORT AND JOIN ON, RETURNING AN 8-COLUMN DATAFRAME:
             # (THIS RETURNS A LIST OF DATAFRAMES, ONE PER POLYPEPTIDE CHAIN).
-            list_of_cif_pdfs_per_chain = parser.parse_cif(pdb_id=pdb_id, relpath_to_cifs_dir=relpath_cif_dir)
-            # Temporary hack to tokenise and write just one chain to ssv: TODO decide if/why another chain would be selected
+            list_of_cif_pdfs_per_chain = parser.parse_cif(pdb_id=pdb_id, relpath_cifs_dir=relpath_cif_dir)
+            list_of_cif_pdfs_per_chain = _make_new_column_for_backbone_or_sidechain_label(list_of_cif_pdfs_per_chain)
+            list_of_cif_pdfs_per_chain = _only_keep_chains_of_polypeptide(list_of_cif_pdfs_per_chain, pdb_id)
+            list_of_cif_pdfs_per_chain = _only_keep_chains_with_enuf_backbone_atoms(list_of_cif_pdfs_per_chain, pdb_id)
+
+            # Temporary hack to tokenise & write just 1 chain to ssv: TODO decide how to select which chain to use.
 
             list_of_cif_pdfs_per_chain = [list_of_cif_pdfs_per_chain[0]]
             list_of_cif_pdfs_per_chain = _make_new_column_for_backbone_or_sidechain_label(list_of_cif_pdfs_per_chain)

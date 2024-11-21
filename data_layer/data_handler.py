@@ -312,7 +312,7 @@ def write_tokenised_cif_to_flatfile(pdb_id: str, pdfs: List[pd.DataFrame], dst_d
             _restore_original_working_dir(cwd)
 
 
-def read_tokenised_cif_ssv_to_pdf(pdb_id: str, relpath_to_tokenised_dir: str) -> List[pd.DataFrame]:
+def read_tokenised_cif_ssv_to_pdf(pdb_id: str, relpath_tokenised_dir: str) -> List[pd.DataFrame]:
     """
     Read pre-tokenised flatfile (i.e. ssv) of cif for given pdb id, from either `src/diffusion/diff_data/tokenised`or
     top-level `data/tokenised`. The reason for having option of data path is simply a workaround to problems when
@@ -322,16 +322,16 @@ def read_tokenised_cif_ssv_to_pdf(pdb_id: str, relpath_to_tokenised_dir: str) ->
     E.g. `src/diffusion/diff_data/tokenised`, or `data/tokenised`.
     :return: Pre-tokenised CIF, stored as a ssv flatfile, read back into dataframe.
     """
-    os.makedirs(relpath_to_tokenised_dir, exist_ok=True)
-    relpath_to_tokenised_dir = relpath_to_tokenised_dir.removesuffix('/').removeprefix('/')
+    os.makedirs(relpath_tokenised_dir, exist_ok=True)
+    relpath_tokenised_dir = relpath_tokenised_dir.removesuffix('/').removeprefix('/')
     pattern = fr'{pdb_id}_[A-Z]\{FileExt.dot_ssv.value}'
     ssvs = []
-    for f in os.listdir(relpath_to_tokenised_dir):
-        if os.path.isfile(os.path.join(relpath_to_tokenised_dir, f)) and re.match(pattern, f):
+    for f in os.listdir(relpath_tokenised_dir):
+        if os.path.isfile(os.path.join(relpath_tokenised_dir, f)) and re.match(pattern, f):
             ssvs.append(f)
     pdfs = []
     for ssv in ssvs:
-        path_cif_ssv = f'{relpath_to_tokenised_dir}/{ssv}'
+        path_cif_ssv = f'{relpath_tokenised_dir}/{ssv}'
         print(f'Reading flatfile of tokenised cif: {path_cif_ssv} into dataframe')
         pdf = pd.read_csv(path_cif_ssv, sep=' ')
         nat_indices = pdf[pdf[ColNames.AA_ATOM_LABEL_NUM.value].isna()].index

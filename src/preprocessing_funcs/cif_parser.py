@@ -343,10 +343,10 @@ def _get_mmcif_data(pdb_id: str, relpath_raw_cif: str) -> dict:
     pdb_id = pdb_id.removesuffix(FileExt.dot_CIF.value)
     relpath_raw_cif = f'{relpath_raw_cif}/{pdb_id}{FileExt.dot_CIF.value}'
 
-    if os.path.exists(relpath_to_raw_cif):
-        mmcif = MMCIF2Dict(relpath_to_raw_cif)
+    if os.path.exists(relpath_raw_cif):
+        mmcif = MMCIF2Dict(relpath_raw_cif)
     else:
-        print(f'Did not find this CIF locally ({relpath_to_raw_cif}). Attempting to read {pdb_id} directly from '
+        print(f'Did not find this CIF locally ({relpath_raw_cif}). Attempting to read {pdb_id} directly from '
               f'https://files.rcsb.org/download/{pdb_id}')
 
         def _fetch_mmcif_from_pdb_api_and_write(_pdb_id: str, relpath_dst_cif: str) -> None:
@@ -359,21 +359,21 @@ def _get_mmcif_data(pdb_id: str, relpath_raw_cif: str) -> dict:
             # relpath_dst_cif = f'../data/big_data_to_git_ignore/SD_573_CIFs/{pdb_id}.cif'
             with open(relpath_dst_cif, 'w') as file:
                 file.write(response.text)
-        _fetch_mmcif_from_pdb_api_and_write(_pdb_id=pdb_id, relpath_dst_cif=relpath_to_raw_cif)
-        mmcif = MMCIF2Dict(relpath_to_raw_cif)
+        _fetch_mmcif_from_pdb_api_and_write(_pdb_id=pdb_id, relpath_dst_cif=relpath_raw_cif)
+        mmcif = MMCIF2Dict(relpath_raw_cif)
     return mmcif
 
 
-def parse_cif(pdb_id: str, relpath_to_cifs_dir: str) -> List[pd.DataFrame]:
+def parse_cif(pdb_id: str, relpath_cifs_dir: str) -> List[pd.DataFrame]:
     """
     Parse given local mmCIF file to extract and tabulate necessary atom and amino acid data fields from
     `_pdbx_poly_seq_scheme` and `_atom_site`.
     :param pdb_id: Alphanumeric 4-character Protein Databank Identifier. e.g. '1OJ6'.
-    :param relpath_to_cifs_dir: Relative path to local raw mmCIF file, e.g. 'path/to/1OJ6' (MUST INCLUDE PDB ID).
+    :param relpath_cifs_dir: Relative path to local raw mmCIF file, e.g. 'path/to/1OJ6' (MUST INCLUDE PDB ID).
     :return: 8 necessary fields extracted from raw mmCIF (from local copy or API) and joined in one table.
     This is a list of one or more results for each chain found in this mmCIF.
     """
-    mmcif_dict = _get_mmcif_data(pdb_id, relpath_to_cifs_dir)
+    mmcif_dict = _get_mmcif_data(pdb_id, relpath_cifs_dir)
     polyseq_pdf = _extract_fields_from_poly_seq(mmcif_dict)
     atomsite_pdf = _extract_fields_from_atom_site(mmcif_dict)
     atomsite_pdf = _remove_hetatm_rows(atomsite_pdf)

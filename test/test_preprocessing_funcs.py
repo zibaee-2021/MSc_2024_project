@@ -49,7 +49,7 @@ class TestPreprocessingFuncs(TestCase):
             pdf_merged.to_csv(path_or_buf=f'{self._test_joined_dir}/{self.test_1V5H_ssv}', sep=' ', index=False)
 
     def test_parse_cif(self):
-        parsed_pdfs = cif_parser.parse_cif(pdb_id=self.test_1OJ6_4chains_cif, relpath_to_cifs_dir=self.test_cif_dir)
+        parsed_pdfs = cif_parser.parse_cif(pdb_id=self.test_1OJ6_4chains_cif, relpath_cifs_dir=self.test_cif_dir)
         pass
 
     def test_parse_tokenise_and_write_cif_to_flatfile(self):
