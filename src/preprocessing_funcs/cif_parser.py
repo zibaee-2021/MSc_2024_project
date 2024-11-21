@@ -351,8 +351,8 @@ def _get_mmcif_data(pdb_id: str, relpath_raw_cif: str) -> dict:
 
         def _fetch_mmcif_from_pdb_api_and_write(_pdb_id: str, relpath_dst_cif: str) -> None:
             """
-            Fetch raw mmCIF data from API (expected hosted at 'https://files.rcsb.org/download/') using given PDB id, and write
-            out to flat file.
+            Fetch raw mmCIF data from API (expected hosted at 'https://files.rcsb.org/download/') using given PDB id,
+            and write out to flat file.
             :param _pdb_id: Alphanumeric 4-character Protein Databank Identifier. e.g. '1OJ6'.
             """
             response = api.call_for_cif_with_pdb_id(_pdb_id)
