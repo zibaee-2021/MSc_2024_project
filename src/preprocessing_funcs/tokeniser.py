@@ -56,6 +56,7 @@ mean_corrected_z      # Z COORDINATES FOR EACH ATOM SUBTRACTED BY THE MEAN OF XY
 import os
 from enum import Enum
 from typing import List
+import numpy as np
 import pandas as pd
 from src.preprocessing_funcs import cif_parser as parser
 from data_layer import data_handler as dh
@@ -77,6 +78,12 @@ class Filename(Enum):
 class FileExt(Enum):
     dot_CIF = '.cif'
     ssv = 'ssv'
+    dot_ssv = '.ssv'
+
+
+class ColValue(Enum):
+    bb = 'bb'  # backbone
+    sc = 'sc'  # sidechain
 
 
 def _assign_mean_corrected_coordinates(pdfs: List[pd.DataFrame]) -> List[pd.DataFrame]:
@@ -182,8 +189,8 @@ def _assign_backbone_index_to_all_residue_rows(pdfs: List[pd.DataFrame], pdb_id:
             # CHECK THERE'S AT LEAST ONE 'CA' IN THIS GROUP:
             if a_id_of_CA.empty:
                 print(f"No 'CA' for residue {S_seq_id} in {pdb_id}, chain {chain}")
-                positions_of_all_bb_atoms = group.loc[group[ColNames.BACKBONE_SIDECHAIN.value]
-                                                      == 'bb', CIF.A_id.value].to_numpy()
+                positions_of_all_bb_atoms = group.loc[group[ColNames.BB_OR_SC.value]
+                                                      == ColValue.bb.value, CIF.A_id.value].to_numpy()
                 if not positions_of_all_bb_atoms:
                     print(f'No backbone atoms at all in chain={chain} of PDBid={pdb_id}.')
                 print(f'Positions of all other backbone atoms for this residue = {positions_of_all_bb_atoms}')
