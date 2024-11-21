@@ -322,13 +322,11 @@ def read_tokenised_cif_ssv_to_pdf(pdb_id: str, relpath_to_tokenised_dir: str) ->
     pdfs = []
     for ssv in ssvs:
         path_cif_ssv = f'{relpath_to_tokenised_dir}/{ssv}'
-        print(f'Attempting to read {path_cif_ssv} into a dataframe')
-
+        print(f'Reading flatfile of tokenised cif: {path_cif_ssv} into dataframe')
         pdf = pd.read_csv(path_cif_ssv, sep=' ')
-        print(f'{pdf[ColNames.AA_ATOM_LABEL_NUM.value].dtype}')
-
         nat_indices = pdf[pdf[ColNames.AA_ATOM_LABEL_NUM.value].isna()].index
-        print(f'Row indices with NaT values: {list(nat_indices)}')
+        if not nat_indices:
+            print(f'Row indices with NaT values: {list(nat_indices)}')
         pdfs.append(pdf)
     return pdfs
 
