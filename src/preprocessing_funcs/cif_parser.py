@@ -41,12 +41,17 @@ A_Cartn_z.value,        # COORDINATES           - ATOM Z-COORDINATES            
 """
 
 import os
+from enum import Enum
 from typing import List
 import numpy as np
 import pandas as pd
 from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 from src.preprocessing_funcs import api_caller as api
 from src.enums import CIF
+
+
+class FileExt(Enum):
+    dot_CIF = '.cif'
 
 
 def _remove_rows_with_missing_x_coords(pdf: pd.DataFrame) -> pd.DataFrame:
@@ -333,10 +338,10 @@ def _extract_fields_from_poly_seq(mmcif: dict) -> pd.DataFrame:
     return poly_seq
 
 
-def _get_mmcif_data(pdb_id: str, relpath_to_raw_cif: str) -> dict:
-    relpath_to_raw_cif = relpath_to_raw_cif.removesuffix('.cif').removeprefix('/').removesuffix('/')
-    pdb_id = pdb_id.removesuffix('.cif')
-    relpath_to_raw_cif = f'{relpath_to_raw_cif}/{pdb_id}.cif'
+def _get_mmcif_data(pdb_id: str, relpath_raw_cif: str) -> dict:
+    relpath_raw_cif = relpath_raw_cif.removesuffix(FileExt.dot_CIF.value).removeprefix('/').removesuffix('/')
+    pdb_id = pdb_id.removesuffix(FileExt.dot_CIF.value)
+    relpath_raw_cif = f'{relpath_raw_cif}/{pdb_id}{FileExt.dot_CIF.value}'
 
     if os.path.exists(relpath_to_raw_cif):
         mmcif = MMCIF2Dict(relpath_to_raw_cif)
