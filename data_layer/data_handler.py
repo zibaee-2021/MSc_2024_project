@@ -34,14 +34,14 @@ class Filename(Enum):
     aa = 'residues'
 
 
-class FileExtension(Enum):
-    CIF_ext = 'cif'
-    dot_CIF_ext = '.cif'
-    ssv_ext = 'ssv'
-    dot_ssv_ext = '.ssv'
-    csv_ext = 'csv'
-    tsv_ext = 'tsv'
-    dot_lst_ext = '.lst'
+class FileExt(Enum):
+    CIF = 'cif'
+    dot_CIF = '.cif'
+    ssv = 'ssv'
+    dot_ssv = '.ssv'
+    csv = 'csv'
+    tsv = 'tsv'
+    dot_lst = '.lst'
 
 
 def _chdir_to_data_layer():
@@ -94,8 +94,8 @@ def copy_cifs_from_bigfilefolder_to_diff_data():
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer.
     file_count = copy_files_over(path_src_dir=Path.sd_573_cifs_dir.value,
                                  path_dst_dir=Path.diff_data_cif_dir.value,
-                                 file_ext=FileExtension.CIF_ext.value)
-    print(f"Number of '.{FileExtension.CIF_ext.value}' files copied over = {file_count}")
+                                 file_ext=FileExt.CIF.value)
+    print(f"Number of '.{FileExt.CIF.value}' files copied over = {file_count}")
     _restore_original_working_dir(cwd)
 
 
@@ -121,7 +121,7 @@ def read_list_of_pdbids_from_text_file(filename: str):
 
 def get_list_of_pdbids_of_local_single_domain_cifs() -> list:
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
-    cifs = glob.glob(os.path.join(Path.sd_573_cifs_dir.value, f'*{FileExtension.dot_CIF_ext.value}'))
+    cifs = glob.glob(os.path.join(Path.sd_573_cifs_dir.value, f'*{FileExt.dot_CIF.value}'))
     path_cifs = [cif.upper() for cif in cifs if os.path.isfile(cif)]
     pdb_id_list = []
 
@@ -138,8 +138,8 @@ def get_list_of_pdbids_of_local_single_domain_cifs() -> list:
 
 
 def write_list_to_lst_file(list_to_write: list, fname: str) -> None:
-    fname = fname.removesuffix(FileExtension.dot_lst_ext.value)
-    fname = fname + FileExtension.dot_lst_ext.value
+    fname = fname.removesuffix(FileExt.dot_lst.value)
+    fname = fname + FileExt.dot_lst.value
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
     with open(f'{Path.data_dir.value}/{fname}', 'w') as f:
         for item in list_to_write:
@@ -225,8 +225,8 @@ def make_api_calls_to_fetch_mmcif_and_write_locally(pdb_id: str, cif_dst_dir: st
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
     non_200_count = 0
     cif_dst_dir = cif_dst_dir.removesuffix('/').removeprefix('/')
-    pdb_id = pdb_id.removesuffix(FileExtension.dot_CIF_ext.value)
-    mmcif_file = f'{cif_dst_dir}/{pdb_id}{FileExtension.dot_CIF_ext.value}'
+    pdb_id = pdb_id.removesuffix(FileExt.dot_CIF.value)
+    mmcif_file = f'{cif_dst_dir}/{pdb_id}{FileExt.dot_CIF.value}'
     if os.path.exists(mmcif_file):
         print(f'{mmcif_file} already exists. No API call required.')
     else:
@@ -262,7 +262,7 @@ def write_tokenised_cif_to_flatfile(pdb_id: str, pdfs: List[pd.DataFrame], dst_d
     """
     for pdf in pdfs:
         if flatfiles is None:
-            flatfiles = [FileExtension.ssv_ext.value]
+            flatfiles = [FileExt.ssv.value]
         elif isinstance(flatfiles, str):
             flatfiles = [flatfiles]
         cwd = ''  # to return to at end of this function.
@@ -279,12 +279,12 @@ def write_tokenised_cif_to_flatfile(pdb_id: str, pdfs: List[pd.DataFrame], dst_d
         chain = chain[0]
         for flatfile in flatfiles:
             sep = ' '
-            if flatfile == FileExtension.tsv_ext.value:
+            if flatfile == FileExt.tsv.value:
                 sep = '\t'
-            elif flatfile == FileExtension.csv_ext.value:
+            elif flatfile == FileExt.csv.value:
                 sep = ','
             dst_data_dir = dst_data_dir.removesuffix('/')
-            pdb_id = pdb_id.removesuffix(FileExtension.dot_CIF_ext.value)
+            pdb_id = pdb_id.removesuffix(FileExt.dot_CIF.value)
             pdf.to_csv(path_or_buf=f'{dst_data_dir}/{pdb_id}_{chain}.{flatfile}', sep=sep, index=False)
 
         # # For a more human-readable set of column-names:
@@ -314,7 +314,7 @@ def read_tokenised_cif_ssv_to_pdf(pdb_id: str, relpath_to_tokenised_dir: str) ->
     """
     os.makedirs(relpath_to_tokenised_dir, exist_ok=True)
     relpath_to_tokenised_dir = relpath_to_tokenised_dir.removesuffix('/').removeprefix('/')
-    pattern = fr'{pdb_id}_[A-Z]\{FileExtension.dot_ssv_ext.value}'
+    pattern = fr'{pdb_id}_[A-Z]\{FileExt.dot_ssv.value}'
     ssvs = []
     for f in os.listdir(relpath_to_tokenised_dir):
         if os.path.isfile(os.path.join(relpath_to_tokenised_dir, f)) and re.match(pattern, f):
@@ -356,8 +356,8 @@ def _read_json_from_data_dir(fname: str) -> dict:
 
 def read_lst_file_from_data_dir(fname):
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
-    fname = fname.removeprefix('/').removesuffix(FileExtension.dot_lst_ext.value)
-    relpath_lst = f'{Path.data_dir.value}/{fname}{FileExtension.dot_lst_ext.value}'
+    fname = fname.removeprefix('/').removesuffix(FileExt.dot_lst.value)
+    relpath_lst = f'{Path.data_dir.value}/{fname}{FileExt.dot_lst.value}'
     assert os.path.exists(relpath_lst)
     try:
         with open(relpath_lst, 'r') as lst_f:
