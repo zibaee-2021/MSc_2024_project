@@ -26,6 +26,7 @@ class Path(Enum):
     aa_atoms_yaml = '../data/yaml/residues_atoms.yaml'
     data_per_aa_atoms_json = '../data/residues_atoms/per_residue_atoms.json'
     diff_data_cif_dir = '../src/diffusion/diff_data/mmCIF'
+    enumeration_h_list = 'enumeration/hydrogens.lst'
 
 
 class Filename(Enum):

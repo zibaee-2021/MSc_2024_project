@@ -14,8 +14,7 @@ from typing import Tuple
 from data_layer import data_handler as dh
 
 
-class Path(Enum):
-    enumeration_h_list = 'enumeration/hydrogens.lst'
+
 
 
 class Filename(Enum):
@@ -69,7 +68,7 @@ def _write_enumerated_atoms_without_hydrogens() -> None:
     ONLY CALLED ONCE TO GENERATE ENUMERATION MAPPINGS FOR ATOMS AND RESIDUE-ATOM PAIRS, WITHOUT HYDROGENS, THEN
     WRITTEN TO JSON FILES THAT ARE TO BE READ AND USED BY TOKENISER.PY.
     """
-    hydrogen_atoms = dh.read_lst_file_from_data_dir(Path.enumeration_h_list.value)
+    hydrogen_atoms = dh.read_lst_file_from_data_dir(dh.Path.enumeration_h_list.value)
 
     def __read_enumeration_mappings():
         _residues_atoms_enumerated = dh.read_enumerations_json(fname=Filename.aa_atoms.value)
