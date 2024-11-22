@@ -107,7 +107,7 @@ def parse_single_dom_prots_and_write_csv(path_cath_list: str, path_single_dom_pr
                              Cols.S100_cnt.value,
                              Cols.Domain_len.value,
                              Cols.Angstroms.value])  # 500238 proteins (12 columns)
-    # The following two dataframe are not used. I just wanted to see how many of these other categories there are:
+    # The following two dataframes are not used. Just wanted to see how many of these other categories there are:
     nmr_pdf = pdf.loc[pdf[Cols.Angstroms.value] == 999.0]  # 9357 proteins
     obsolete_pdf = pdf.loc[pdf[Cols.Angstroms.value] == 1000.0]  # 28191 proteins
 
