@@ -353,25 +353,18 @@ def _get_mmcif_data(pdb_id: str, relpath_raw_cif: str) -> dict:
     relpath_raw_cif = relpath_raw_cif.removesuffix(FileExt.dot_CIF.value).removeprefix('/').removesuffix('/')
     pdb_id = pdb_id.removesuffix(FileExt.dot_CIF.value)
     relpath_raw_cif = f'{relpath_raw_cif}/{pdb_id}{FileExt.dot_CIF.value}'
-
     if os.path.exists(relpath_raw_cif):
-        mmcif = MMCIF2Dict(relpath_raw_cif)
+        try:
+            MMCIF2Dict(relpath_raw_cif)
+        except ValueError:
+            print(f'{pdb_id}{FileExt.dot_CIF.value} appears to be empty. '
+                  f'Attempt to read {pdb_id} directly from https://files.rcsb.org/download/{pdb_id}')
+            __fetch_mmcif_from_pdb_api_and_write(_pdb_id=pdb_id, relpath_dst_cif=relpath_raw_cif)
     else:
-        print(f'Did not find this CIF locally ({relpath_raw_cif}). Attempting to read {pdb_id} directly from '
-              f'https://files.rcsb.org/download/{pdb_id}')
-
-        def _fetch_mmcif_from_pdb_api_and_write(_pdb_id: str, relpath_dst_cif: str) -> None:
-            """
-            Fetch raw mmCIF data from API (expected hosted at 'https://files.rcsb.org/download/') using given PDB id,
-            and write out to flat file.
-            :param _pdb_id: Alphanumeric 4-character Protein Databank Identifier. e.g. '1OJ6'.
-            """
-            response = api.call_for_cif_with_pdb_id(_pdb_id)
-            # relpath_dst_cif = f'../data/big_data_to_git_ignore/SD_573_CIFs/{pdb_id}.cif'
-            with open(relpath_dst_cif, 'w') as file:
-                file.write(response.text)
-        _fetch_mmcif_from_pdb_api_and_write(_pdb_id=pdb_id, relpath_dst_cif=relpath_raw_cif)
-        mmcif = MMCIF2Dict(relpath_raw_cif)
+        print(f'Did not find this CIF locally ({relpath_raw_cif}). '
+              f'Attempt to read {pdb_id} directly from https://files.rcsb.org/download/{pdb_id}')
+        __fetch_mmcif_from_pdb_api_and_write(_pdb_id=pdb_id, relpath_dst_cif=relpath_raw_cif)
+    mmcif = MMCIF2Dict(relpath_raw_cif)
     return mmcif
 
 
