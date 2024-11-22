@@ -56,19 +56,18 @@ class FileExt(Enum):
 
 def _remove_rows_with_missing_x_coords(pdf: pd.DataFrame) -> pd.DataFrame:
     """
-
     :param pdf: IMPORTANT: THIS IS EXPECTED TO BE FOR ON POLYPEPTIDE CHAIN ONLY.
     :return:
     """
-    missing_count = pdf[CIF.A_Cartn_x.value].isna().sum()
-    if missing_count > 0:
-        print(f'BEFORE removing them, there are {missing_count} rows with missing values in column'
-              f' {CIF.A_Cartn_x.value}')
+    # missing_count = pdf[CIF.A_Cartn_x.value].isna().sum()
+    # if missing_count > 0:
+        # print(f'BEFORE removing them, there are {missing_count} rows with missing values in column'
+        #       f' {CIF.A_Cartn_x.value}')
     pdf = pdf.dropna(how='any', axis=0, inplace=False, subset=[CIF.A_Cartn_x.value])
-    missing_count = pdf[CIF.A_Cartn_x.value].isna().sum()
-    if missing_count > 0:
-        print(f'AFTER removing them, there are {missing_count} rows with missing values in column'
-              f' {CIF.A_Cartn_x.value}')
+    # missing_count = pdf[CIF.A_Cartn_x.value].isna().sum()
+    # if missing_count > 0:
+        # print(f'AFTER removing them, there are {missing_count} rows with missing values in column'
+        #       f' {CIF.A_Cartn_x.value}')
     return pdf
 
 
@@ -131,18 +130,18 @@ def _replace_low_occupancy_coords_with_nans(pdf: pd.DataFrame) -> pd.DataFrame:
     :return: Given dataframe parsed according to occupancy metric.
     """
     missing_count = pdf[CIF.A_Cartn_x.value].isna().sum()
-    if missing_count > 0:
-        print(f'BEFORE replacing low occupancy rows with NAN, '
-              f'there are {missing_count} rows with missing values in column {CIF.A_Cartn_x.value}.')
+    # if missing_count > 0:
+        # print(f'BEFORE replacing low occupancy rows with NAN, '
+        #       f'there are {missing_count} rows with missing values in column {CIF.A_Cartn_x.value}.')
 
     pdf[CIF.A_Cartn_x.value] = np.where(pdf[CIF.A_occupancy.value] <= 0.5, np.nan, pdf[CIF.A_Cartn_x.value])
     pdf[CIF.A_Cartn_y.value] = np.where(pdf[CIF.A_occupancy.value] <= 0.5, np.nan, pdf[CIF.A_Cartn_y.value])
     pdf[CIF.A_Cartn_z.value] = np.where(pdf[CIF.A_occupancy.value] <= 0.5, np.nan, pdf[CIF.A_Cartn_z.value])
 
     missing_count = pdf[CIF.A_Cartn_x.value].isna().sum()
-    if missing_count > 0:
-        print(f'AFTER replacing low occupancy rows with NAN, '
-              f'there are {missing_count} rows with missing values in column {CIF.A_Cartn_x.value}.')
+    # if missing_count > 0:
+    #     print(f'AFTER replacing low occupancy rows with NAN, '
+              # f'there are {missing_count} rows with missing values in column {CIF.A_Cartn_x.value}.')
     return pdf
 
 
@@ -338,6 +337,18 @@ def _extract_fields_from_poly_seq(mmcif: dict) -> pd.DataFrame:
     return poly_seq
 
 
+def __fetch_mmcif_from_pdb_api_and_write(_pdb_id: str, relpath_dst_cif: str) -> None:
+    """
+    Fetch raw mmCIF data from API (expected hosted at 'https://files.rcsb.org/download/') using given PDB id,
+    and write out to flat file.
+    :param _pdb_id: Alphanumeric 4-character Protein Databank Identifier. e.g. '1OJ6'.
+    """
+    response = api.call_for_cif_with_pdb_id(_pdb_id)
+    # relpath_dst_cif = f'../data/big_data_to_git_ignore/SD_573_CIFs/{pdb_id}.cif'
+    with open(relpath_dst_cif, 'w') as file:
+        file.write(response.text)
+
+
 def _get_mmcif_data(pdb_id: str, relpath_raw_cif: str) -> dict:
     relpath_raw_cif = relpath_raw_cif.removesuffix(FileExt.dot_CIF.value).removeprefix('/').removesuffix('/')
     pdb_id = pdb_id.removesuffix(FileExt.dot_CIF.value)
@@ -373,6 +384,7 @@ def parse_cif(pdb_id: str, relpath_cifs_dir: str) -> List[pd.DataFrame]:
     :return: 8 necessary fields extracted from raw mmCIF (from local copy or API) and joined in one table.
     This is a list of one or more results for each chain found in this mmCIF.
     """
+    print(f'Start parsing PDBid={pdb_id}')
     mmcif_dict = _get_mmcif_data(pdb_id, relpath_cifs_dir)
     polyseq_pdf = _extract_fields_from_poly_seq(mmcif_dict)
     atomsite_pdf = _extract_fields_from_atom_site(mmcif_dict)

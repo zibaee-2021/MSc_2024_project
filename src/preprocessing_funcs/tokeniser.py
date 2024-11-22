@@ -62,7 +62,7 @@ from src.preprocessing_funcs import cif_parser as parser
 from data_layer import data_handler as dh
 from src.enums import ColNames, CIF, PolypeptideAtoms
 # If more than this proportion of residues have no backbone atoms, remove the chain.
-MIN_RATIO_MISSING_BACKBONE_ATOMS = 0.0
+MIN_RATIO_MISSING_BACKBONE_ATOMS = 0.5
 
 
 class Path(Enum):
@@ -88,7 +88,8 @@ class ColValue(Enum):
     sc = 'sc'  # sidechain
 
 
-def _assign_mean_corrected_coordinates(pdfs: List[pd.DataFrame]) -> List[pd.DataFrame]:
+def _assign_mean_corrected_coordinates(pdfs: List[pd.DataFrame], pdb_id: str) -> List[pd.DataFrame]:
+    print(f'PDBid={pdb_id}: calc mean-corrected coords')
     result_pdfs = list()
     for pdf in pdfs:
         # SUBTRACT EACH COORDINATE BY THE MEAN OF ALL 3 PER ATOM:
@@ -164,13 +165,14 @@ def _enumerate_residues(pdf: pd.DataFrame) -> pd.DataFrame:
     return pdf
 
 
-def _enumerate_atoms_and_residues(pdfs: List[pd.DataFrame]) -> List[pd.DataFrame]:
+def _enumerate_atoms_and_residues(pdfs: List[pd.DataFrame], pdb_id: str) -> List[pd.DataFrame]:
     """
     Enumerate residues, atoms, and residue-atoms pairs of given protein CIF data, and store to new columns in given
     dataframe. Currently hard-coded to only use atom data that lacks all hydrogen atoms.
     :param pdfs: List of dataframes of one protein CIF, per chain, containing atoms to enumerate to new columns.
     :return: Dataframe with new columns of enumerated data for residues, atoms, and residue-atoms pairs.
     """
+    print(f'PDBid={pdb_id}: enumerate atoms and residues')
     result_pdfs = list()
     for pdf in pdfs:
         pdf = _enumerate_residues(pdf)
@@ -181,49 +183,67 @@ def _enumerate_atoms_and_residues(pdfs: List[pd.DataFrame]) -> List[pd.DataFrame
 
 
 def _assign_backbone_index_to_all_residue_rows(pdfs: List[pd.DataFrame], pdb_id: str) -> List[pd.DataFrame]:
+    print(f'PDBid={pdb_id}: assign bb indices')
     result_pdfs = list()
     for pdf in pdfs:
         # ASSIGN INDEX OF CHOSEN BACKBONE ATOM (ALPHA-CARBON) FOR ALL ROWS IN EACH ROW-WISE-RESIDUE SUBSETS:
-        for S_seq_id, group in pdf.groupby(CIF.S_seq_id.value):  # GROUP BY RESIDUE POSITION VALUE
+        chain = pdf[CIF.S_asym_id.value].unique()[0]
+
+        for S_seq_id, aa_group in pdf.groupby(CIF.S_seq_id.value):  # GROUP BY RESIDUE POSITION VALUE
             # GET ATOM INDEX ('A_id') WHERE ATOM ('A_label_atom_id') IS 'CA' IN THIS RESIDUE GROUP.
-            a_id_of_CA = group.loc[group[CIF.A_label_atom_id.value] == CIF.ALPHA_CARBON.value, CIF.A_id.value]
-            chain = pdf[CIF.S_asym_id.value].unique()[0]
-            # CHECK THERE'S AT LEAST ONE 'CA' IN THIS GROUP:
+            a_id_of_CA = aa_group.loc[aa_group[CIF.A_label_atom_id.value] == CIF.ALPHA_CARBON.value, CIF.A_id.value]
+
+            # IF NO 'CA' FOR THIS RESIDUE, USE MOST C-TERMINAL NON-CA BACKBONE ATOM POSITION INSTEAD:
             if a_id_of_CA.empty:
-                print(f"No 'CA' for residue {S_seq_id} in {pdb_id}, chain {chain}")
-                positions_of_all_bb_atoms = group.loc[group[ColNames.BB_OR_SC.value]
-                                                      == ColValue.bb.value, CIF.A_id.value].to_numpy()
-                if not positions_of_all_bb_atoms:
-                    print(f'No backbone atoms at all in chain={chain} of PDBid={pdb_id}.')
-                print(f'Positions of all other backbone atoms for this residue = {positions_of_all_bb_atoms}')
-                max_bb_position = max(positions_of_all_bb_atoms)
-                print(f'Position chosen of backbone atom={max_bb_position}')
-                most_Cterminal_bb_atom = group.loc[group[CIF.A_id.value]
-                                                   == max_bb_position, CIF.A_label_atom_id.value].values[0]
-                print(f'Therefore, selecting most C-terminal position of another backbone atom for this residue. '
-                      f'Non-CA backbone atoms are at {str(list(positions_of_all_bb_atoms))}. '
-                      f"So {max_bb_position} is selected. This atom is '{most_Cterminal_bb_atom}'.")
+                print(f"No 'CA' for {aa_group[CIF.S_mon_id.value].iloc[0]} at {S_seq_id} "
+                      f"(PDBid={pdb_id}, chain={chain})")
+                positions_of_all_bb_atoms = aa_group.loc[aa_group[ColNames.BB_OR_SC.value]
+                                                         == ColValue.bb.value, CIF.A_id.value].to_numpy()
+
+                # IF NO BACKBONE ATOMS FOR THIS RESIDUE AT ALL, REMOVE THIS RESIDUE FROM THIS CIF:
                 if positions_of_all_bb_atoms.size == 0:
-                    print(f'There are no backbone atoms at all! (Residue {S_seq_id}, pdb {pdb_id}, chain {chain}. '
-                          f'Ignoring this for now but a decision needs to be made about whether to remove '
-                          f'this residue all together or if it is ok to substitute in the position of a side-chain '
-                          f'atom.')
+                    aa = {aa_group[CIF.S_mon_id.value].iloc[0]}
+                    print(f'{aa} at {S_seq_id} only has atoms {str(list(aa_group[CIF.A_label_atom_id.value]))}. '
+                          f'Hence, no backbone atoms at all, so {aa} at {S_seq_id} will be completely removed from '
+                          f'this dataframe.')
+                    pdf = pdf[pdf[CIF.S_seq_id.value] != S_seq_id]
+                    continue  # continue to next residue
+                else:
+                    a_id = max(positions_of_all_bb_atoms)
+                    print(f'Instead, assigning position of most C-terminal non-CA backbone atom={a_id}.')
+                    most_cterm_bb_atom = aa_group.loc[aa_group[CIF.A_id.value]
+                                                      == a_id, CIF.A_label_atom_id.value].values[0]
+                    print(f'Non-CA backbone atoms for this residue are at: {str(list(positions_of_all_bb_atoms))}, '
+                          f'so {a_id} is selected. (The atom at this position is: {most_cterm_bb_atom}.)')
                     continue
                 # raise ValueError(f'No {CIF.ALPHA_CARBON.value} found in {CIF.A_label_atom_id.value} for group '
                 #                  f'{group[CIF.S_seq_id.value].iloc[0]}')
             else:
                 a_id = a_id_of_CA.iloc[0]
-
                 # ASSIGN THIS ATOM INDEX TO BB_INDEX ('bb_index') FOR ALL ROWS IN THIS GROUP:
-                pdf.loc[group.index, ColNames.BB_INDEX.value] = a_id
+            pdf.loc[aa_group.index, ColNames.BB_INDEX.value] = a_id
         # CAST NEW COLUMN TO INT64 (FOR CONSISTENCY):
-        pdf[ColNames.BB_INDEX.value] = pd.to_numeric(pdf[ColNames.BB_INDEX.value], errors='coerce')
-        pdf[ColNames.BB_INDEX.value] = pdf[ColNames.BB_INDEX.value].astype('Int64')
+        pdf.loc[:, ColNames.BB_INDEX.value] = pd.to_numeric(pdf[ColNames.BB_INDEX.value], errors='coerce')
+        pdf.loc[:, ColNames.BB_INDEX.value] = pdf[ColNames.BB_INDEX.value].astype('Int64')
         result_pdfs.append(pdf)
     return result_pdfs
 
 
-def _only_keep_chains_with_enuf_backbone_atoms(pdfs: List[pd.DataFrame], pdb_id: str) -> List[pd.DataFrame]:
+def _select_optimal_chain(pdfs: List[pd.DataFrame], pdb_id: str) -> List[pd.DataFrame]:
+    """
+    Temporary hack to tokenise & write just 1 chain to ssv:
+    TODO decide how to select which chain to use, e.g. chain with most atoms and/or most backbone atoms.
+    :param pdfs:
+    :param pdb_id:
+    :return: A list of one dataframe. (This is also temporary to avoid breaking subsequent operations).
+    """
+    print(f'PDBid={pdb_id}: choose one chain only')
+    if len(pdfs) > 0:
+        pdfs = [pdfs[0]]
+    return pdfs
+
+
+def _only_keep_chains_with_enuf_bckbone_atoms(pdfs: List[pd.DataFrame], pdb_id: str) -> List[pd.DataFrame]:
     """
     Remove chain(s) from list of chains for this CIF if not more than a specific number of backbone polypeptides.
     :param pdfs: List of dataframes, one per chain, for one CIF.
@@ -231,15 +251,20 @@ def _only_keep_chains_with_enuf_backbone_atoms(pdfs: List[pd.DataFrame], pdb_id:
     :return: List of dataframes, one per chain of protein, with any chains removed if they have less than the minimum
     permitted ratio of missing atoms (arbitrarily chosen for now).
     """
+    print(f'PDBid={pdb_id}: remove chains without enough backbone atoms')
     result_pdfs = []
     for pdf in pdfs:
-        no_bb_count = (pdf
+        aa_w_no_bbatom_count = (pdf
                        .groupby(CIF.S_seq_id.value)[ColNames.BB_OR_SC.value]
                        .apply(lambda x: ColValue.bb.value not in x.values)
                        .sum())
         total_atom_count = pdf.shape[0]
-        if (no_bb_count / total_atom_count) <= MIN_RATIO_MISSING_BACKBONE_ATOMS:
+        if (aa_w_no_bbatom_count / total_atom_count) <= MIN_RATIO_MISSING_BACKBONE_ATOMS:
             result_pdfs.append(pdf)
+    if len(result_pdfs) == 0:
+        print(f'PDBid={pdb_id}: After removing chains that have too many residues that lack any backbone atom '
+              f'coordinates at all, there are no chains left for this protein, PDBid={pdb_id}. It needs to be removed '
+              f'from the dataset entirely.')
     return result_pdfs
 
 
@@ -254,24 +279,36 @@ def _only_keep_chains_of_polypeptide(pdfs: List[pd.DataFrame], pdb_id: str) -> L
     :param pdb_id: The PDB id of the corresponding CIF data.
     :return: List of dataframes, one per chain of protein, with any non-polypeptide chains removed.
     """
+    print(f'PDBid={pdb_id}: remove non-protein chains')
     result_pdfs = []
     for pdf in pdfs:
-        chain = pdf[CIF.S_asym_id.value].iloc[0]
-        atleast_one_row_isna = pdf[ColNames.BB_OR_SC.value].isna().any()
-        all_rows_isna = pdf[ColNames.BB_OR_SC.value].isna().all()
-        if atleast_one_row_isna:
-            print(f'There are atoms in chain={chain} of PDB id={pdb_id} which are not polypeptide atoms, so this chain '
-                  f'will be excluded.')
-            if not all_rows_isna:
-                print(f'It seems that while at least one row in column {ColNames.BB_OR_SC.value} has null, '
-                      f'not all rows are null. This is unexpected and should be investigated further. '
-                      f'(Chain {chain} of PDB id {pdb_id}).')
-        else:
-            result_pdfs.append(pdf)
+        try:
+            chain = pdf[CIF.S_asym_id.value].iloc[0]
+            atleast_one_row_isna = pdf[ColNames.BB_OR_SC.value].isna().any()
+            all_rows_isna = pdf[ColNames.BB_OR_SC.value].isna().all()
+            if atleast_one_row_isna:
+                nat_indices = pdf[pd.isna(pdf[ColNames.BB_OR_SC.value])].index
+                print(f'nat_indices={nat_indices}')
+                print(f'There are atoms in chain={chain} of PDB id={pdb_id} which are not polypeptide atoms, so this chain '
+                      f'will be excluded.')
+                if not all_rows_isna:
+                    print(f'It seems that while at least one row in column {ColNames.BB_OR_SC.value} has null, '
+                          f'not all rows are null. This is unexpected and should be investigated further. '
+                          f'(Chain {chain} of PDB id {pdb_id}).')
+            else:
+                result_pdfs.append(pdf)
+            if len(result_pdfs) == 0:
+                print(f'PDBid={pdb_id}: After removing all non-polypeptide chains, there are no chains left. '
+                      f'This should not occur, so needs to be investigated further.')
+        except IndexError:
+            print(f' `chain = pdf[CIF.S_asym_id.value].iloc[0]` fails. '
+                  f'\nCIF.S_asym_id.value={CIF.S_asym_id.value} '
+                  f'\npdf[CIF.S_asym_id.value]={pdf[CIF.S_asym_id.value]}')
     return result_pdfs
 
 
-def _make_new_column_for_backbone_or_sidechain_label(pdfs: List[pd.DataFrame]) -> List[pd.DataFrame]:
+def _make_new_bckbone_or_sdchain_col(pdfs: List[pd.DataFrame], pdb_id: str) -> List[pd.DataFrame]:
+    print(f'PDBid={pdb_id}: make new column `bb_or_sc` - indicates whether atom is backbone or side-chain.')
     result_pdfs = list()
     for pdf in pdfs:
         is_backbone_atom = pdf[CIF.A_label_atom_id.value].isin(PolypeptideAtoms.BACKBONE.value)
@@ -283,6 +320,16 @@ def _make_new_column_for_backbone_or_sidechain_label(pdfs: List[pd.DataFrame]) -
         assert len(pdf.columns) == expected_num_of_cols, \
             f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf.columns)}'
         result_pdfs.append(pdf)
+    return result_pdfs
+
+
+def _remove_all_hydrogen_atoms(pdfs: List[pd.DataFrame], pdb_id: str) -> List[pd.DataFrame]:
+    print(f'PDBid={pdb_id}: remove Hydrogens')
+    hydrogen_atoms = dh.read_lst_file_from_data_dir(dh.Path.enumeration_h_list.value)
+    result_pdfs = []
+    for pdf in pdfs:
+        _pdf = pdf.loc[~pdf[CIF.A_label_atom_id.value].isin(hydrogen_atoms)]
+        result_pdfs.append(_pdf)
     return result_pdfs
 
 
@@ -313,37 +360,46 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir: str, relpath_dst_dir:
     else:
         _pdb_list = __read_lst_file_from_src_diff_dir(fname=Path.relpath_diffdata_sd573_lst.value)
 
-    list_of_cif_pdfs_per_chain = []
+    cif_pdfs_per_chain = []
 
     for pdb_id in _pdb_list:  # expecting only one PDB id per line.
         pdb_id = pdb_id.rstrip().split()[0]
         flatfile_format_to_write = flatfile_format_to_write.removeprefix('.').lower()
         pdb_id = pdb_id.removesuffix(FileExt.dot_CIF.value)
+        print(f'Starting PDBid={pdb_id} ---------------------------------------------------------')
         # IF ALREADY PARSED AND SAVED AS FLATFILE, JUST READ IT IN:
         cif_tokenised_ssv_dir = relpath_dst_dir  # just to clarify dst_dir is the source dir if pre-tokenised.
         if os.path.exists(cif_tokenised_ssv_dir):
-            list_of_cif_pdfs_per_chain = dh.read_tokenised_cif_ssv_to_pdf(pdb_id=pdb_id,
-                                                                          relpath_tokenised_dir=cif_tokenised_ssv_dir)
-        else:
-            # OTHERWISE GET THE CIF DATA (EITHER LOCALLY OR VIA API)
-            relpath_cif_dir = relpath_cif_dir.removesuffix('/').removeprefix('/')
-            # PARSE mmCIF TO EXTRACT 14 FIELDS, TO FILTER, IMPUTE, SORT AND JOIN ON, RETURNING AN 8-COLUMN DATAFRAME:
-            # (THIS RETURNS A LIST OF DATAFRAMES, ONE PER POLYPEPTIDE CHAIN).
-            list_of_cif_pdfs_per_chain = parser.parse_cif(pdb_id=pdb_id, relpath_cifs_dir=relpath_cif_dir)
-            list_of_cif_pdfs_per_chain = _make_new_column_for_backbone_or_sidechain_label(list_of_cif_pdfs_per_chain)
-            list_of_cif_pdfs_per_chain = _only_keep_chains_of_polypeptide(list_of_cif_pdfs_per_chain, pdb_id)
-            list_of_cif_pdfs_per_chain = _only_keep_chains_with_enuf_backbone_atoms(list_of_cif_pdfs_per_chain, pdb_id)
-
-            # Temporary hack to tokenise & write just 1 chain to ssv: TODO decide how to select which chain to use.
-
-            list_of_cif_pdfs_per_chain = [list_of_cif_pdfs_per_chain[0]]
-            list_of_cif_pdfs_per_chain = _assign_backbone_index_to_all_residue_rows(list_of_cif_pdfs_per_chain, pdb_id)
-            list_of_cif_pdfs_per_chain = _enumerate_atoms_and_residues(list_of_cif_pdfs_per_chain)
-            list_of_cif_pdfs_per_chain = _assign_mean_corrected_coordinates(list_of_cif_pdfs_per_chain)
-            dh.write_tokenised_cif_to_flatfile(pdb_id, list_of_cif_pdfs_per_chain,
-                                               dst_data_dir=relpath_dst_dir,
-                                               flatfiles=flatfile_format_to_write)
-    return list_of_cif_pdfs_per_chain
+            matching_files = [item for item in os.listdir(cif_tokenised_ssv_dir)
+                              if item.startswith(f'{pdb_id}_')
+                              and item.endswith(FileExt.dot_ssv.value)]
+            if len(matching_files) > 0:
+                assert len(matching_files) == 1, f'{cif_tokenised_ssv_dir}/{pdb_id}_'
+                print(f'PDBid={pdb_id} already tokenised. Reading in ssv')
+                cif_pdfs_per_chain = dh.read_tokenised_cif_ssv_to_pdf(pdb_id=pdb_id,
+                                                                              relpath_tokenised_dir=cif_tokenised_ssv_dir)
+            else:
+                # OTHERWISE GET THE CIF DATA (EITHER LOCALLY OR VIA API)
+                relpath_cif_dir = relpath_cif_dir.removesuffix('/').removeprefix('/')
+                # PARSE mmCIF TO EXTRACT 14 FIELDS, TO FILTER, IMPUTE, SORT & JOIN ON, RETURNING AN 8-COLUMN DATAFRAME:
+                # (THIS RETURNS A LIST OF DATAFRAMES, ONE PER POLYPEPTIDE CHAIN).
+                cif_pdfs_per_chain = parser.parse_cif(pdb_id=pdb_id, relpath_cifs_dir=relpath_cif_dir)
+                cif_pdfs_per_chain = _remove_all_hydrogen_atoms(cif_pdfs_per_chain, pdb_id)
+                cif_pdfs_per_chain = _make_new_bckbone_or_sdchain_col(cif_pdfs_per_chain, pdb_id)
+                cif_pdfs_per_chain = _only_keep_chains_of_polypeptide(cif_pdfs_per_chain, pdb_id)
+                cif_pdfs_per_chain = _only_keep_chains_with_enuf_bckbone_atoms(cif_pdfs_per_chain, pdb_id)
+                cif_pdfs_per_chain = _select_optimal_chain(cif_pdfs_per_chain, pdb_id)
+                if len(cif_pdfs_per_chain) == 0:
+                    print(f'No chains left for this CIF: PDBid={pdb_id}. Therefore its tokenisation is discontinued, '
+                          f'it will be EXCLUDED from dataset.********')
+                    continue
+                cif_pdfs_per_chain = _assign_backbone_index_to_all_residue_rows(cif_pdfs_per_chain, pdb_id)
+                cif_pdfs_per_chain = _enumerate_atoms_and_residues(cif_pdfs_per_chain, pdb_id)
+                cif_pdfs_per_chain = _assign_mean_corrected_coordinates(cif_pdfs_per_chain, pdb_id)
+                dh.write_tokenised_cif_to_flatfile(pdb_id, cif_pdfs_per_chain,
+                                                   dst_data_dir=relpath_dst_dir,
+                                                   flatfiles=flatfile_format_to_write)
+    return cif_pdfs_per_chain
 
 
 def __read_lst_file_from_src_diff_dir(fname: str) -> list:

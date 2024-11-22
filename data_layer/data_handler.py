@@ -270,6 +270,7 @@ def write_tokenised_cif_to_flatfile(pdb_id: str, pdfs: List[pd.DataFrame], dst_d
     :param flatfiles: List of file formats (e.g. ['ssv', 'csv', 'tsv'], or string of one format, otherwise just
     one ssv file per protein and chain, by default). E.g. Chain 'A' for PDB id '10J6' is written to `10J6_A.ssv`.
     """
+    print(f'PDBid={pdb_id}: write tokenised to ssv')
     for pdf in pdfs:
         if flatfiles is None:
             flatfiles = [FileExt.ssv.value]
