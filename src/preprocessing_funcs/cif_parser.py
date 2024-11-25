@@ -45,8 +45,6 @@ from enum import Enum
 from typing import List
 import numpy as np
 import pandas as pd
-from Bio.PDB.MMCIF2Dict import MMCIF2Dict
-from src.preprocessing_funcs import api_caller as api
 from src.enums import CIF
 
 
@@ -337,56 +335,25 @@ def _extract_fields_from_poly_seq(mmcif: dict) -> pd.DataFrame:
     return poly_seq
 
 
-def __fetch_mmcif_from_pdb_api_and_write(_pdb_id: str, relpath_dst_cif: str) -> None:
-    """
-    Fetch raw mmCIF data from API (expected hosted at 'https://files.rcsb.org/download/') using given PDB id,
-    and write out to flat file.
-    :param _pdb_id: Alphanumeric 4-character Protein Databank Identifier. e.g. '1OJ6'.
-    """
-    response = api.call_for_cif_with_pdb_id(_pdb_id)
-    # relpath_dst_cif = f'../data/big_data_to_git_ignore/SD_573_CIFs/{pdb_id}.cif'
-    with open(relpath_dst_cif, 'w') as file:
-        file.write(response.text)
-
-
-def _get_mmcif_data(pdb_id: str, relpath_raw_cif: str) -> dict:
-    relpath_raw_cif = relpath_raw_cif.removesuffix(FileExt.dot_CIF.value).removeprefix('/').removesuffix('/')
-    pdb_id = pdb_id.removesuffix(FileExt.dot_CIF.value)
-    relpath_raw_cif = f'{relpath_raw_cif}/{pdb_id}{FileExt.dot_CIF.value}'
-    if os.path.exists(relpath_raw_cif):
-        try:
-            MMCIF2Dict(relpath_raw_cif)
-        except ValueError:
-            print(f'{pdb_id}{FileExt.dot_CIF.value} appears to be empty. '
-                  f'Attempt to read {pdb_id} directly from https://files.rcsb.org/download/{pdb_id}')
-            __fetch_mmcif_from_pdb_api_and_write(_pdb_id=pdb_id, relpath_dst_cif=relpath_raw_cif)
-    else:
-        print(f'Did not find this CIF locally ({relpath_raw_cif}). '
-              f'Attempt to read {pdb_id} directly from https://files.rcsb.org/download/{pdb_id}')
-        __fetch_mmcif_from_pdb_api_and_write(_pdb_id=pdb_id, relpath_dst_cif=relpath_raw_cif)
-    mmcif = MMCIF2Dict(relpath_raw_cif)
-    return mmcif
-
-
-def parse_cif(pdb_id: str, relpath_cifs_dir: str) -> List[pd.DataFrame]:
+def parse_cif(pdb_id: str, mmcif_dict: dict) -> List[pd.DataFrame]:
     """
     Parse given local mmCIF file to extract and tabulate necessary atom and amino acid data fields from
     `_pdbx_poly_seq_scheme` and `_atom_site`.
-    :param pdb_id: Alphanumeric 4-character Protein Databank Identifier. e.g. '1OJ6'.
-    :param relpath_cifs_dir: Relative path to local raw mmCIF file, e.g. 'path/to/1OJ6' (MUST INCLUDE PDB ID).
+    :param pdb_id: Alphanumeric 4-character Protein Databank Identifier. **May include chain. e.g. '1OJ6' or '1OJ6_A'**
+    :param mmcif_dict:
     :return: 8 necessary fields extracted from raw mmCIF (from local copy or API) and joined in one table.
     This is a list of one or more results for each chain found in this mmCIF.
     """
     print(f'Start parsing PDBid={pdb_id}')
-    mmcif_dict = _get_mmcif_data(pdb_id, relpath_cifs_dir)
+
     polyseq_pdf = _extract_fields_from_poly_seq(mmcif_dict)
     atomsite_pdf = _extract_fields_from_atom_site(mmcif_dict)
     atomsite_pdf = _remove_hetatm_rows(atomsite_pdf)
     # GENERATE A LIST OF TUPLES, EACH TUPLE IS THE ATOMSITE AND POLYSEQ DATA FOR A SINGLE CHAIN
-    all_chains_pdf = _split_up_by_chain(atomsite_pdf, polyseq_pdf)
-
+    all_chains_pdfs = _split_up_by_chain(atomsite_pdf, polyseq_pdf)
+    # IF CHAIN SPECIFIED IN LIST FILE, REMOVE ANY OTHER CHAINS
     parsed_cif_by_chain = []
-    for chain_pdf in all_chains_pdf:
+    for chain_pdf in all_chains_pdfs:
         atomsite_pdf, polyseq_pdf = chain_pdf
         joined_pdf = _join_atomsite_to_polyseq(atomsite_pdf, polyseq_pdf)
         joined_pdf = _reorder_columns(joined_pdf)
