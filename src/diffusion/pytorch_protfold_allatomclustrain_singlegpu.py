@@ -48,18 +48,14 @@ from src.preprocessing_funcs import tokeniser as tk
 from src.enums import ColNames, CIF
 
 
+# `rp_` stands for relative path:
 class Path(Enum):
-    relpath_bigdata_cif_dir_from_dh = '../data/dataset/big_files_to_git_ignore/SD_573_CIFs'
-    relpath_bigdata_tokenised_dir_from_dh = '../data/dataset/big_files_to_git_ignore/tokenised_573'
-    relpath_diffdata_cir = 'diff_data/mmCIF'
-    relpath_diffdata_emb = 'diff_data/emb'
-    relpath_diffdata_tokenised = 'diff_data/tokenised'
-    relpath_diffdata_10_Globins_PDBid_lst = 'globins_10.lst'
-    relpath_diffdata_573_SD_PDBid_lst = 'SD_573.lst'
-
-
-PROT_TRAIN_CLUSTERS = 'globins_10.lst'
-PROT_TRAIN_573_SD = 'SD_573.lst'
+    rp_diffdata_cif_dir = 'diff_data/mmCIF'
+    rp_diffdata_emb_dir = 'diff_data/emb'
+    rp_diffdata_tokenised_dir = 'diff_data/tokenised'
+    rp_diffdata_573_SD_PDBid_lst = 'diff_data/SD_573.lst'
+    rp_diffdata_10_Globins_PDBid_lst = 'diff_data/globins_10.lst'
+    rp_diffdata_1_Globin_PDBid_lst = 'diff_data/globin_1.lst'
 
 
 class Filename(Enum):
@@ -87,7 +83,7 @@ RESTART_FLAG = True
 FINETUNE_FLAG = False
 
 
-def load_dataset(use_pretokenised_cif_ssv: bool):
+def load_dataset():
 
     train_list = []
     validation_list = []
@@ -105,8 +101,9 @@ def load_dataset(use_pretokenised_cif_ssv: bool):
     nn = 0
 
     # GET THE LIST OF PDB NAMES FOR PROTEINS TO TOKENISE:
-    # targetfile_lst_path = Path.relpath_diffdata_10_Globins_PDBid_lst.value
-    targetfile_lst_path = Path.relpath_diffdata_573_SD_PDBid_lst.value
+    # targetfile_lst_path = Path.rp_diffdata_573_SD_PDBid_lst.value
+    # targetfile_lst_path = Path.rp_diffdata_10_Globins_PDBid_lst.value
+    targetfile_lst_path = Path.rp_diffdata_1_Globin_PDBid_lst.value
     assert os.path.exists(targetfile_lst_path)
     targetfile = ''
     try:
@@ -117,32 +114,15 @@ def load_dataset(use_pretokenised_cif_ssv: bool):
     except Exception as e:
         print(f"An error occurred: {e}")
 
-    train_list_per_chain, validation_list_per_chain = [], []
+    train_list, validation_list = [], []
 
     for line in targetfile:  # It is expected that there is only one pdb id per line.
 
         target_pdbid = line.rstrip().split()[0]
 
-        if not use_pretokenised_cif_ssv:
-            # WON'T CALL API IF FILE ALREADY IN LOCAL `diff_data/mmCIF` DIR (LARGE NUMBERS ARE MANUALLY MOVED HERE):
-            dh.make_api_calls_to_fetch_mmcif_and_write_locally(pdb_id=target_pdbid,
-                                                               cif_dst_dir=Path.relpath_bigdata_cif_dir_from_dh.value)
-            sp = []
-            # JUST READ IN PRE-PARSED & PRE-TOKENISED DATA. OTHERWISE PERFORM ALL FROM SCRATCH.
-            # RETURNS LIST OF DATAFRAMES, ONE PER CHAIN:
-            # THE CODE EXPECTS THE CIFS TO BE IN THE HIDDEN DATASET DIR NOT IN DIFF_DATA:
-            pdf_target_per_chain = (
-                tk.parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=Path.relpath_bigdata_cif_dir_from_dh.value,
-                                                         relpath_toknsd_ssv_dir=Path.relpath_bigdata_tokenised_dir_from_dh.value,
-                                                         relpath_pdblst=None,
-                                                         pdb_id=target_pdbid))
-
-            # FOR TIME-BEING, JUST USE THE ONE ('A') CHAIN FROM EACH PROTEIN, IGNORING ANY OTHER CHAINS:
-            pdf_target = pdf_target_per_chain[0]
-
-        else:
-            pdf_target = pd.read_csv(f'{Path.relpath_diffdata_tokenised.value}/'
-                                     f'{target_pdbid}{FileExt.dot_ssv.value}', sep=' ')
+        sp = []
+        pdf_target = pd.read_csv(f'{Path.rp_diffdata_tokenised_dir.value}/{target_pdbid}{FileExt.dot_ssv.value}',
+                                 sep=' ')
         # GET MEAN-CORRECTED COORDINATES VIA 'mean_corrected_x', '_y', '_z' TO 3-ELEMENT LIST:
         coords = pdf_target[[ColNames.MEAN_CORR_X.value, ColNames.MEAN_CORR_Y.value, ColNames.MEAN_CORR_Z.value]].values
 
@@ -176,7 +156,7 @@ def load_dataset(use_pretokenised_cif_ssv: bool):
             continue
 
         # READ PRE-COMPUTED EMBEDDING OF THIS PROTEIN:
-        pdb_embed = torch.load(f'{Path.relpath_diffdata_emb.value}/{target_pdbid}{FileExt.dot_pt.value}')
+        pdb_embed = torch.load(f'{Path.rp_diffdata_emb_dir.value}/{target_pdbid}{FileExt.dot_pt.value}')
 
         # AND MAKE SURE IT HAS SAME NUMBER OF RESIDUES AS THE PARSED-TOKENISED SEQUENCE FROM MMCIF:
         # **** THIS WON'T BE THE CASE BECAUSE MY EMBEDDINGS WERE MADE FROM FULL PROTEIN SEQUENCE.
@@ -328,7 +308,7 @@ class DMPDataset(Dataset):
         target = sample[4]
         target_coords = sample[5]
 
-        embed = torch.load(f'{Path.relpath_diffdata_emb.value}/{target}{FileExt.dot_pt.value}')
+        embed = torch.load(f'{Path.rp_diffdata_emb_dir.value}/{target}{FileExt.dot_pt.value}')
         
         # length = ntseq.shape[0]
         length = aaseq.shape[0]
@@ -401,7 +381,7 @@ class DMPDataset(Dataset):
         return sample
 
 
-def main(use_pretokenised_cif_ssv=True):
+def main():
     global BATCH_SIZE
     
     # Create neural network model
@@ -415,7 +395,7 @@ def main(use_pretokenised_cif_ssv=True):
 
     # Load the dataset
     print("Loading data...")
-    train_list, validation_list = load_dataset(use_pretokenised_cif_ssv)
+    train_list, validation_list = load_dataset()
 
     ntrain = len(train_list)
     nvalidation = len(validation_list)
@@ -585,35 +565,38 @@ def main(use_pretokenised_cif_ssv=True):
 
 if __name__ == "__main__":
 
-    import pandas
-    import numpy
-    import torch
-    import einops
+    check_runtime_specs = False
 
-    # Print the active Conda environment (if any)
-    print("Conda environment:", os.environ.get("CONDA_DEFAULT_ENV"))
+    if check_runtime_specs:
+        import pandas
+        import numpy
+        import torch
+        import einops
 
-    # Print the environment paths
-    print("Environment PATH:", os.environ.get("PATH"))
+        # Print the active Conda environment (if any)
+        print("Conda environment:", os.environ.get("CONDA_DEFAULT_ENV"))
 
-    print(f'PyTorch CUDA version: {torch.version.cuda}')
-    print(f'IS CUDA available: {torch.cuda.is_available()}')
-    if torch.cuda.is_available():
-        print(f'CUDA devices: {torch.cuda.device_count()}')
-        for i in range(torch.cuda.device_count()):
-            print(f'Device {i}: {torch.cuda.get_device_name(i)}')
+        # Print the environment paths
+        print("Environment PATH:", os.environ.get("PATH"))
 
-    import subprocess
-    # result = subprocess.run(['nvcc', '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    result = subprocess.run(['which', 'nvcc'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    print(f'result.stdout.decode(): {result.stdout.decode()}')
+        print(f'PyTorch CUDA version: {torch.version.cuda}')
+        print(f'IS CUDA available: {torch.cuda.is_available()}')
+        if torch.cuda.is_available():
+            print(f'CUDA devices: {torch.cuda.device_count()}')
+            for i in range(torch.cuda.device_count()):
+                print(f'Device {i}: {torch.cuda.get_device_name(i)}')
 
-    print(f'torch.__version__={torch.__version__}')
-    print(f'pandas.__version__={pandas.__version__}')
-    print(f'numpy.__version__={numpy.__version__}')
-    print(f'einops.__version__={einops.__version__}')
-    print(f'torch.__version__={torch.__version__}')
-    print(f'sys.version = {sys.version}')
+        import subprocess
+        # result = subprocess.run(['nvcc', '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        result = subprocess.run(['which', 'nvcc'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        print(f'result.stdout.decode(): {result.stdout.decode()}')
 
-    main(use_pretokenised_cif_ssv=True)
+        print(f'torch.__version__={torch.__version__}')
+        print(f'pandas.__version__={pandas.__version__}')
+        print(f'numpy.__version__={numpy.__version__}')
+        print(f'einops.__version__={einops.__version__}')
+        print(f'torch.__version__={torch.__version__}')
+        print(f'sys.version = {sys.version}')
+
+    main()
 

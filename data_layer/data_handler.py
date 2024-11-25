@@ -18,6 +18,8 @@ from src.preprocessing_funcs import api_caller as api
 class Path(Enum):
     data_pdbid_dir = '../data/PDBid'
     sd_573_cifs_dir = '../data/dataset/big_files_to_git_ignore/SD_573_CIFs'
+    rp_bigdata_cif_dir = '../data/dataset/big_files_to_git_ignore/SD_573_CIFs'
+    rp_bigdata_toknsd_dir = '../data/dataset/big_files_to_git_ignore/tokenised_573'
     enumeration_dir = 'enumeration'
     data_dir = '../data'
     fasta_dir = 'FASTA'
