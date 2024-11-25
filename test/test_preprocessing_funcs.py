@@ -56,7 +56,7 @@ class TestPreprocessingFuncs(TestCase):
         pdf = tk.parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=self.test_cif_dir,
                                                        relpath_toknsd_ssv_dir=self.test_tokenised_dir,
                                                        relpath_pdblst=None,
-                                                       pdb_id=self.test_1V5H_ssv[:-4])
+                                                       pdb_ids=self.test_1V5H_ssv[:-4], all_pretokenised_ssvs=None)
         # pdf.to_csv(path_or_buf='test_data/tokenised/test_1V5H.ssv', sep=' ', index=False)
         self.assertEqual(18, len(pdf.columns))
 
