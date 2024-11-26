@@ -71,10 +71,10 @@ MIN_RATIO_MISSING_BACKBONE_ATOMS = 0.0
 # `rp_` stands for relative path:
 class Path(Enum):
     rp_diffdata_tokenised_dir = '../diffusion/diff_data/tokenised'
+    rp_diffdata_cif_dir = '../diffusion/diff_data/mmCIF'
     rp_diffdata_sd573_lst = '../diffusion/diff_data/SD_573.lst'
     rp_diffdata_globins10_lst = '../diffusion/diff_data/globins_10.lst'
     rp_diffdata_globin1_lst = '../diffusion/diff_data/globin_1.lst'
-    rp_diffdata_cif_dir = '../diffusion/diff_data/mmCIF'
 
 
 class Filename(Enum):
