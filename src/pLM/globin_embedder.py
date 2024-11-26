@@ -27,7 +27,7 @@ def generate_ankh_base_embeddings_from_seq_id_of_tokenised_cifs(pdbid_chain: str
     tokeniser, eval_model = pe.load_tokeniser_and_eval_model(model_name=pe.HFModelName.ANKH_BASE.value)
     globins_pdbid_raw_tok_emb = pe.generate_embeddings_from_aminoacid_sequence(tokeniser=tokeniser,
                                                                                eval_model=eval_model,
-                                                                               pdb_id_chain=pdbid_chain,
+                                                                               pdbid_chain=pdbid_chain,
                                                                                aa_sequence=aa_sequence)
     return globins_pdbid_raw_tok_emb
 
