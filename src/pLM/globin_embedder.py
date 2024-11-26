@@ -19,13 +19,23 @@ def generate_ankh_base_embeddings_of_5_globins_from_fastas_of_pdbids():
     return globins_pdbid_raw_tok_emb
 
 
-def generate_ankh_base_embeddings_from_seq_id_of_tokenised_cifs(pdbid_chain: str):
-
-    pdf = dh.read_tokenised_cif_chain_ssv_to_pdf(pdbid_chain=pdbid_chain, relpath_tokensd_dir=Path.tokenised_dir.value)
+def _get_aa_sequence_from_ssv(_pdbid_chain: str) -> str:
+    pdf = dh.read_tokenised_cif_chain_ssv_to_pdf(pdbid_chain=_pdbid_chain, relpath_tokensd_dir=Path.tokenised_dir.value)
     tk.nums_of_missing_data(pdf)
-    aa_position_sequence = pdf[[CIF.S_seq_id.value, CIF.S_mon_id.value]]
-    aa_position_sequence = aa_position_sequence.drop_duplicates(subset=CIF.S_seq_id.value, keep='first')
-    aa_sequence = ''.join(aa_position_sequence[CIF.S_mon_id.value])
+    aa_pos_seq_pdf = pdf[[CIF.S_seq_id.value, CIF.S_mon_id.value]]
+    aa_pos_seq_pdf = aa_pos_seq_pdf.drop_duplicates(subset=CIF.S_seq_id.value, keep='first')
+    aa_seq = aa_pos_seq_pdf[CIF.S_mon_id.value]
+    aa_seq = aa_seq.tolist()
+    aa_3to1 = dh.read_aa_3to1_yaml()
+    aa_sequence = ''.join([aa_3to1[aa] for aa in aa_seq])
+    len_aa_seq = len(aa_sequence)
+    return aa_sequence
+
+
+def generate_ankh_base_embeddings_from_seq_id_of_tokenised_cifs(pdbid_chain: str):
+    aa_sequence = _get_aa_sequence_from_ssv(pdbid_chain)
+    len_aa_seq = len(aa_sequence)
+    # aa_sequence = 'AMG'
     tokeniser, eval_model = pe.load_tokeniser_and_eval_model(model_name=pe.HFModelName.ANKH_BASE.value)
     globins_pdbid_raw_tok_emb = pe.generate_embeddings_from_aminoacid_sequence(tokeniser=tokeniser,
                                                                                eval_model=eval_model,
@@ -44,6 +54,6 @@ if __name__ == '__main__':
                                                                     f'pdbchains_9{dh.FileExt.dot_lst.value}')
     for pdbid_chain in pdbid_chains:
         globins_pdbid_raw_tok_emb_ = generate_ankh_base_embeddings_from_seq_id_of_tokenised_cifs(pdbid_chain)
-
+        pass
     pass
 

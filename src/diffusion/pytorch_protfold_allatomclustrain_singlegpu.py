@@ -53,9 +53,10 @@ class Path(Enum):
     rp_diffdata_cif_dir = 'diff_data/mmCIF'
     rp_diffdata_emb_dir = 'diff_data/emb'
     rp_diffdata_tokenised_dir = 'diff_data/tokenised'
-    rp_diffdata_573_SD_PDBid_lst = 'diff_data/SD_573.lst'
-    rp_diffdata_10_Globins_PDBid_lst = 'diff_data/globins_10.lst'
-    rp_diffdata_1_Globin_PDBid_lst = 'diff_data/globin_1.lst'
+    rp_diffdata_573_SD_PDBid_lst = 'diff_data/PDBid_list/SD_573.lst'
+    rp_diffdata_10_Globins_PDBid_lst = 'diff_data/PDBid_list/globins_10.lst'
+    rp_diffdata_1_Globin_PDBid_lst = 'diff_data/PDBid_list/globin_1.lst'
+    rp_diffdata_9_PDBids_lst = 'diff_data/PDBid_list/pdbchains_9.lst'
 
 
 class Filename(Enum):
@@ -103,7 +104,7 @@ def load_dataset():
     # GET THE LIST OF PDB NAMES FOR PROTEINS TO TOKENISE:
     # targetfile_lst_path = Path.rp_diffdata_573_SD_PDBid_lst.value
     # targetfile_lst_path = Path.rp_diffdata_10_Globins_PDBid_lst.value
-    targetfile_lst_path = Path.rp_diffdata_1_Globin_PDBid_lst.value
+    targetfile_lst_path = Path.rp_diffdata_9_PDBids_lst.value
     assert os.path.exists(targetfile_lst_path)
     targetfile = ''
     try:
@@ -156,10 +157,11 @@ def load_dataset():
             continue
 
         # READ PRE-COMPUTED EMBEDDING OF THIS PROTEIN:
-        pdb_embed = torch.load(f'{Path.rp_diffdata_emb_dir.value}/{target_pdbid}{FileExt.dot_pt.value}')
+        path_pdb_embed = f'{Path.rp_diffdata_emb_dir.value}/{target_pdbid}{FileExt.dot_pt.value}'
+        pdb_embed = torch.load(path_pdb_embed)
 
         # AND MAKE SURE IT HAS SAME NUMBER OF RESIDUES AS THE PARSED-TOKENISED SEQUENCE FROM MMCIF:
-        assert pdb_embed.size(1) == len(aacodes)
+        assert pdb_embed.size(1) == len(aacodes) + 1  # BECAUSE ANKH-BASE ADDS AN EXTRA TOKEN AT THE END. MAYBE 'EOS'.
 
         # ONE BACKBONE ATOM (ALPHA-CARBON) PER RESIDUE. SO `len(bbindices)` SHOULD EQUAL NUMBER OF RESIDUES:
         assert len(aacodes) == len(bbindices)

@@ -60,6 +60,7 @@ class YamlKey(Enum):
     root = 'ROOT'
     aas = 'AAs'
     atoms_by_aa = 'ATOMS_BY_AA'
+    aa_3to1 = 'AA_3to1'
 
 
 def _chdir_to_data_layer():
@@ -240,6 +241,21 @@ def read_aa_atoms_yaml() -> Tuple[list, dict]:
             print(exc)
     _restore_original_working_dir(cwd)
     return aas, aas_atoms
+
+
+def read_aa_3to1_yaml() -> dict:
+    cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
+    aa_3to1 = dict()
+
+    with open(Path.aa_atoms_yaml.value, 'r') as stream:
+        try:
+            atoms_aas = yaml.load(stream, Loader=yaml.Loader)
+            aa_3to1 = atoms_aas[YamlKey.root.value][YamlKey.aa_3to1.value]
+
+        except yaml.YAMLError as exc:
+            print(exc)
+    _restore_original_working_dir(cwd)
+    return aa_3to1
 
 
 def write_pdb_uniprot_fasta_recs_to_json(recs: dict, filename: str) -> None:
