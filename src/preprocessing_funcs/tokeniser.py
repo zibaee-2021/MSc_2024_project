@@ -94,6 +94,20 @@ class ColValue(Enum):
     sc = 'sc'  # side-chain
 
 
+def _find_and_parse_missing_data(pdf):
+
+    counts = {
+        'NaN': (pdf.map(lambda x: isinstance(x, float) and pd.isna(x))).sum().sum(),
+        'pd.NA': (pdf.map(lambda x: x is pd.NA)).sum().sum(),
+        'pd.NaT': (pdf.map(lambda x: x is pd.NaT)).sum().sum()
+    }
+    print(counts)
+
+    # missing_strings = ['NaN', 'None', 'N/A', 'missing', 'NULL', '']
+    # pdf = pdf.replace(missing_strings, np.nan)
+    return pdf
+
+
 def _assign_mean_corrected_coordinates(pdfs: List[pd.DataFrame], pdb_id: str) -> List[pd.DataFrame]:
     if pdb_id:
         print(f'PDBid={pdb_id}: calc mean-corrected coords')
@@ -529,20 +543,6 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=Path.rp_diffdata_cif_d
                 _find_and_parse_missing_data(pdf_chain)
 
     return cif_pdfs_per_chain
-
-
-def _find_and_parse_missing_data(pdf):
-
-    counts = {
-        'NaN': (pdf.map(lambda x: isinstance(x, float) and pd.isna(x))).sum().sum(),
-        'pd.NA': (pdf.map(lambda x: x is pd.NA)).sum().sum(),
-        'pd.NaT': (pdf.map(lambda x: x is pd.NaT)).sum().sum()
-    }
-    print(counts)
-
-    # missing_strings = ['NaN', 'None', 'N/A', 'missing', 'NULL', '']
-    # pdf = pdf.replace(missing_strings, np.nan)
-    return pdf
 
 
 if __name__ == '__main__':
