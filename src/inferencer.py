@@ -10,5 +10,5 @@ from src.preprocessing_funcs import faa_to_atoms
 
 if __name__ == '__main__':
 
-    id_to_atomic_sequence = faa_to_atoms.translate_aa_to_atoms(uniprot_ids=[])
+    id_to_atomic_sequence = faa_to_atoms.translate_aa_to_atoms(uniprot_ids=[], pdbid_chains='1ECA_A')
 
