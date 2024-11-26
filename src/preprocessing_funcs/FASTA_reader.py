@@ -21,6 +21,8 @@ def read_fasta_sequences(uniprot_ids=None) -> dict:
     If no identifier passed in, all FASTA files will be read from `../data/FASTA/`.
     :param uniprot_ids: A list of unique Uniprot identifiers (aka 'primary accession numbers').
     :return: 1-letter FASTA amino acid sequence(s) mapped to the identifier(s).
+    e.g. {}
+
     """
     if isinstance(uniprot_ids, str):
         uniprot_ids = [uniprot_ids]
@@ -38,7 +40,6 @@ def read_fasta_sequences(uniprot_ids=None) -> dict:
             uniprot_ids.append(fasta_id)
 
     for fasta_id in uniprot_ids:
-
         fasta_path = os.path.join(Paths.fasta_dir.value, fasta_id)
         fasta_path_faa = f'{fasta_path}.faa'
 
