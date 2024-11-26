@@ -69,7 +69,7 @@ N - CA - C = 0 and OXT
 # (THERE ARE 38 NON-HYDROGEN ATOM ANNOTATIONS FOR POLYPEPTIDES)
 class PolypeptideAtoms(Enum):
 
-    BACKBONE = ('C', 'CA', 'N', 'O', 'OXT')  # AKA "MAIN-CHAIN"
+    BACKBONE = ('N', 'CA', 'C',  'O', 'OXT')  # AKA "MAIN-CHAIN"
     PEPTIDE_BOND_BACKBONE = ('C', 'N', 'O')  # SUBSET OF BACKBONE. PEPTIDE-BOND CARBONYL AND AMINO NITROGEN.
     SIDECHAIN = ('CB', 'CD', 'CD1', 'CD2', 'CE', 'CE1', 'CE2', 'CE3', 'CG', 'CG1', 'CG2', 'CH2', 'CZ', 'CZ2',
                        'CZ3', 'ND1', 'ND2', 'NE', 'NE1', 'NE2', 'NH1', 'NH2', 'NZ', 'OD1', 'OD2', 'OE1', 'OE2', 'OG',
