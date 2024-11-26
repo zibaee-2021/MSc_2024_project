@@ -16,10 +16,11 @@ from src.preprocessing_funcs import api_caller as api
 
 
 class Path(Enum):
-    data_pdbid_dir = '../data/PDBid'
+    data_pdbid_dir = '../data/PDBid_list'
     sd_573_cifs_dir = '../data/dataset/big_files_to_git_ignore/SD_573_CIFs'
     rp_bigdata_cif_dir = '../data/dataset/big_files_to_git_ignore/SD_573_CIFs'
     rp_bigdata_toknsd_dir = '../data/dataset/big_files_to_git_ignore/tokenised_573'
+
     enumeration_dir = 'enumeration'
     data_dir = '../data'
     fasta_dir = 'FASTA'
@@ -27,8 +28,12 @@ class Path(Enum):
     data_tokenised_dir = '../data/tokenised'
     aa_atoms_yaml = '../data/yaml/residues_atoms.yaml'
     data_per_aa_atoms_json = '../data/residues_atoms/per_residue_atoms.json'
-    diff_data_cif_dir = '../src/diffusion/diff_data/mmCIF'
+    diffdata_cif_dir = '../src/diffusion/diff_data/mmCIF'
     enumeration_h_list = 'enumeration/hydrogens.lst'
+
+    rp_diffdata_sd573_lst = '../diffusion/diff_data/SD_573.lst'
+    rp_diffdata_globins10_lst = '../diffusion/diff_data/globins_10.lst'
+    rp_diffdata_globin1_lst = '../diffusion/diff_data/globin_1.lst'
 
 
 class Filename(Enum):
@@ -105,7 +110,7 @@ def copy_files_over(path_src_dir: str, path_dst_dir: str, file_ext: str) -> int:
 def copy_cifs_from_bigfilefolder_to_diff_data():
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer.
     file_count = copy_files_over(path_src_dir=Path.sd_573_cifs_dir.value,
-                                 path_dst_dir=Path.diff_data_cif_dir.value,
+                                 path_dst_dir=Path.diffdata_cif_dir.value,
                                  file_ext=FileExt.CIF.value)
     print(f"Number of '.{FileExt.CIF.value}' files copied over = {file_count}")
     _restore_original_working_dir(cwd)
@@ -116,8 +121,8 @@ def clear_diffdatacif_dir() -> None:
     Note: As we're likely dealing with less than 10,000 files, I am not using Linux via subprocess, which would be:
     ```subprocess.run(['rm', '-rf', f'{directory_path}/*'], check=True, shell=True)```
     """
-    for cif_file in os.listdir(Path.diff_data_cif_dir.value):
-        cif_path = os.path.join(Path.diff_data_cif_dir.value, cif_file)
+    for cif_file in os.listdir(Path.diffdata_cif_dir.value):
+        cif_path = os.path.join(Path.diffdata_cif_dir.value, cif_file)
         os.unlink(cif_path)
 
 
@@ -129,6 +134,29 @@ def read_list_of_pdbids_from_text_file(filename: str):
     pdbids = pdb_ids.split()
     _restore_original_working_dir(cwd)
     return pdbids
+
+
+def read_pdb_lst_from_src_diff_dir(relpath_pdblst: str) -> list:
+    """
+    Read protein PDB id list from `.lst` file, hence expects one PDBid per line.
+    E.g.:
+                                    `3C9P
+                                     2HL7`
+     or PDBid_chain:
+                                    `3C9P_A
+                                     3C9P_B
+                                     2HL7_C`
+    :param relpath_pdblst:
+    :return:
+    """
+    try:
+        with open(relpath_pdblst, 'r') as pdblst_f:
+            pdb_ids = [line.strip() for line in pdblst_f]
+    except FileNotFoundError:
+        print(f'{pdblst_f} does not exist.')
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    return pdb_ids
 
 
 def get_list_of_pdbids_of_local_single_domain_cifs() -> list:
@@ -149,14 +177,12 @@ def get_list_of_pdbids_of_local_single_domain_cifs() -> list:
 # def get_list_of_uniprotids_of_locally_downloaded_cifs():
 
 
-def write_list_to_lst_file(list_to_write: list, fname: str) -> None:
-    fname = fname.removesuffix(FileExt.dot_lst.value)
-    fname = fname + FileExt.dot_lst.value
-    cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
-    with open(f'{Path.data_dir.value}/{fname}', 'w') as f:
+def write_list_to_lst_file(list_to_write: list, path_fname: str) -> None:
+    path_fname = path_fname.removesuffix(FileExt.dot_lst.value)
+    path_fname = f'{path_fname}{FileExt.dot_lst.value}'
+    with open(path_fname, 'w') as f:
         for item in list_to_write:
             f.write(f'{item}\n')
-    _restore_original_working_dir(cwd)
 
 
 def write_list_to_space_separated_txt_file(list_to_write: list, fname: str) -> None:

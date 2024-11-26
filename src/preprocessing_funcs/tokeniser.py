@@ -75,6 +75,7 @@ class Path(Enum):
     rp_diffdata_sd573_lst = '../diffusion/diff_data/SD_573.lst'
     rp_diffdata_globins10_lst = '../diffusion/diff_data/globins_10.lst'
     rp_diffdata_globin1_lst = '../diffusion/diff_data/globin_1.lst'
+    rp_diffdata_pdbid_dir = '../diffusion/diff_data/PDBid_list'
 
 
 class Filename(Enum):
@@ -87,6 +88,7 @@ class FileExt(Enum):
     dot_CIF = '.cif'
     ssv = 'ssv'
     dot_ssv = '.ssv'
+    dot_lst = '.lst'
 
 
 class ColValue(Enum):
@@ -102,6 +104,10 @@ def _find_and_parse_missing_data(pdf):
         'pd.NaT': (pdf.map(lambda x: x is pd.NaT)).sum().sum()
     }
     print(counts)
+    has_missing_data = any(value > 0 for value in counts.values())
+
+    if has_missing_data:
+        raise ValueError('There are missing values.. needs to be addressed.')
 
     # missing_strings = ['NaN', 'None', 'N/A', 'missing', 'NULL', '']
     # pdf = pdf.replace(missing_strings, np.nan)
@@ -383,6 +389,17 @@ def _remove_all_hydrogen_atoms(pdfs: List[pd.DataFrame], pdb_id: str=None) -> Li
     return result_pdfs
 
 
+def _keep_only_the_given_chain(pdfs: List[pd.DataFrame], chain: str, pdb_id: str=None) -> List[pd.DataFrame]:
+    if pdb_id:
+        print(f'PDBid={pdb_id}: only keep the specified chain={chain}.')
+    result_pdfs = list()
+    for pdf in pdfs:
+        if pdf[CIF.S_asym_id.value].isin([chain]).any():
+            result_pdfs.append(pdf)
+            return result_pdfs
+    return result_pdfs
+
+
 def __fetch_mmcif_from_pdb_api_and_write(pdb_id: str, relpath_dst_cif: str) -> None:
     """
     Fetch raw mmCIF data from API (expected hosted at 'https://files.rcsb.org/download/') using given PDB id,
@@ -422,43 +439,21 @@ def _get_mmcif_data(pdb_id: str, relpath_cif_dir: str) -> dict:
     return mmcif
 
 
-def __split_pdbchain(s):
-    match = re.match(r"^(.*)_([A-Za-z])$", s)
+def __split_pdbid_chain(pdbid_chain):
+    match = re.match(r"^(.*)_([A-Za-z])$", pdbid_chain)
     if match:
         pdbid, chain = match.groups()
         return pdbid, chain
     else:
-        return s, None
-
-
-def __read_pdb_lst_from_src_diff_dir(relpath_pdblst: str) -> list:
-    """
-    Read protein PDB id list from `.lst` file, hence expects one PDBid per line.
-    E.g.:
-                                    `3C9P
-                                     2HL7`
-     or PDBid_chain:
-                                    `3C9P_A
-                                     3C9P_B
-                                     2HL7_C`
-    :param relpath_pdblst:
-    :return:
-    """
-    try:
-        with open(relpath_pdblst, 'r') as pdblst_f:
-            pdb_ids = [line.strip() for line in pdblst_f]
-    except FileNotFoundError:
-        print(f'{pdblst_f} does not exist.')
-    except Exception as e:
-        print(f"An error occurred: {e}")
-    return pdb_ids
+        return pdbid_chain, None
 
 
 def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=Path.rp_diffdata_cif_dir.value,
                                           relpath_toknsd_ssv_dir=Path.rp_diffdata_tokenised_dir.value,
                                           relpath_pdblst: str = None,
                                           flatfile_format_to_write: str = FileExt.ssv.value,
-                                          pdb_ids=None) -> List[pd.DataFrame]:
+                                          pdb_ids=None,
+                                          write_lst_file=False) -> List[pd.DataFrame]:
     """
     Parse and tokenise sequence and structure fields from mmCIFs of proteins, returning a list of Pandas dataframes,
     with one dataframe per chain. Write each dataframe to one flat file (ssv by default), in `tokenised` directory,
@@ -484,18 +479,20 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=Path.rp_diffdata_cif_d
     'A_Cartn_y', 'A_Cartn_z', 'aa_label_num', 'bb_or_sc', 'bb_index', 'atom_label_num', 'aa_atom_tuple',
     'aa_atom_label_num', 'mean_xyz', 'mean_corrected_x', 'mean_corrected_y', 'mean_corrected_z'].
     """
+    for_pdbchain_lst = []
+
     if pdb_ids:
-        if pdb_ids.instanceof(str):  # If string, it is assumed that this is one PDB id.
+        if isinstance(pdb_ids, str):  # If string, it is assumed that this is one PDB id.
             pdb_ids = [pdb_ids]
     if relpath_pdblst:
-        pdb_ids.extend(__read_pdb_lst_from_src_diff_dir(relpath_pdblst=relpath_pdblst))
+        pdb_ids.extend(dh.read_pdb_lst_from_src_diff_dir(relpath_pdblst=relpath_pdblst))
 
     cif_tokenised_ssv_dir = Path.rp_diffdata_tokenised_dir.value
-    pretokenised_ssvs = []
+    pdbid_chains_of_pretokenised = []
     if os.path.exists(cif_tokenised_ssv_dir):
-        pretokenised_ssvs = [item for item in os.listdir(cif_tokenised_ssv_dir)
-                                  if item.endswith(FileExt.dot_ssv.value)]
-
+        pdbid_chains_of_pretokenised = [item.removesuffix(FileExt.dot_ssv.value)
+                                             for item in os.listdir(cif_tokenised_ssv_dir)
+                                             if item.endswith(FileExt.dot_ssv.value)]
     cif_pdfs_per_chain = []
 
     for pdb_id in pdb_ids:  # Expecting only one PDB id per line. Can be PDBid_chain.
@@ -504,44 +501,52 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=Path.rp_diffdata_cif_d
         pdb_id = pdb_id.removesuffix(FileExt.dot_CIF.value)
         print(f'Starting PDBid={pdb_id} ---------------------------------------------------------')
 
-        # IF ALREADY PARSED AND SAVED AS FLATFILE, JUST READ IT IN:
-        for pretokenised_ssv in pretokenised_ssvs:
+        # THE LOGIC EXPECTS THAT IF IT HAS BEEN TOKENISED AND SAVED AS ssv, THEN IT WILL BE BY THE CHAIN AND SO
+        # MUST HAVE THE SUFFIX `<pdbid>_A.ssv`, `<pdbid>_B.ssv`, ETC, RATHER THAN JUST `<pdbid>.ssv`:
+        if pdb_id in pdbid_chains_of_pretokenised:
+            pdbid_chain = pdb_id  # to make it clear that this is expected to include a chain suffix.
+            print(f'PDBid={pdbid_chain} already tokenised. Reading ssv in to pdf. Add to list.')
+            _cif_pdfs_per_chain = dh.read_tokenised_cif_ssv_to_pdf(relpath_tokensd_dir=relpath_toknsd_ssv_dir,
+                                                                   pdb_id=pdbid_chain)
+            # EXPECTED TO BE FOR ONE CHAIN OF THIS PDBID, SO IT'S A PYTHON LIST OF 1.
+            assert _cif_pdfs_per_chain, 'no cif_pdfs_per_chain returned. Expected list of one pdf for one chain.'
+            for_pdbchain_lst.append(pdbid_chain)
+            continue
+        # OTHERWISE GET THE CIF (LOCALLY OR VIA API), AND EXPECT PDBid TO BE WITHOUT THE CHAIN:
+        relpath_cif_dir = relpath_cif_dir.removesuffix('/').removeprefix('/')
+        pdbid, chain = __split_pdbid_chain(pdb_id)  # Note: chain should be empty string
+        mmcif_dict = _get_mmcif_data(relpath_cif_dir=relpath_cif_dir, pdb_id=pdbid)
+        # PARSE mmCIF TO EXTRACT 14 FIELDS, TO FILTER, IMPUTE, SORT & JOIN ON, RETURNING AN 8-COLUMN DATAFRAME:
+        # (THIS RETURNS A LIST OF DATAFRAMES, ONE PER POLYPEPTIDE CHAIN).
+        cif_pdfs_per_chain = parser.parse_cif(mmcif_dict=mmcif_dict, pdb_id=pdbid)
+        if chain:
+            cif_pdfs_per_chain = _keep_only_the_given_chain(pdfs=cif_pdfs_per_chain, chain=chain, pdb_id=pdbid)
+        cif_pdfs_per_chain = _remove_all_hydrogen_atoms(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
+        cif_pdfs_per_chain = _make_new_bckbone_or_sdchain_col(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
+        cif_pdfs_per_chain = _only_keep_chains_of_polypeptide(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
+        cif_pdfs_per_chain = _only_keep_chains_with_enuf_bckbone_atoms(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
+        cif_pdfs_per_chain = _select_chains_to_use(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
 
-            if pretokenised_ssv.startswith(f'{relpath_toknsd_ssv_dir}/{pdb_id}_'):
-                print(f'PDBid={pdb_id} already tokenised. Reading in ssv.')
-                cif_pdfs_per_chain = dh.read_tokenised_cif_ssv_to_pdf(pdb_id=pdb_id,
-                                                                      relpath_tokensd_dir=relpath_toknsd_ssv_dir)
-                return cif_pdfs_per_chain
+        if len(cif_pdfs_per_chain) == 0:
+            print(f'No chains left for this CIF: PDBid={pdbid}, so it cannot be used.')
+            continue
 
-        if not pretokenised_ssvs:
+        cif_pdfs_per_chain = _assign_backbone_index_to_all_residue_rows(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
+        cif_pdfs_per_chain = _enumerate_atoms_and_residues(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
+        cif_pdfs_per_chain = _assign_mean_corrected_coordinates(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
+        dh.write_tokenised_cif_to_flatfile(pdfs=cif_pdfs_per_chain,
+                                           dst_data_dir=relpath_toknsd_ssv_dir,
+                                           flatfiles=flatfile_format_to_write, pdb_id=pdbid)
+        for pdf_chain in cif_pdfs_per_chain:
+            _find_and_parse_missing_data(pdf_chain)
+            chain = pdf_chain[CIF.S_asym_id.value].iloc[0]
+            pdbid_chain = f'{pdbid}_{chain}'
+            for_pdbchain_lst.append(pdbid_chain)
 
-            # OTHERWISE GET THE CIF DATA (EITHER LOCALLY OR VIA API)
-            relpath_cif_dir = relpath_cif_dir.removesuffix('/').removeprefix('/')
-
-            # PARSE mmCIF TO EXTRACT 14 FIELDS, TO FILTER, IMPUTE, SORT & JOIN ON, RETURNING AN 8-COLUMN DATAFRAME:
-            # (THIS RETURNS A LIST OF DATAFRAMES, ONE PER POLYPEPTIDE CHAIN).
-            pdb_id, chain = __split_pdbchain(pdb_id)
-            mmcif_dict = _get_mmcif_data(pdb_id=pdb_id, relpath_cif_dir=relpath_cif_dir)
-            cif_pdfs_per_chain = parser.parse_cif(pdb_id=pdb_id, mmcif_dict=mmcif_dict)
-            cif_pdfs_per_chain = _remove_all_hydrogen_atoms(cif_pdfs_per_chain, pdb_id)
-            cif_pdfs_per_chain = _make_new_bckbone_or_sdchain_col(cif_pdfs_per_chain, pdb_id)
-            cif_pdfs_per_chain = _only_keep_chains_of_polypeptide(cif_pdfs_per_chain, pdb_id)
-            cif_pdfs_per_chain = _only_keep_chains_with_enuf_bckbone_atoms(cif_pdfs_per_chain, pdb_id)
-            cif_pdfs_per_chain = _select_chains_to_use(cif_pdfs_per_chain, pdb_id)
-
-            if len(cif_pdfs_per_chain) == 0:
-                print(f'No chains left for this CIF: PDBid={pdb_id}, so it cannot be used.')
-                continue
-
-            cif_pdfs_per_chain = _assign_backbone_index_to_all_residue_rows(cif_pdfs_per_chain, pdb_id)
-            cif_pdfs_per_chain = _enumerate_atoms_and_residues(cif_pdfs_per_chain, pdb_id)
-            cif_pdfs_per_chain = _assign_mean_corrected_coordinates(cif_pdfs_per_chain, pdb_id)
-            dh.write_tokenised_cif_to_flatfile(pdb_id, cif_pdfs_per_chain,
-                                               dst_data_dir=relpath_toknsd_ssv_dir,
-                                               flatfiles=flatfile_format_to_write)
-            for pdf_chain in cif_pdfs_per_chain:
-                _find_and_parse_missing_data(pdf_chain)
-
+    if write_lst_file:
+        dh.write_list_to_lst_file(list_to_write=for_pdbchain_lst,
+                                  path_fname=f'{Path.rp_diffdata_pdbid_dir.value}/pdbchains_{len(for_pdbchain_lst)}'
+                                             f'{FileExt.dot_lst.value}')
     return cif_pdfs_per_chain
 
 
@@ -550,8 +555,10 @@ if __name__ == '__main__':
 
     parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=Path.rp_diffdata_cif_dir.value,
                                           relpath_toknsd_ssv_dir=Path.rp_diffdata_tokenised_dir.value,
-                                          relpath_pdblst=Path.rp_diffdata_globin1_lst.value,
+                                          relpath_pdblst=None,
                                           flatfile_format_to_write=FileExt.ssv.value,
-                                          pdb_ids=[])
-
+                                          pdb_ids=['1ECA', '2DN1', '2DN2', '1OJ6', '1V5H',
+                                                   '1MBN', '2GDM', '1GDI', '2WY4'],
+                                          write_lst_file=True)
+    # Note: '4C0N' has 18 missing values
     # dh.clear_diffdatacif_dir()
