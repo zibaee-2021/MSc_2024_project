@@ -3,6 +3,7 @@ from data_layer import data_handler as dh
 import plm_embedder as pe
 from plm_embedder import Path
 from src.enums import CIF
+from src.preprocessing_funcs import tokeniser as tk
 
 
 class Filename(Enum):
@@ -21,6 +22,7 @@ def generate_ankh_base_embeddings_of_5_globins_from_fastas_of_pdbids():
 def generate_ankh_base_embeddings_from_seq_id_of_tokenised_cifs(pdbid_chain: str):
 
     pdf = dh.read_tokenised_cif_chain_ssv_to_pdf(pdbid_chain=pdbid_chain, relpath_tokensd_dir=Path.tokenised_dir.value)
+    tk.nums_of_missing_data(pdf)
     aa_position_sequence = pdf[[CIF.S_seq_id.value, CIF.S_mon_id.value]]
     aa_position_sequence = aa_position_sequence.drop_duplicates(subset=CIF.S_seq_id.value, keep='first')
     aa_sequence = ''.join(aa_position_sequence[CIF.S_mon_id.value])
@@ -35,6 +37,13 @@ def generate_ankh_base_embeddings_from_seq_id_of_tokenised_cifs(pdbid_chain: str
 if __name__ == '__main__':
 
     # globins_pdbid_raw_tok_emb_ = generate_ankh_base_embeddings_of_5_globins_from_fastas_of_pdbids()
-    globins_pdbid_raw_tok_emb_ = generate_ankh_base_embeddings_from_seq_id_of_tokenised_cifs(pdbid_chain='1ECA_A')
+    # globins_pdbid_raw_tok_emb_ = generate_ankh_base_embeddings_from_seq_id_of_tokenised_cifs(pdbid_chain='1ECA_A')
+
+    # pdbid_chains = dh.read_pdb_lst_from_src_diff_dir(relpath_pdblst=dh.Path.rp_diffdata_globins10_lst.value)
+    pdbid_chains = dh.read_pdb_lst_from_src_diff_dir(relpath_pdblst=f'{dh.Path.rp_diffdata_pdbid_lst_dir.value}/'
+                                                                    f'pdbchains_9{dh.FileExt.dot_lst.value}')
+    for pdbid_chain in pdbid_chains:
+        globins_pdbid_raw_tok_emb_ = generate_ankh_base_embeddings_from_seq_id_of_tokenised_cifs(pdbid_chain)
+
     pass
 

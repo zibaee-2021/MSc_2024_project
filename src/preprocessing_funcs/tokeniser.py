@@ -96,7 +96,7 @@ class ColValue(Enum):
     sc = 'sc'  # side-chain
 
 
-def _find_and_parse_missing_data(pdf):
+def nums_of_missing_data(pdf):
 
     counts = {
         'NaN': (pdf.map(lambda x: isinstance(x, float) and pd.isna(x))).sum().sum(),
@@ -538,7 +538,7 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=Path.rp_diffdata_cif_d
                                            dst_data_dir=relpath_toknsd_ssv_dir,
                                            flatfiles=flatfile_format_to_write, pdb_id=pdbid)
         for pdf_chain in cif_pdfs_per_chain:
-            _find_and_parse_missing_data(pdf_chain)
+            nums_of_missing_data(pdf_chain)
             chain = pdf_chain[CIF.S_asym_id.value].iloc[0]
             pdbid_chain = f'{pdbid}_{chain}'
             for_pdbchain_lst.append(pdbid_chain)

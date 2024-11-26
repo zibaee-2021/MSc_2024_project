@@ -31,9 +31,10 @@ class Path(Enum):
     diffdata_cif_dir = '../src/diffusion/diff_data/mmCIF'
     enumeration_h_list = 'enumeration/hydrogens.lst'
 
-    rp_diffdata_sd573_lst = '../diffusion/diff_data/SD_573.lst'
-    rp_diffdata_globins10_lst = '../diffusion/diff_data/globins_10.lst'
-    rp_diffdata_globin1_lst = '../diffusion/diff_data/globin_1.lst'
+    rp_diffdata_pdbid_lst_dir = '../diffusion/diff_data/PDBid_list'
+    rp_diffdata_sd573_lst = '../diffusion/diff_data/PDBid_list/SD_573.lst'
+    rp_diffdata_globins10_lst = '../diffusion/diff_data/PDBid_list/globins_10.lst'
+    rp_diffdata_globin1_lst = '../diffusion/diff_data/PDBid_list/globin_1.lst'
 
 
 class Filename(Enum):
