@@ -254,9 +254,10 @@ def make_api_calls_to_fetch_mmcif_and_write_locally(pdb_id: str, cif_dst_dir: st
     _restore_original_working_dir(cwd)
 
 
-def save_torch_tensor(pt: torch.Tensor, dst_dir: str):
+def save_torch_tensor(pt: torch.Tensor, dst_dir: str, pdbid_chain: str):
     os.makedirs(dst_dir, exist_ok=True)
-    torch.save(pt, f'{dst_dir}{FileExt.dot_pt.value}')
+    pt_file = f'{dst_dir}/{pdbid_chain}{FileExt.dot_pt.value}'
+    torch.save(pt, pt_file)
 
 
 def write_tokenised_cif_to_flatfile(pdb_id: str, pdfs: List[pd.DataFrame], dst_data_dir=None, flatfiles=None):

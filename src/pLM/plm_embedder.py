@@ -52,7 +52,7 @@ def generate_embeddings_from_fastas_of_pdbids(tokeniser, eval_model, pdbids_fast
     return pdbid_raw_tok_emb
 
 
-def generate_embeddings_from_aminoacid_sequence(tokeniser, eval_model, pdb_id_chain: str, aa_sequence: str) -> dict:
+def generate_embeddings_from_aminoacid_sequence(tokeniser, eval_model, pdbid_chain: str, aa_sequence: str) -> dict:
 
     raw_tok_emb = {'raw_sequence': None, 'tokenised': None, 'embedding': None}
     pdbid_raw_tok_emb = {}
@@ -71,7 +71,7 @@ def generate_embeddings_from_aminoacid_sequence(tokeniser, eval_model, pdb_id_ch
     # aa_sequence_embedding = embedding[0]
     aa_seq_embedding = embedding.encoder_last_hidden_state
     raw_tok_emb['embedding'] = aa_seq_embedding
-    pdbid_raw_tok_emb[pdb_id_chain] = raw_tok_emb
-    dh.save_torch_tensor(pt=aa_seq_embedding, dst_dir=f'{Path.local_emb_dir.value}/{pdb_id_chain}')
+    pdbid_raw_tok_emb[pdbid_chain] = raw_tok_emb
+    dh.save_torch_tensor(pt=aa_seq_embedding, dst_dir=Path.local_emb_dir.value, pdbid_chain=pdbid_chain)
 
     return pdbid_raw_tok_emb
