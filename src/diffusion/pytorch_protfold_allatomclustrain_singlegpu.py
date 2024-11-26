@@ -159,9 +159,7 @@ def load_dataset():
         pdb_embed = torch.load(f'{Path.rp_diffdata_emb_dir.value}/{target_pdbid}{FileExt.dot_pt.value}')
 
         # AND MAKE SURE IT HAS SAME NUMBER OF RESIDUES AS THE PARSED-TOKENISED SEQUENCE FROM MMCIF:
-        # **** THIS WON'T BE THE CASE BECAUSE MY EMBEDDINGS WERE MADE FROM FULL PROTEIN SEQUENCE.
-        # SO I NEED TO REDO THE EMBEDDINGS, USING ONLY PROTEIN SEQUENCE FROM CIF (I.E. WITH GAPS)****
-        # assert pdb_embed.size(1) == len(aacodes)
+        assert pdb_embed.size(1) == len(aacodes)
 
         # ONE BACKBONE ATOM (ALPHA-CARBON) PER RESIDUE. SO `len(bbindices)` SHOULD EQUAL NUMBER OF RESIDUES:
         assert len(aacodes) == len(bbindices)
