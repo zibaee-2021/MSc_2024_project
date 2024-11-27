@@ -86,24 +86,12 @@ FINETUNE_FLAG = False
 
 def load_dataset():
 
-    train_list = []
-    validation_list = []
     tnum = 0
-
-    # FROM RNA VERSION. PROTEIN MAPPINGS ARE READ INSTEAD FROM JSON FILES VIA
-    # tokeniser.parse_tokenise_cif_write_flatfile():
-    # atokendict = {"OP3": 0, "P": 1, "OP1": 2, "OP2": 3, "O5'": 4, "C5'": 5, "C4'": 6, "O4'": 7, "C3'": 8, "O3'": 9,
-    #               "C2'": 10, "O2'": 11, "C1'": 12, "N9": 13, "C8": 14, "N7": 15, "C5": 16, "C6": 17, "O6": 18,
-    #               "N1": 19, "C2": 20, "N2": 21, "N3": 22, "C4": 23, "O2": 24, "N4": 25, "N6": 26, "O4": 27}
-    # ntnumdict = {'A': 0, 'U': 1, 'G': 2, 'C': 3}
-
     sum_d2 = 0
     sum_d = 0
     nn = 0
 
     # GET THE LIST OF PDB NAMES FOR PROTEINS TO TOKENISE:
-    # targetfile_lst_path = Path.rp_diffdata_573_SD_PDBid_lst.value
-    # targetfile_lst_path = Path.rp_diffdata_10_Globins_PDBid_lst.value
     targetfile_lst_path = Path.rp_diffdata_9_PDBids_lst.value
     assert os.path.exists(targetfile_lst_path)
     targetfile = ''
@@ -118,15 +106,13 @@ def load_dataset():
     train_list, validation_list = [], []
 
     for line in targetfile:  # It is expected that there is only one pdb id per line.
-
         target_pdbid = line.rstrip().split()[0]
-
         sp = []
         pdf_target = pd.read_csv(f'{Path.rp_diffdata_tokenised_dir.value}/{target_pdbid}{FileExt.dot_ssv.value}',
                                  sep=' ')
         # GET MEAN-CORRECTED COORDINATES VIA 'mean_corrected_x', '_y', '_z' TO 3-ELEMENT LIST:
         coords = pdf_target[[ColNames.MEAN_CORR_X.value, ColNames.MEAN_CORR_Y.value, ColNames.MEAN_CORR_Z.value]].values
-
+        len_coords = len(coords)  # should be same as
         # GET `atomcodes` VIA 'atom_label_num' COLUMN, WHICH HOLDS ENUMERATED ATOMS VALUES:
         atomcodes = pdf_target[ColNames.ATOM_LABEL_NUM.value].tolist()
 
@@ -135,11 +121,6 @@ def load_dataset():
 
         # GET `aaindices`. EXPECTED TO HAVE REPEATED VALUES BECAUSE 1 AA HAS 5 OR MORE ATOMS (NOT DUPLICATE ROWS):
         aaindices = pdf_target[CIF.S_seq_id.value].tolist()
-
-        # # GET `bbindices`, VIA ASSIGNING DUPLICATED VALUES TO NEW COLUMN `BB_INDEX`, (DE-DUPLICATED BELOW):
-        # pdf_target = pdf_target.loc[pdf_target[CIF.A_label_atom_id.value]
-        #                             == CIF.ALPHA_CARBON.value, ColNames.BB_INDEX.value] \
-        #     = pdf_target[CIF.A_id.value]
 
         # DE-DUPLICATE ROWS ON RESIDUE POSITION (`S_seq_id`) TO GET CORRECT DIMENSION OF `aacodes` and `bbindices`:
         pdf_target_deduped = (pdf_target
