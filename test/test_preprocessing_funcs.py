@@ -1,9 +1,12 @@
 import os, sys
+import pandas as pd
 from unittest import TestCase
+from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 from src.preprocessing_funcs import tokeniser as tk
 from src.preprocessing_funcs import cif_parser
-import pandas as pd
-from Bio.PDB.MMCIF2Dict import MMCIF2Dict
+from data_layer import data_handler as dh
+from src.enums import CIF
+
 """
 Expected 17 columns of output dataframe of `parse_tokenise_cif_write_flatfile()`:
 
@@ -32,8 +35,9 @@ class TestPreprocessingFuncs(TestCase):
     def setUp(self):
         self.test_cif_dir = 'test_data/cif'
         self.test_tokenised_dir = 'test_data/tokenised'
-        self._test_joined_dir = 'test_data/merged'
+        self.test_joined_dir = 'test_data/merged'
         self.test_1V5H_ssv = 'test_1V5H.ssv'
+        self.test_1V5H_ssv_small = 'test_1V5H_small.ssv'
         self.test_1V5H_cif = 'test_1V5H.cif'
         self.test_1OJ6_4chains_cif = 'test_1OJ6_4chains.cif'
 
@@ -45,8 +49,27 @@ class TestPreprocessingFuncs(TestCase):
             atomsite_pdf = cif_parser._extract_fields_from_atom_site(mmcif_dict)
             atomsite_pdf = cif_parser._remove_hetatm_rows(atomsite_pdf)
             pdf_merged = cif_parser._join_atomsite_to_polyseq(atomsite_pdf, polyseq_pdf)
-            os.makedirs(self._test_joined_dir, exist_ok=True)
-            pdf_merged.to_csv(path_or_buf=f'{self._test_joined_dir}/{self.test_1V5H_ssv}', sep=' ', index=False)
+            os.makedirs(self.test_joined_dir, exist_ok=True)
+            pdf_merged.to_csv(path_or_buf=f'{self.test_joined_dir}/{self.test_1V5H_ssv}', sep=' ', index=False)
+
+    def generate_tokenised_ssv(self):
+
+        mmcif_dict = MMCIF2Dict(f'{self.test_cif_dir}/{self.test_1OJ6_4chains_cif}')
+        pdbid = self.test_1V5H_cif
+        cif_pdfs_per_chain = cif_parser.parse_cif(mmcif_dict=mmcif_dict, pdb_id=pdbid)
+        # cif_pdfs_per_chain = cif_pdfs_per_chain[0]
+        cif_pdfs_per_chain = tk._remove_all_hydrogen_atoms(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
+        cif_pdfs_per_chain = tk._make_new_bckbone_or_sdchain_col(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
+        cif_pdfs_per_chain = tk._only_keep_chains_of_polypeptide(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
+        cif_pdfs_per_chain = tk._only_keep_chains_with_enuf_bckbone_atoms(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
+        cif_pdfs_per_chain = tk._select_chains_to_use(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
+
+        cif_pdfs_per_chain = tk._assign_backbone_index_to_all_residue_rows(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
+        cif_pdfs_per_chain = tk._enumerate_atoms_and_residues(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
+        cif_pdfs_per_chain = tk._assign_mean_corrected_coordinates(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
+        pdf_target = cif_pdfs_per_chain[0]
+        dh.write_tokenised_cif_to_ssv(pdf=pdf_target,
+                                      path_dst_dir=self.test_tokenised_dir, pdb_id=pdbid)
 
     def test_parse_cif(self):
         parsed_pdfs = cif_parser.parse_cif(pdb_id=self.test_1OJ6_4chains_cif, relpath_cifs_dir=self.test_cif_dir)
@@ -69,7 +92,7 @@ class TestPreprocessingFuncs(TestCase):
             self.assertEqual(18, len(pdf.columns))
 
     def test_datatypes_after_casting(self):
-        pdf_merged = pd.read_csv(f'{self._test_joined_dir}/{self.test_1V5H_ssv}', sep=' ')
+        pdf_merged = pd.read_csv(f'{self.test_joined_dir}/{self.test_1V5H_ssv}', sep=' ')
         pdf_merged = cif_parser._cast_number_strings_to_numeric_types(pdf_merged)
         pdf_merged = cif_parser._cast_objects_to_stringdtype(pdf_merged)
         expected_int64_dtype = pd.Int64Dtype()
@@ -95,3 +118,9 @@ class TestPreprocessingFuncs(TestCase):
         for chain_pdfs in chains_pdfs:
             pass
 
+    def test_some_pd_func(self):
+        pdf_target = pd.read_csv(f'{self.test_tokenised_dir}/{self.test_1V5H_ssv_small}', sep=' ')
+        pdf_target_deduped = (pdf_target
+                              .drop_duplicates(subset=CIF.S_seq_id.value, keep='first')
+                              .reset_index(drop=True))
+        pass

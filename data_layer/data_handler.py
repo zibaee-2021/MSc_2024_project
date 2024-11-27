@@ -303,7 +303,23 @@ def save_torch_tensor(pt: torch.Tensor, dst_dir: str, pdbid_chain: str):
     torch.save(pt, pt_file)
 
 
-def write_tokenised_cif_to_flatfile(pdb_id: str, pdfs: List[pd.DataFrame], dst_data_dir=None, flatfiles=None):
+def write_tokenised_cif_to_ssv(pdb_id: str, pdf: pd.DataFrame, path_dst_dir=None):
+    """
+    Write dataframe of single protein, and single chain, with columns CIF.S_seq_id, CIF.S_mon_id, CIF.A_id,
+    CIF.A_label_atom_id, ColNames.MEAN_CORR_X, ColNames.MEAN_CORR_Y, ColNames.MEAN_CORR_Z to flat file(s) in local
+    relative dir 'src/diffusion/diff_data/tokenised/' or to the top-level `data` dir.
+    :param pdb_id: PDB id.
+    :param pdf: Dataframe to write to ssv. 
+    :param path_dst_dir: Relative path to destination dir.
+    """
+    print(f'PDBid={pdb_id}: write tokenised to ssv')
+    os.makedirs(path_dst_dir, exist_ok=True)
+    path_dst_dir = path_dst_dir.removesuffix('/').removeprefix('/')
+    pdb_id = pdb_id.removesuffix(FileExt.dot_CIF.value)
+    pdf.to_csv(path_or_buf=f'{path_dst_dir}/{pdb_id}{FileExt.dot_ssv.value}', sep=' ', index=False)
+
+
+def write_tokenised_cifs_to_flatfiles(pdb_id: str, pdfs: List[pd.DataFrame], dst_data_dir=None, flatfiles=None):
     """
     Write dataframe of single protein, and single chain, with columns CIF.S_seq_id, CIF.S_mon_id, CIF.A_id,
     CIF.A_label_atom_id, ColNames.MEAN_CORR_X, ColNames.MEAN_CORR_Y, ColNames.MEAN_CORR_Z to flat file(s) in local
@@ -316,7 +332,7 @@ def write_tokenised_cif_to_flatfile(pdb_id: str, pdfs: List[pd.DataFrame], dst_d
     :param flatfiles: List of file formats (e.g. ['ssv', 'csv', 'tsv'], or string of one format, otherwise just
     one ssv file per protein and chain, by default). E.g. Chain 'A' for PDB id '10J6' is written to `10J6_A.ssv`.
     """
-    print(f'PDBid={pdb_id}: write tokenised to ssv')
+    print(f'PDBid={pdb_id}: write tokenised to flatfile')
     for pdf in pdfs:
         if flatfiles is None:
             flatfiles = [FileExt.ssv.value]
@@ -404,7 +420,6 @@ def read_tokenised_cif_chain_ssv_to_pdf(pdbid_chain: str, relpath_tokensd_dir: s
     if not nan_indices.empty:
         print(f'Row indices with NaN values: {list(nan_indices)}')
     return pdf
-
 
 
 def _read_json_from_data_dir(fname: str) -> dict:

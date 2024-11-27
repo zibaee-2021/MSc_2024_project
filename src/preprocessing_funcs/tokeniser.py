@@ -534,9 +534,9 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=Path.rp_diffdata_cif_d
         cif_pdfs_per_chain = _assign_backbone_index_to_all_residue_rows(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
         cif_pdfs_per_chain = _enumerate_atoms_and_residues(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
         cif_pdfs_per_chain = _assign_mean_corrected_coordinates(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
-        dh.write_tokenised_cif_to_flatfile(pdfs=cif_pdfs_per_chain,
-                                           dst_data_dir=relpath_toknsd_ssv_dir,
-                                           flatfiles=flatfile_format_to_write, pdb_id=pdbid)
+        dh.write_tokenised_cifs_to_flatfiles(pdfs=cif_pdfs_per_chain,
+                                             dst_data_dir=relpath_toknsd_ssv_dir,
+                                             flatfiles=flatfile_format_to_write, pdb_id=pdbid)
         for pdf_chain in cif_pdfs_per_chain:
             nums_of_missing_data(pdf_chain)
             chain = pdf_chain[CIF.S_asym_id.value].iloc[0]
