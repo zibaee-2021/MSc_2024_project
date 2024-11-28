@@ -557,7 +557,7 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=Path.rp_diffdata_cif_d
 
 
 def load_dataset():
-
+    print('Starting load_dataset()...')
     tnum = 0
     sum_d2 = 0
     sum_d = 0
@@ -667,12 +667,12 @@ def load_dataset():
         print(f'Data s.d. = , {sigma_data}')
         print(f'Data unit var scaling = , {1 / sigma_data}')
 
+    print('Finished load_dataset()...')
     return train_list, validation_list
 
 
 if __name__ == '__main__':
     # dh.copy_cifs_from_bigfilefolder_to_diff_data()
-    train_list, validation_list = load_dataset()
     # parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=Path.rp_diffdata_cif_dir.value,
     #                                       relpath_toknsd_ssv_dir=Path.rp_diffdata_tokenised_dir.value,
     #                                       relpath_pdblst=None,
@@ -680,5 +680,6 @@ if __name__ == '__main__':
     #                                       pdb_ids=['1ECA', '2DN1', '2DN2', '1OJ6', '1V5H',
     #                                                '1MBN', '2GDM', '1GDI', '2WY4'],
     #                                       write_lst_file=True)
+    train_list, validation_list = load_dataset()
     # Note: '4C0N' has 18 missing values
     # dh.clear_diffdatacif_dir()
