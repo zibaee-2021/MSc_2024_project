@@ -131,7 +131,7 @@ def load_dataset():
         aacodes = pdf_target_deduped[ColNames.AA_LABEL_NUM.value].tolist()
 
         # COMPLETE `bbindices`, VIA `BB_INDEX` IN DE-DUPLICATED DF:
-        bbindices = pdf_target_deduped[ColNames.BB_INDEX.value].tolist()
+        bbindices = pdf_target_deduped[ColNames.BB_ATOM_POS.value].tolist()
 
         # ONLY INCLUDE PROTEINS WITHIN A CERTAIN SIZE RANGE:
         if len(aacodes) < 10 or len(aacodes) > 500:

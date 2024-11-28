@@ -41,7 +41,8 @@ A_Cartn_y             # COORDINATES           - ATOM Y-COORDINATES (SUBSEQUENTLY
 A_Cartn_z             # COORDINATES           - ATOM Z-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN), CAN BE REMOVED.
 aa_label_num          # ENUMERATED RESIDUES   - EQUIVALENT TO `ntcodes` IN ORIGINAL RNA CODE. KEEP IN DF.
 bb_or_sc              # BACKBONE OR SIDE-CHAIN ATOM ('bb' or 'sc'), KEEP FOR POSSIBLE SUBSEQUENT OPERATIONS.
-bb_index              # POSITION OF THE ALPHA-CARBON FOR EACH RESIDUE IN THE POLYPEPTIDE (MAIN-CHAIN). KEEP IN DF.
+bb_atom_pos           # ATOM POSITION CA OR MOST C-TERM OTHER BB ATOM, PER RESIDUE. KEEP IN DF.
+bbindices             # INDEX POSITION OF THE ATOM POSITION (`A_id`) OF ALLOCATED BACKBONE ATOM.
 atom_label_num        # ENUMERATED ATOMS      - EQUIVALENT TO `atomcodes` IN ORIGINAL RNA CODE. KEEP IN DF.
 aa_atom_tuple         # RESIDUE-ATOM PAIR     - ONE TUPLE PER ROW. KEEP IN DF.
 aa_atom_label_num     # ENUMERATED RESIDUE-ATOM PAIRS. (ALTERNATIVE WAY TO GENERATE `atomcodes`, will be `aaatomcodes`).
@@ -59,6 +60,8 @@ from enum import Enum
 from typing import List
 import numpy as np
 import pandas as pd
+import torch
+from math import sqrt
 from src.preprocessing_funcs import cif_parser as parser
 from data_layer import data_handler as dh
 from Bio.PDB.MMCIF2Dict import MMCIF2Dict
@@ -76,6 +79,8 @@ class Path(Enum):
     rp_diffdata_globins10_lst = '../diffusion/diff_data/globins_10.lst'
     rp_diffdata_globin1_lst = '../diffusion/diff_data/globin_1.lst'
     rp_diffdata_pdbid_dir = '../diffusion/diff_data/PDBid_list'
+    rp_diffdata_9_PDBids_lst = '../diffusion/diff_data/PDBid_list/pdbchains_9.lst'
+    rp_diffdata_emb_dir = '../diffusion/diff_data/emb'
 
 
 class Filename(Enum):
@@ -89,6 +94,7 @@ class FileExt(Enum):
     ssv = 'ssv'
     dot_ssv = '.ssv'
     dot_lst = '.lst'
+    dot_pt = '.pt'
 
 
 class ColValue(Enum):
@@ -223,7 +229,7 @@ def _assign_backbone_index_to_all_residue_rows(pdfs: List[pd.DataFrame], pdb_id:
 
         # Even though `a_id` is always an int (when no NaNs), and I cast to Int64 below. The column remains float64.
         # Apparently I have to cast this column beforehand ? Very odd behaviour.
-        pdf[ColNames.BB_INDEX.value] = pd.Series(dtype="Int64")
+        pdf[ColNames.BB_ATOM_POS.value] = pd.Series(dtype="Int64")
 
         for S_seq_id, aa_group in pdf.groupby(CIF.S_seq_id.value):  # GROUP BY RESIDUE POSITION VALUE
             # GET ATOM INDEX ('A_id') WHERE ATOM ('A_label_atom_id') IS 'CA' IN THIS RESIDUE GROUP.
@@ -257,17 +263,17 @@ def _assign_backbone_index_to_all_residue_rows(pdfs: List[pd.DataFrame], pdb_id:
             else:
                 a_id = a_id_of_CA.iloc[0]
 
-                # ASSIGN THIS ATOM INDEX TO BB_INDEX ('bb_index') FOR ALL ROWS IN THIS GROUP:
-            pdf.loc[aa_group.index, ColNames.BB_INDEX.value] = a_id
+                # ASSIGN THIS ATOM INDEX TO BB_ATOM_POS ('bb_atom_pos') FOR ALL ROWS IN THIS GROUP:
+            pdf.loc[aa_group.index, ColNames.BB_ATOM_POS.value] = a_id
 
         # CAST NEW COLUMN TO INT64 (FOR CONSISTENCY):
-        print(f'What type is pdf bb_index column before any casting operations ..{pdf[ColNames.BB_INDEX.value].dtype}')
+        print(f'Type of `bb_atom_pos` column, before any casting operations={pdf[ColNames.BB_ATOM_POS.value].dtype}')
 
-        pdf.loc[:, ColNames.BB_INDEX.value] = pd.to_numeric(pdf[ColNames.BB_INDEX.value], errors='coerce')
-        print(f'pdf bb_index column should be numeric type ..{pdf[ColNames.BB_INDEX.value].dtype}')
+        pdf.loc[:, ColNames.BB_ATOM_POS.value] = pd.to_numeric(pdf[ColNames.BB_ATOM_POS.value], errors='coerce')
+        print(f'`b_atom_pos` column should be numeric type={pdf[ColNames.BB_ATOM_POS.value].dtype}')
 
-        pdf.loc[:, ColNames.BB_INDEX.value] = pdf[ColNames.BB_INDEX.value].astype('Int64')
-        print(f'pdf bb_index column should be integer type ..{pdf[ColNames.BB_INDEX.value].dtype}')
+        pdf.loc[:, ColNames.BB_ATOM_POS.value] = pdf[ColNames.BB_ATOM_POS.value].astype('Int64')
+        print(f'`bb_atom_pos` column should be integer type={pdf[ColNames.BB_ATOM_POS.value].dtype}')
         result_pdfs.append(pdf)
 
     return result_pdfs
@@ -476,7 +482,7 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=Path.rp_diffdata_cif_d
     :return: Parsed and tokenised CIF file as dataframe which is also written to a flatfile (ssv by default)
     at `src/diffusion/diff_data/tokenised`. List of dataframes, one per chain.
     Dataframe currently has these 17 Columns: ['A_label_asym_id', 'S_seq_id', 'A_id', 'A_label_atom_id', 'A_Cartn_x',
-    'A_Cartn_y', 'A_Cartn_z', 'aa_label_num', 'bb_or_sc', 'bb_index', 'atom_label_num', 'aa_atom_tuple',
+    'A_Cartn_y', 'A_Cartn_z', 'aa_label_num', 'bb_or_sc', 'bb_atom_pos', 'atom_label_num', 'aa_atom_tuple',
     'aa_atom_label_num', 'mean_xyz', 'mean_corrected_x', 'mean_corrected_y', 'mean_corrected_z'].
     """
     for_pdbchain_lst = []
@@ -550,15 +556,129 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=Path.rp_diffdata_cif_d
     return cif_pdfs_per_chain
 
 
+def load_dataset():
+
+    tnum = 0
+    sum_d2 = 0
+    sum_d = 0
+    nn = 0
+
+    # GET THE LIST OF PDB NAMES FOR PROTEINS TO TOKENISE:
+    targetfile_lst_path = Path.rp_diffdata_9_PDBids_lst.value
+    assert os.path.exists(targetfile_lst_path)
+    targetfile = ''
+    try:
+        with open(targetfile_lst_path, 'r') as lst_f:
+            targetfile = [line.strip() for line in lst_f]
+    except FileNotFoundError:
+        print(f'{lst_f} does not exist.')
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+    train_list, validation_list = [], []
+
+    for line in targetfile:  # It is expected that there is only one pdb id per line.
+        target_pdbid = line.rstrip().split()[0]
+        sp = []
+        pdf_target = pd.read_csv(f'{Path.rp_diffdata_tokenised_dir.value}/{target_pdbid}{FileExt.dot_ssv.value}',
+                                 sep=' ')
+        # GET MEAN-CORRECTED COORDINATES VIA 'mean_corrected_x', '_y', '_z' TO 3-ELEMENT LIST:
+        coords = pdf_target[[ColNames.MEAN_CORR_X.value, ColNames.MEAN_CORR_Y.value, ColNames.MEAN_CORR_Z.value]].values
+        len_coords = len(coords)  # should be same as
+        # GET `atomcodes` VIA 'atom_label_num' COLUMN, WHICH HOLDS ENUMERATED ATOMS VALUES:
+        atomcodes = pdf_target[ColNames.ATOM_LABEL_NUM.value].tolist()
+
+        # GET `aaatomcodes` VIA 'aa_atom_label_num' COLUMN, WHICH HOLDS ENUMERATED RESIDUE-ATOM PAIRS VALUES:
+        aaatomcodes = pdf_target[ColNames.AA_ATOM_LABEL_NUM.value].tolist()
+
+        # GET `aaindices`. EXPECTED TO HAVE REPEATED VALUES BECAUSE 1 AA HAS 5 OR MORE ATOMS (NOT DUPLICATE ROWS):
+        aaindices = pdf_target[CIF.S_seq_id.value].tolist()
+
+        # ASSIGN DATAFRAME INDEX OF BACKBONE ATOM POSITION PER RESIDUE IN NEW COLUMN `BBINDICES`:
+        indices_of_atom_positions = {value: index for index, value in pdf_target[CIF.A_id.value].items()}
+        pdf_target[ColNames.BBINDICES.value] = pdf_target[ColNames.BB_ATOM_POS.value].map(indices_of_atom_positions)
+
+        # DE-DUPLICATE ROWS ON RESIDUE POSITION (`S_seq_id`) TO GET CORRECT DIMENSION OF `aacodes` and `bbindices`:
+        pdf_target_deduped = (pdf_target
+                              .drop_duplicates(subset=CIF.S_seq_id.value, keep='first')
+                              .reset_index(drop=True))
+
+        # GET `aacodes`, VIA 'aa_label_num' COLUMN, WHICH HOLDS ENUMERATED RESIDUES VALUES:
+        aacodes = pdf_target_deduped[ColNames.AA_LABEL_NUM.value].tolist()
+
+        bbindices = pdf_target_deduped[ColNames.BBINDICES.value].tolist()
+
+        # ONLY INCLUDE PROTEINS WITHIN A CERTAIN SIZE RANGE:
+        if len(aacodes) < 10 or len(aacodes) > 500:
+            continue
+
+        # READ PRE-COMPUTED EMBEDDING OF THIS PROTEIN:
+        path_pdb_embed = f'{Path.rp_diffdata_emb_dir.value}/{target_pdbid}{FileExt.dot_pt.value}'
+        pdb_embed = torch.load(path_pdb_embed)
+        pdbembed_dim1 = pdb_embed.size(1)
+        # AND MAKE SURE IT HAS SAME NUMBER OF RESIDUES AS THE PARSED-TOKENISED SEQUENCE FROM MMCIF:
+        assert pdb_embed.size(1) == len(aacodes) + 1  # BECAUSE ANKH-BASE ADDS AN EXTRA TOKEN AT THE END. MAYBE 'EOS'.
+
+        # ONE BACKBONE ATOM (ALPHA-CARBON) PER RESIDUE. SO `len(bbindices)` SHOULD EQUAL NUMBER OF RESIDUES:
+        assert len(aacodes) == len(bbindices)
+
+        # MAKE SURE YOU HAVE AT LEAST THE MINIMUM NUMBER OF EXPECTED ATOMS IN MMCIF DATA:
+        min_num_atoms_expected_per_residue = 5  # GLYCINE HAS 5 NON-H ATOMS: 2xO, 2xC, 1xN, 5xH.
+        min_num_expected_atoms = len(bbindices) * min_num_atoms_expected_per_residue
+        # THIS IS THE NUMBER OF ATOMS (AS ONE ROW PER ATOM DUE TO OUTER-JOIN. MIMICKS DJ'S RNA CODE:
+        num_of_atoms_in_cif = len(aaindices)
+
+        # ASSUME PROTEIN WILL NEVER BE 100% GLYCINE (OTHERWISE I'D USE `<=` INSTEAD OF `<`):
+        if num_of_atoms_in_cif < min_num_expected_atoms:
+            print("WARNING: Too many missing atoms in ", target_pdbid, len(aacodes), len(aaindices))
+            continue
+
+        aacodes = np.asarray(aacodes, dtype=np.uint8)
+        atomcodes = np.asarray(atomcodes, dtype=np.uint8)
+        aaatomcodes = np.asarray(aaatomcodes, dtype=np.uint8)  # THIS IS AN ALTERNATIVE TO atomcodes.
+        bbindices = np.asarray(bbindices, dtype=np.int16)
+        aaindices = np.asarray(aaindices, dtype=np.int16)
+
+        target_coords = np.asarray(coords, dtype=np.float32)
+        target_coords -= target_coords.mean(0)
+
+        assert len(aacodes) == target_coords[bbindices].shape[0]
+
+        sum_d2 += (target_coords ** 2).sum()
+        sum_d += np.sqrt((target_coords ** 2).sum(axis=-1)).sum()
+        nn += target_coords.shape[0]
+
+        diff = target_coords[1:] - target_coords[:-1]
+        distances = np.linalg.norm(diff, axis=1)
+
+        print(target_coords.shape, target_pdbid, len(aacodes), distances.min(), distances.max())
+
+        sp.append((aacodes, atomcodes, aaindices, bbindices, target_pdbid, target_coords))
+        # sp.append((aacodes, aaatomcodes, aaindices, bbindices, target, target_coords))
+
+        # Choose every 10th sample for validation
+        if tnum % 10 == 0:
+            validation_list.append(sp)
+        else:
+            train_list.append(sp)
+        tnum += 1
+
+        sigma_data = sqrt((sum_d2 / nn) - (sum_d / nn) ** 2)
+        print(f'Data s.d. = , {sigma_data}')
+        print(f'Data unit var scaling = , {1 / sigma_data}')
+
+    return train_list, validation_list
+
+
 if __name__ == '__main__':
     # dh.copy_cifs_from_bigfilefolder_to_diff_data()
-
-    parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=Path.rp_diffdata_cif_dir.value,
-                                          relpath_toknsd_ssv_dir=Path.rp_diffdata_tokenised_dir.value,
-                                          relpath_pdblst=None,
-                                          flatfile_format_to_write=FileExt.ssv.value,
-                                          pdb_ids=['1ECA', '2DN1', '2DN2', '1OJ6', '1V5H',
-                                                   '1MBN', '2GDM', '1GDI', '2WY4'],
-                                          write_lst_file=True)
+    train_list, validation_list = load_dataset()
+    # parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=Path.rp_diffdata_cif_dir.value,
+    #                                       relpath_toknsd_ssv_dir=Path.rp_diffdata_tokenised_dir.value,
+    #                                       relpath_pdblst=None,
+    #                                       flatfile_format_to_write=FileExt.ssv.value,
+    #                                       pdb_ids=['1ECA', '2DN1', '2DN2', '1OJ6', '1V5H',
+    #                                                '1MBN', '2GDM', '1GDI', '2WY4'],
+    #                                       write_lst_file=True)
     # Note: '4C0N' has 18 missing values
     # dh.clear_diffdatacif_dir()

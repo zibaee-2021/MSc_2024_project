@@ -6,7 +6,8 @@ class ColNames(Enum):
     ATOM_LABEL_NUM = 'atom_label_num'        # ENUMERATED ATOMS. (EQUIVALENT TO `atomcodes` IN DJ's ORIGINAL RNA CODE).
     AA_ATOM_PAIR = 'aa_atom_tuple'           # RESIDUE-ATOM PAIR (ONE TUPLE PER ROW).
     AA_ATOM_LABEL_NUM = 'aa_atom_label_num'  # ENUMERATED RESIDUE-ATOM PAIRS. (ALTERNATIVE WAY TO GENERATE `atomcodes`).
-    BB_INDEX = 'bb_index'                    # POSITION OF 1 OUT OF 5 BACKBONE ATOMS. I'VE CHOSEN ALPHA-CARBON ('CA').
+    BB_ATOM_POS = 'bb_atom_pos'              # POSITION OF 1 OUT OF 5 BACKBONE ATOMS. 'CA' ELSE MOST C-TERM ALTERNATIVE.
+    BBINDICES = 'bbindices'                  # INDEX POSITION OF THE ATOM POSITION (`A_id`) OF ALLOCATED BACKBONE ATOM.
     BB_OR_SC = 'bb_or_sc'                    # BACKBONE OR SIDE-CHAIN ATOM ('bb' or 'sc').
     MEAN_COORDS = 'mean_xyz'                 # MEAN OF X, Y, Z COORDINATES FOR EACH ATOM.
     MEAN_CORR_X = 'mean_corrected_x'         # X COORDINATES FOR EACH ATOM SUBTRACTED BY THE MEAN OF XYZ COORDINATES.
