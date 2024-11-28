@@ -29,6 +29,7 @@ _pdbx_poly_seq_scheme:
 
 import sys
 import os
+from typing import List
 from enum import Enum
 import time
 import random
@@ -286,7 +287,8 @@ def main():
                                    batch_size=BATCH_SIZE,
                                    shuffle=True,
                                    drop_last=True,
-                                   num_workers=4,
+                                   # num_workers=4,
+                                   num_workers=0,
                                    pin_memory=True,
                                    collate_fn=my_collate)
 
@@ -294,7 +296,8 @@ def main():
                                  batch_size=1,
                                  shuffle=False,
                                  drop_last=False,
-                                 num_workers=4,
+                                 # num_workers=4,
+                                 num_workers=0,
                                  pin_memory=True,
                                  collate_fn=my_collate)
 
@@ -332,27 +335,27 @@ def main():
     print("Starting training...", flush=True)
 
     # Process one sample and return loss
-    def calculate_sample_loss(sample):
+    def calculate_sample_loss(_sample: List[torch.Tensor]) -> float:
         """
         Calculate loss for a single sample, combining 3 difference loss components in a weight ed sum of backbone loss,
         confidence loss and difference loss.
-        :param sample: Tuple of the following 10 elements: `embed`, `noised_coords`, `noise_levels`, `noise`,
+        :param _sample: Tuple of the following 10 elements: `embed`, `noised_coords`, `noise_levels`, `noise`,
         `aacodes`, `atomcodes`, `aaindices`, `bb_coords`, `target_coords` and `target`. All of which are used except
         for `noise` (sample[3]) and `target` (sample[9]).
         :return: the combined loss.
         """
-        # I'M NOT 100% CLEAR ON THIS NON_BLOCKING ARGUMNET. DOES IT REDUCE COMPUTATION TIME, IN ASYNCHRONOUS CONTEXT ?
+        # I'M NOT 100% CLEAR ON THIS NON_BLOCKING ARGUMENT. DOES IT REDUCE COMPUTATION TIME, IN ASYNCHRONOUS CONTEXT ?
         # (embed, noised_coords, noise_levels, noise, aacodes, atomcodes, aaindices, bb_coords, target_coords, target)
-        inputs = sample[0].cuda(non_blocking=True)  # `embed` (pLM embedding model?)
-        noised_coords = sample[1].cuda(non_blocking=True)  # prediction after noise added ?
-        noise_levels = sample[2].cuda(non_blocking=True)  # how much noise ?
+        inputs = _sample[0].cuda(non_blocking=True)  # pLM embedding tensor
+        noised_coords = _sample[1].cuda(non_blocking=True)  # prediction after noise added ?
+        noise_levels = _sample[2].cuda(non_blocking=True)  # how much noise ?
         # ntcodes = sample[4].cuda(non_blocking=True)
-        aacodes = sample[4].cuda(non_blocking=True)  # Enumeration of amino acids (0-19)
-        atomcodes = sample[5].cuda(non_blocking=True)  # Enumeration of atoms (0-37 or 0-186)
+        aacodes = _sample[4].cuda(non_blocking=True)  # Enumeration of amino acids (0-19)
+        atomcodes = _sample[5].cuda(non_blocking=True)  # Enumeration of atoms (0-37 or 0-186)
         # ntindices = sample[6].cuda(non_blocking=True)
-        aaindices = sample[6].cuda(non_blocking=True)  # Position of amino acid in protein.
-        bb_coords = sample[7].cuda(non_blocking=True)  # X,Y,Z coordinates of the chosen backbone atoms (`CA`).
-        target_coords = sample[8].cuda(non_blocking=True)  # X,Y,Z coordinates of all of the other atoms ? Or
+        aaindices = _sample[6].cuda(non_blocking=True)  # Position of amino acid in protein.
+        bb_coords = _sample[7].cuda(non_blocking=True)  # X,Y,Z coordinates of the chosen backbone atoms (`CA`).
+        target_coords = _sample[8].cuda(non_blocking=True)  # X,Y,Z coordinates of all of the other atoms ? Or
         # specifically non-backbone atoms.. Is it possible to know exactly which atoms are definitely from side-chains?
 
         # pred_denoised, pred_coords, pred_confs = network(inputs, ntcodes, atomcodes, ntindices, noised_coords, noise_levels)
