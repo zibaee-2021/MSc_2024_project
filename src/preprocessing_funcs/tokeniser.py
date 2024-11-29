@@ -107,7 +107,12 @@ def nums_of_missing_data(pdf):
     counts = {
         'NaN': (pdf.map(lambda x: isinstance(x, float) and pd.isna(x))).sum().sum(),
         'pd.NA': (pdf.map(lambda x: x is pd.NA)).sum().sum(),
-        'pd.NaT': (pdf.map(lambda x: x is pd.NaT)).sum().sum()
+        'pd.NaT': (pdf.map(lambda x: x is pd.NaT)).sum().sum(),
+        ' ': (pdf.map(lambda x: x == ' ')).sum().sum(),
+        'na': (pdf.map(lambda x: x.lower() == 'na')).sum().sum(),
+        'nan': (pdf.map(lambda x: x.lower() == 'nan')).sum().sum(),
+        'none': (pdf.map(lambda x: x.lower() == 'none')).sum().sum(),
+        'null': (pdf.map(lambda x: x.lower() == 'null')).sum().sum()
     }
     print(counts)
     has_missing_data = any(value > 0 for value in counts.values())
@@ -118,6 +123,12 @@ def nums_of_missing_data(pdf):
     # missing_strings = ['NaN', 'None', 'N/A', 'missing', 'NULL', '']
     # pdf = pdf.replace(missing_strings, np.nan)
     return pdf
+
+
+def _each_column_has_expected_values(pdf_chain):
+    pdf_chain.head()
+    # TODO checks that each column has values of the expected type and range.
+    pass
 
 
 def _assign_mean_corrected_coordinates(pdfs: List[pd.DataFrame], pdb_id: str) -> List[pd.DataFrame]:
@@ -545,6 +556,7 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=Path.rp_diffdata_cif_d
                                              flatfiles=flatfile_format_to_write, pdb_id=pdbid)
         for pdf_chain in cif_pdfs_per_chain:
             nums_of_missing_data(pdf_chain)
+            _each_column_has_expected_values(pdf_chain)
             chain = pdf_chain[CIF.S_asym_id.value].iloc[0]
             pdbid_chain = f'{pdbid}_{chain}'
             for_pdbchain_lst.append(pdbid_chain)
