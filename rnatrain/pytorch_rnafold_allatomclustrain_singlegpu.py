@@ -1,78 +1,20 @@
 #!/home/jones/miniconda3/bin/python
-"""
-DJ's diffusion method for training and inference of RNA structures from primary sequence, adapted here for proteins.
 
-General notes:
-
-- `pdf_` in any variable name refers to it being Pandas dataframe.
-
-
-atom_site:
-    group_PDB,          # 'ATOM' or 'HETATM'    - Filter on this then remove.
-    label_seq_id,       # residue position     - used to join with S_seq_id, then remove.
-    label_comp_id,      # residue (3-letter)    - used to sanity-check with S_mon_id, then remove.
-    id,                 # atom position         - sort on this, keep.
-    label_atom_id,      # atom                  - keep
-    label_asym_id,      # chain                 - join on this, keep.
-    Cartn_x,            # atom x-coordinates
-    Cartn_y,            # atom y-coordinates
-    Cartn_z,            # atom z-coordinates
-    occupancy           # occupancy
-
-_pdbx_poly_seq_scheme:
-    seq_id,             # residue position      - join on this, sort on this, keep.
-    mon_id,             # residue (3-letter)    - used to sanity-check with A_label_comp_id, keep*.
-    pdb_seq_num,        # residue position      - keep for now, as may relate to sequence as input to make embeddings.
-    asym_id,            # chain                 - join on this, sort on this, then remove.
-
-"""
+# Diffusion method for RNA folding
 
 import sys
 import os
-from typing import List
-from enum import Enum
 import time
 import random
 from math import sqrt, log
 import numpy as np
-import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.cuda.amp import GradScaler
 from torch.utils.data import Dataset, DataLoader
-from nndef_protfold_atompyt2 import DiffusionNet
-
-from data_layer import data_handler as dh
-from src.preprocessing_funcs import tokeniser as tk
-from src.enums import ColNames, CIF
-
-
-# `rp_` stands for relative path:
-class Path(Enum):
-    rp_diffdata_cif_dir = 'diff_data/mmCIF'
-    rp_diffdata_emb_dir = 'diff_data/emb'
-    rp_diffdata_tokenised_dir = 'diff_data/tokenised'
-    rp_diffdata_573_SD_PDBid_lst = 'diff_data/PDBid_list/SD_573.lst'
-    rp_diffdata_10_Globins_PDBid_lst = 'diff_data/PDBid_list/globins_10.lst'
-    rp_diffdata_1_Globin_PDBid_lst = 'diff_data/PDBid_list/globin_1.lst'
-    rp_diffdata_9_PDBids_lst = 'diff_data/PDBid_list/pdbchains_9.lst'
-
-
-class Filename(Enum):
-    # OUTPUT FILE NAMES:
-    prot_e2e_prot_model_pt = 'prot_e2e_model.pt'
-    # CAN BE INPUT OR OUTPUT:
-    prot_e2e_prot_model_train_pt = 'prot_e2e_model_train.pt'
-    checkpoint_pt = 'checkpoint.pt'
-
-
-class FileExt(Enum):
-    ssv = 'ssv'
-    dot_ssv = '.ssv'
-    dot_pt = '.pt'
-
+from nndef_rnafold_atompyt2 import DiffusionNet
 
 os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 # BATCH_SIZE = 32
@@ -80,32 +22,115 @@ BATCH_SIZE = 8
 # NSAMPLES = 24
 NSAMPLES = 12
 SIGDATA = 16
-
+        
 RESTART_FLAG = True
 FINETUNE_FLAG = False
 
 
+# Load dataset function remains the same
 def load_dataset():
-    train_list, validation_list = tk.load_dataset()
+
+    train_list = []
+    validation_list = []
+    tnum = 0
+
+    atokendict = {"OP3": 0, "P": 1, "OP1": 2, "OP2": 3, "O5'": 4, "C5'": 5, "C4'": 6, "O4'": 7, "C3'": 8, "O3'": 9,
+                  "C2'": 10, "O2'": 11, "C1'": 12, "N9": 13, "C8": 14, "N7": 15, "C5": 16, "C6": 17, "O6": 18,
+                  "N1": 19, "C2": 20, "N2": 21, "N3": 22, "C4": 23, "O2": 24, "N4": 25, "N6": 26, "O4": 27}
+
+    ntnumdict = {'A': 0, 'U': 1, 'G': 2, 'C': 3}
+
+    sum_d2 = 0
+    sum_d = 0
+    nn = 0
+    
+    with open('train_clusters.lst', 'r') as targetfile:
+        for line in targetfile:
+            targets = line.rstrip().split()
+            sp = []
+            for target in targets:
+                ntcodes = []
+                ntindices = []
+                bbindices = []
+                atomcodes = []
+                coords = []
+                ntindex = -1
+                atomindex = 0
+                lastnid = None
+
+                with open('data/cif/' + target + '.cif', 'r') as pdbfile:
+                    for line in pdbfile:
+                        if line[:4] == 'ATOM':
+                            fields = line.split()
+                            atid = fields[3].replace('"', '')
+                            if atid not in atokendict or float(fields[13]) <= 0.5:
+                                continue
+                            if fields[8] != lastnid:
+                                nt = ntnumdict.get(fields[5], 4)
+                                ntcodes.append(nt)
+                                bbindices.append(atomindex)
+                                ntindex += 1
+                                lastnid = fields[8]
+                            if atid == "C3'" or atid == "P":
+                                # Replace representative reference atom index with preferred type (C3' > P)
+                                bbindices[-1] = atomindex
+                            # Split the line
+                            xyz_fields = [fields[10], fields[11], fields[12]]
+                            coords.append(np.array([float(xyz_fields[0]), float(xyz_fields[1]), float(xyz_fields[2])]))
+                            ntindices.append(ntindex)
+                            atomcodes.append(atokendict[atid])
+                            atomindex += 1
+
+                length = ntindex+1
+
+                if length < 10 or length > 500:
+                    continue
+
+                assert torch.load("data/emb/" + target + ".pt").size(1) == length
+
+                assert length == len(bbindices)
+
+                if len(ntindices) < length * 6:
+                    print("WARNING: Too many missing atoms in ", target, length, len(ntindices))
+                    continue
+
+                ntcodes = np.asarray(ntcodes, dtype=np.uint8)
+                atomcodes = np.asarray(atomcodes, dtype=np.uint8)
+                bbindices = np.asarray(bbindices, dtype=np.int16)
+                ntindices = np.asarray(ntindices, dtype=np.int16)
+
+                target_coords = np.asarray(coords, dtype=np.float32)
+                target_coords -= target_coords.mean(0)
+
+                assert length == target_coords[bbindices].shape[0]
+
+                sum_d2 += (target_coords ** 2).sum()
+                sum_d += np.sqrt((target_coords ** 2).sum(axis=-1)).sum()
+                nn += target_coords.shape[0]
+
+                diff = target_coords[1:] - target_coords[:-1]
+                distances = np.linalg.norm(diff, axis=1)
+
+                print(target_coords.shape, target, length, distances.min(), distances.max())
+
+                sp.append((ntcodes, atomcodes, ntindices, bbindices, target, target_coords))
+
+            # Choose every 10th sample for validation
+            if tnum % 10 == 0:
+                validation_list.append(sp)
+            else:
+                train_list.append(sp)
+            tnum += 1
+        
+    sigma_data = sqrt((sum_d2 / nn) - (sum_d / nn) ** 2)
+    print("Data s.d. = ", sigma_data)
+    print("Data unit var scaling = ", 1/sigma_data)
+
     return train_list, validation_list
 
 
 # Superpose coordinates (superposes c1 on c2)
 def lsq_fit(c1, c2):
-    """
-    To compare two sets of 3D coordinates in a way that is rotation-invariant, this function performs the rotation
-    that minimises any rotational differences, so that subsequent comparisons are
-    A rigid transformation fitting, using least squares method for minimising the distance between two sets of
-    coordinates. Minimisation is achieved using SVD. (This involves aligning points, via rotation, rather than
-    fitting a model to data as in the application of least squares that I am more used to encountering). Note the
-    sum of squared errors does not need to be explicitly calculated because the use of SVD shortcuts to the
-    optimal rotation matrix, so its performed implicitly.
-    :param c1: Set of 3D points.
-    :param c2: Set of 3D points.
-    :return: The set of points from `c1` after they've been rotated to align as closely as possible with `c2`.
-    Best-fit transformation of `c1` coordinates onto `c2` coordinates, where only a rotation (no scaling or
-    reflection) has been applied.
-    """
     with torch.no_grad():
         P = c1.transpose(1, 2)
         Q = c2.transpose(1, 2)
@@ -119,13 +144,11 @@ def lsq_fit(c1, c2):
 
         cov = torch.matmul(P, Q.transpose(1, 2))
 
-        # Find optimal rotation matrix using SVD (which minimises squared distances between corresponding points):
         try:
             U, S, Vh = torch.linalg.svd(cov)
         except RuntimeError:
             return None
 
-        #  Applying the rotation to align c1 with c2:
         V = Vh.transpose(-2, -1)
         d = torch.eye(3, device=P.device).repeat(P.size(0),1,1)
         d[:, 2, 2] = torch.det(torch.matmul(V, U.transpose(-2, -1)))
@@ -139,7 +162,7 @@ def lsq_fit(c1, c2):
 def random_rotation_matrices(N):
     """Generates N random rotation matrices."""
     axes = np.random.randn(N, 3)
-    axes /= np.linalg.norm(axes, axis=1)[:, np.newaxis]  # normalise each vector
+    axes /= np.linalg.norm(axes, axis=1)[:, np.newaxis]  # normalize each vector
     angles = np.random.uniform(0, 2 * np.pi, N)
     cos_a = np.cos(angles)
     sin_a = np.sin(angles)
@@ -164,8 +187,8 @@ class DMPDataset(Dataset):
     def __init__(self, sample_list, augment=True):
         self.sample_list = sample_list
         self.augment = augment
-        # self.mse_sum = 0
-        # self.mse_count = 0
+        #self.mse_sum = 0
+        #self.mse_count = 0
         
     def __len__(self):
         return len(self.sample_list)
@@ -175,46 +198,41 @@ class DMPDataset(Dataset):
             sample = random.choice(self.sample_list[tn])
         else:
             sample = self.sample_list[tn][0]
-        # ntseq = sample[0]
-        aaseq = sample[0]
+        ntseq = sample[0]
         atomcodes = sample[1]
-        # ntindices = sample[2]
-        aaindices = sample[2]
+        ntindices = sample[2]
         bbindices = sample[3]
         target = sample[4]
         target_coords = sample[5]
 
-        embed = torch.load(f'{Path.rp_diffdata_emb_dir.value}/{target}{FileExt.dot_pt.value}')
+        embed = torch.load("data/emb/" + target + ".pt")
         
-        # length = ntseq.shape[0]
-        length = aaseq.shape[0]
+        length = ntseq.shape[0]
 
         if FINETUNE_FLAG:
             croplen = 20
         else:
             croplen = random.randint(10, min(20, length))
 
+        print(f'croplen={croplen}')
+
         if self.augment and length > croplen:
             lcut = random.randint(0, length-croplen)
-            # ntseq = ntseq[lcut:lcut+croplen]
-            aaseq = aaseq[lcut:lcut + croplen]
-            bbindices = bbindices[lcut: lcut + croplen]
+            ntseq = ntseq[lcut:lcut+croplen]
+            bbindices = bbindices[lcut:lcut+croplen]
             bb_coords = target_coords[bbindices]
-            embed = embed[:, lcut: lcut + croplen]
-            # mask = np.logical_and(ntindices >= lcut, ntindices < lcut+croplen)
-            mask = np.logical_and(aaindices >= lcut, aaindices < lcut + croplen)
+            embed = embed[:,lcut:lcut+croplen]
+            mask = np.logical_and(ntindices >= lcut, ntindices < lcut+croplen)
             atomcodes = atomcodes[mask]
-            # ntindices = ntindices[mask] - lcut
-            aaindices = aaindices[mask] - lcut
+            ntindices = ntindices[mask] - lcut
             target_coords = target_coords[mask]
             length = croplen
         else:
             bb_coords = target_coords[bbindices]
 
         if target_coords.shape[0] < 10:
-            # print(target, length, ntindices)
-            print(target, length, aaindices)
-
+            print(target, length, ntindices)
+            
         noised_coords = target_coords - target_coords.mean(axis=0)
 
         # Original coordinates and replicating for N sets (N, L, 3)
@@ -226,7 +244,7 @@ class DMPDataset(Dataset):
             translations = np.random.randn(NSAMPLES,1,3)
             # Apply rotations using einsum for batch matrix multiplication
             batched_coords = np.einsum('nij,nkj->nki', rotation_matrices, batched_coords) + translations
-            #  distribution = torch.distributions.Beta(1, 8)
+            #distribution = torch.distributions.Beta(1, 8)
             distribution = torch.distributions.Uniform(0, 1)
             tsteps = distribution.sample((NSAMPLES,))
         else:
@@ -236,11 +254,9 @@ class DMPDataset(Dataset):
         sig_min_r7 = 4e-4 ** (1/7)
         noise_levels = (sig_max_r7 + tsteps * (sig_min_r7 - sig_max_r7)) ** 7
 
-        # ntcodes = torch.from_numpy(ntseq.copy()).long()
-        aacodes = torch.from_numpy(aaseq.copy()).long()
+        ntcodes = torch.from_numpy(ntseq.copy()).long()
         bb_coords = torch.from_numpy(bb_coords).float()
-        # ntindices = torch.from_numpy(ntindices.copy()).long()
-        aaindices = torch.from_numpy(aaindices.copy()).long()
+        ntindices = torch.from_numpy(ntindices.copy()).long()
         atomcodes = torch.from_numpy(atomcodes.copy()).long()
         target_coords = torch.from_numpy(target_coords.copy()).unsqueeze(0)
 
@@ -248,11 +264,11 @@ class DMPDataset(Dataset):
         
         noise = torch.randn_like(batched_coords)
 
-        # print(noise_levels.size(), noise.size(), batched_coords.size())
+        #print(noise_levels.size(), noise.size(), batched_coords.size())
         noised_coords = noise_levels.view(NSAMPLES, 1, 1) * noise + batched_coords
 
-        # sample = (embed, noised_coords, noise_levels, noise, ntcodes, atomcodes, ntindices, bb_coords, target_coords, target)
-        sample = (embed, noised_coords, noise_levels, noise, aacodes, atomcodes, aaindices, bb_coords, target_coords, target)
+        sample = (embed, noised_coords, noise_levels, noise, ntcodes, atomcodes, ntindices, bb_coords, target_coords,
+                  target)
 
         return sample
 
@@ -261,13 +277,7 @@ def main():
     global BATCH_SIZE
     
     # Create neural network model
-    network = DiffusionNet(seqwidth=1024,
-                           atomwidth=128,
-                           seqheads=16,
-                           atomheads=8,
-                           seqdepth=6,
-                           atomdepth=3,
-                           cycles=2).cuda()
+    network = DiffusionNet(seqwidth=1024, atomwidth=128, seqheads=16, atomheads=8, seqdepth=6, atomdepth=3, cycles=2).cuda()
 
     # Load the dataset
     print("Loading data...")
@@ -288,7 +298,6 @@ def main():
                                    shuffle=True,
                                    drop_last=True,
                                    num_workers=4,
-                                   # num_workers=0,
                                    pin_memory=True,
                                    collate_fn=my_collate)
 
@@ -297,7 +306,6 @@ def main():
                                  shuffle=False,
                                  drop_last=False,
                                  num_workers=4,
-                                 # num_workers=0,
                                  pin_memory=True,
                                  collate_fn=my_collate)
 
@@ -312,7 +320,7 @@ def main():
 
     if RESTART_FLAG:
         try:
-            pretrained_dict = torch.load('prot_e2e_model_train.pt', map_location='cuda')
+            pretrained_dict = torch.load('rna_e2e_model_train.pt', map_location='cuda')
             model_dict = network.state_dict()
             pretrained_dict = {k: v for k, v in pretrained_dict.items() if (k in model_dict) and (model_dict[k].shape == pretrained_dict[k].shape)}
             network.load_state_dict(pretrained_dict, strict=False)
@@ -320,7 +328,7 @@ def main():
             pass
 
         try:
-            checkpoint = torch.load(Filename.checkpoint_pt.value)
+            checkpoint = torch.load('checkpoint.pt')
             start_iteration = checkpoint['iteration']
             val_err_min = checkpoint['val_err_min']
             print("Checkpoint file loaded.")
@@ -335,33 +343,19 @@ def main():
     print("Starting training...", flush=True)
 
     # Process one sample and return loss
-    def calculate_sample_loss(_sample: List[torch.Tensor]) -> float:
-        """
-        Calculate loss for a single sample, combining 3 difference loss components in a weight ed sum of backbone loss,
-        confidence loss and difference loss.
-        :param _sample: Tuple of the following 10 elements: `embed`, `noised_coords`, `noise_levels`, `noise`,
-        `aacodes`, `atomcodes`, `aaindices`, `bb_coords`, `target_coords` and `target`. All of which are used except
-        for `noise` (sample[3]) and `target` (sample[9]).
-        :return: the combined loss.
-        """
-        # I'M NOT 100% CLEAR ON THIS NON_BLOCKING ARGUMENT. DOES IT REDUCE COMPUTATION TIME, IN ASYNCHRONOUS CONTEXT ?
-        # (embed, noised_coords, noise_levels, noise, aacodes, atomcodes, aaindices, bb_coords, target_coords, target)
-        inputs = _sample[0].cuda(non_blocking=True)  # pLM embedding tensor
-        noised_coords = _sample[1].cuda(non_blocking=True)  # prediction after noise added ?
-        noise_levels = _sample[2].cuda(non_blocking=True)  # how much noise ?
-        # ntcodes = sample[4].cuda(non_blocking=True)
-        aacodes = _sample[4].cuda(non_blocking=True)  # Enumeration of amino acids (0-19)
-        atomcodes = _sample[5].cuda(non_blocking=True)  # Enumeration of atoms (0-37 or 0-186)
-        # ntindices = sample[6].cuda(non_blocking=True)
-        aaindices = _sample[6].cuda(non_blocking=True)  # Position of amino acid in protein.
-        bb_coords = _sample[7].cuda(non_blocking=True)  # X,Y,Z coordinates of the chosen backbone atoms (`CA`).
-        target_coords = _sample[8].cuda(non_blocking=True)  # X,Y,Z coordinates of all of the other atoms ? Or
-        # specifically non-backbone atoms.. Is it possible to know exactly which atoms are definitely from side-chains?
+    def calculate_sample_loss(sample):
+        inputs = sample[0].cuda(non_blocking=True)
+        noised_coords = sample[1].cuda(non_blocking=True)
+        noise_levels = sample[2].cuda(non_blocking=True)
+        ntcodes = sample[4].cuda(non_blocking=True)
+        atomcodes = sample[5].cuda(non_blocking=True)
+        ntindices = sample[6].cuda(non_blocking=True)
+        bb_coords = sample[7].cuda(non_blocking=True)
+        target_coords = sample[8].cuda(non_blocking=True)
 
-        # pred_denoised, pred_coords, pred_confs = network(inputs, ntcodes, atomcodes, ntindices, noised_coords, noise_levels)
-        pred_denoised, pred_coords, pred_confs = network(inputs, aacodes, atomcodes, aaindices, noised_coords, noise_levels)
+        pred_denoised, pred_coords, pred_confs = network(inputs, ntcodes, atomcodes, ntindices, noised_coords, noise_levels)
 
-        predmap = torch.cdist(pred_coords, pred_coords)  # What does this do. What is this for ?
+        predmap = torch.cdist(pred_coords, pred_coords)
         bb_coords = bb_coords.unsqueeze(0)
         targmap = torch.cdist(bb_coords, bb_coords)
 
@@ -383,6 +377,7 @@ def main():
 
         loss = bb_loss + 0.01 * conf_loss + diff_loss
 
+        print(f'debugging --> loss = {loss}')
         # Return zero if NaN
         if loss != loss:
             loss = 0
@@ -398,10 +393,12 @@ def main():
             optimizer.zero_grad()
 
             batch_loss = 0
+            print(f'len(sample_batch)={len(sample_batch)}')
             for sample in sample_batch:
                 batch_loss = batch_loss + calculate_sample_loss(sample)
 
             # Scale the loss and call backward()
+
             scaler.scale(batch_loss / len(sample_batch)).backward()
             scaler.step(optimizer)
             scaler.update()
@@ -422,7 +419,7 @@ def main():
                     val_samples += 1
 
             val_err /= val_samples
-            #  scheduler.step(val_err)
+            #scheduler.step(val_err)
 
             print(f"Epoch {epoch}, train loss: {train_err:.4f}, val loss: {val_err:.4f}")
             print(f"Time taken = {time.time() - last_time:.2f}", flush=True)
@@ -430,15 +427,15 @@ def main():
 
             if val_err < val_err_min:
                 val_err_min = val_err
-                torch.save(network.state_dict(), 'prot_e2e_model.pt')
+                torch.save(network.state_dict(), 'rna_e2e_model.pt')
                 print("Saving model...", flush=True)
                     
-            torch.save(network.state_dict(), 'prot_e2e_model_train.pt')
+            torch.save(network.state_dict(), 'rna_e2e_model_train.pt')
 
             torch.save({
                 'epoch': epoch,
                 'val_err_min': val_err_min,
-            }, Filename.checkpoint_pt.value)
+            }, 'checkpoint.pt')
 
 
 if __name__ == "__main__":
@@ -446,10 +443,7 @@ if __name__ == "__main__":
     check_runtime_specs = False
 
     if check_runtime_specs:
-        import pandas
-        import numpy
-        import torch
-        import einops
+        import pandas, numpy, torch, einops
 
         # Print the active Conda environment (if any)
         print("Conda environment:", os.environ.get("CONDA_DEFAULT_ENV"))
@@ -477,4 +471,3 @@ if __name__ == "__main__":
         print(f'sys.version = {sys.version}')
 
     main()
-

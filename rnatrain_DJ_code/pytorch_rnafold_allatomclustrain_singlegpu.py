@@ -18,7 +18,7 @@ from nndef_rnafold_atompyt2 import DiffusionNet
 
 # Limit program to only see & use GPU with ID 0 (first GPU on system). Otherwise, program can access all available GPUs.
 # Including this line would seem to restrict the effectiveness of the scheduler to spread workload for different users.
-# os.environ['CUDA_VISIBLE_DEVICES'] = "0"
+os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 # BATCH_SIZE = 32
 BATCH_SIZE = 8
 # NSAMPLES = 24
@@ -46,7 +46,7 @@ def load_dataset():
     sum_d = 0
     nn = 0
     
-    with open('train_clusters.lst', 'r') as targetfile:
+    with open('../rnatrain/train_clusters.lst', 'r') as targetfile:
         for line in targetfile:
             targets = line.rstrip().split()
             sp = []
@@ -345,7 +345,7 @@ def main():
         try:
             # What is this rna_e2e_model_train.pt?
             # Is it an empty network ? Untrained weights or has it been trained on something?
-            pretrained_dict = torch.load('rna_e2e_model_train.pt', map_location='cuda')
+            pretrained_dict = torch.load('../rnatrain/rna_e2e_model_train.pt', map_location='cuda')
             model_dict = network.state_dict()
             pretrained_dict = {k: v for k, v in pretrained_dict.items() if (k in model_dict) and (model_dict[k].shape == pretrained_dict[k].shape)}
             network.load_state_dict(pretrained_dict, strict=False)
@@ -353,7 +353,7 @@ def main():
             pass
 
         try:
-            checkpoint = torch.load('checkpoint.pt')
+            checkpoint = torch.load('../rnatrain/checkpoint.pt')
             start_iteration = checkpoint['iteration']
             val_err_min = checkpoint['val_err_min']
             print("Checkpoint file loaded.")
@@ -449,44 +449,17 @@ def main():
 
             if val_err < val_err_min:
                 val_err_min = val_err
-                torch.save(network.state_dict(), 'rna_e2e_model.pt')
+                torch.save(network.state_dict(), '../rnatrain/rna_e2e_model.pt')
                 print("Saving model...", flush=True)
                     
-            torch.save(network.state_dict(), 'rna_e2e_model_train.pt')
+            torch.save(network.state_dict(), '../rnatrain/rna_e2e_model_train.pt')
 
             torch.save({
                 'epoch': epoch,
                 'val_err_min': val_err_min,
-            }, 'checkpoint.pt')
+            }, '../rnatrain/checkpoint.pt')
 
 
 if __name__ == "__main__":
-    import numpy
-    import torch
-    import einops
-
-    # Print the active Conda environment (if any)
-    print("Conda environment:", os.environ.get("CONDA_DEFAULT_ENV"))
-
-    # Print the environment paths
-    print("Environment PATH:", os.environ.get("PATH"))
-
-    print(f'PyTorch CUDA version: {torch.version.cuda}')
-    print(f'IS CUDA available: {torch.cuda.is_available()}')
-    if torch.cuda.is_available():
-        print(f'CUDA devices: {torch.cuda.device_count()}')
-        for i in range(torch.cuda.device_count()):
-            print(f'Device {i}: {torch.cuda.get_device_name(i)}')
-
-    import subprocess
-    # result = subprocess.run(['nvcc', '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    result = subprocess.run(['which', 'nvcc'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    print(f'result.stdout.decode(): {result.stdout.decode()}')
-
-    print(f'torch.__version__={torch.__version__}')
-    print(f'numpy.__version__={numpy.__version__}')
-    print(f'einops.__version__={einops.__version__}')
-    print(f'torch.__version__={torch.__version__}')
-    print(f'sys.version = {sys.version}')
 
     main()
