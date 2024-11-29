@@ -30,7 +30,7 @@ _pdbx_poly_seq_scheme:
 import sys
 import os
 from typing import List
-from enum import Enum
+# from enum import Enum
 import time
 import random
 from math import sqrt, log
@@ -50,28 +50,20 @@ from src.enums import ColNames, CIF
 
 
 # `rp_` stands for relative path:
-class Path(Enum):
-    rp_diffdata_cif_dir = 'diff_data/mmCIF'
-    rp_diffdata_emb_dir = 'diff_data/emb'
-    rp_diffdata_tokenised_dir = 'diff_data/tokenised'
-    rp_diffdata_573_SD_PDBid_lst = 'diff_data/PDBid_list/SD_573.lst'
-    rp_diffdata_10_Globins_PDBid_lst = 'diff_data/PDBid_list/globins_10.lst'
-    rp_diffdata_1_Globin_PDBid_lst = 'diff_data/PDBid_list/globin_1.lst'
-    rp_diffdata_9_PDBids_lst = 'diff_data/PDBid_list/pdbchains_9.lst'
+# class Path(Enum):
+#     rp_diffdata_emb_dir = 'diff_data/emb'
 
 
-class Filename(Enum):
-    # OUTPUT FILE NAMES:
-    prot_e2e_prot_model_pt = 'prot_e2e_model.pt'
-    # CAN BE INPUT OR OUTPUT:
-    prot_e2e_prot_model_train_pt = 'prot_e2e_model_train.pt'
-    checkpoint_pt = 'checkpoint.pt'
+# class Filename(Enum):
+#     # OUTPUT FILE NAMES:
+#     prot_e2e_prot_model_pt = 'prot_e2e_model.pt'
+#     # CAN BE INPUT OR OUTPUT:
+#     prot_e2e_model_train_pt = 'prot_e2e_model_train.pt'
+#     checkpoint_pt = 'checkpoint.pt'
 
 
-class FileExt(Enum):
-    ssv = 'ssv'
-    dot_ssv = '.ssv'
-    dot_pt = '.pt'
+# class FileExt(Enum):
+    # dot_pt = '.pt'
 
 
 os.environ['CUDA_VISIBLE_DEVICES'] = "0"
@@ -184,7 +176,9 @@ class DMPDataset(Dataset):
         target = sample[4]
         target_coords = sample[5]
 
-        embed = torch.load(f'{Path.rp_diffdata_emb_dir.value}/{target}{FileExt.dot_pt.value}')
+        embed_pt = f'diff_data/emb/{target}.pt'
+        embed = torch.load(embed_pt)
+        # embed = torch.load(f'{Path.rp_diffdata_emb_dir.value}/{target}{FileExt.dot_pt.value}')
         
         # length = ntseq.shape[0]
         length = aaseq.shape[0]
@@ -312,6 +306,7 @@ def main():
 
     if RESTART_FLAG:
         try:
+            # pretrained_dict = torch.load(Filename.prot_e2e_model_train_pt.value, map_location='cuda')
             pretrained_dict = torch.load('prot_e2e_model_train.pt', map_location='cuda')
             model_dict = network.state_dict()
             pretrained_dict = {k: v for k, v in pretrained_dict.items() if (k in model_dict) and (model_dict[k].shape == pretrained_dict[k].shape)}
@@ -320,7 +315,8 @@ def main():
             pass
 
         try:
-            checkpoint = torch.load(Filename.checkpoint_pt.value)
+            # checkpoint = torch.load(Filename.checkpoint_pt.value)
+            checkpoint = torch.load('checkpoint.pt')
             start_iteration = checkpoint['iteration']
             val_err_min = checkpoint['val_err_min']
             print("Checkpoint file loaded.")
@@ -430,15 +426,18 @@ def main():
 
             if val_err < val_err_min:
                 val_err_min = val_err
+                # torch.save(network.state_dict(), Filename.prot_e2e_model_pt.value)
                 torch.save(network.state_dict(), 'prot_e2e_model.pt')
                 print("Saving model...", flush=True)
                     
+            # torch.save(network.state_dict(), Filename.prot_e2e_model_train_pt.value)
             torch.save(network.state_dict(), 'prot_e2e_model_train.pt')
 
             torch.save({
                 'epoch': epoch,
                 'val_err_min': val_err_min,
-            }, Filename.checkpoint_pt.value)
+            }, 'checkpoint.pt')
+            # }, Filename.checkpoint_pt.value)
 
 
 if __name__ == "__main__":
