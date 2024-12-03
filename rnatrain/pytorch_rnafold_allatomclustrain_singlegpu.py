@@ -467,7 +467,6 @@ if __name__ == "__main__":
         print(f'pandas.__version__={pandas.__version__}')
         print(f'numpy.__version__={numpy.__version__}')
         print(f'einops.__version__={einops.__version__}')
-        print(f'torch.__version__={torch.__version__}')
         print(f'sys.version = {sys.version}')
 
     main()
