@@ -344,9 +344,9 @@ def main():
         """
         # I'M NOT 100% CLEAR ON THIS NON_BLOCKING ARGUMENT. DOES IT REDUCE COMPUTATION TIME, IN ASYNCHRONOUS CONTEXT ?
         # (embed, noised_coords, noise_levels, noise, aacodes, atomcodes, aaindices, bb_coords, target_coords, target)
-        inputs = _sample[0].cuda(non_blocking=True)  # pLM embedding tensor
+        inputs = _sample[0].cuda(non_blocking=True)  # `embed` is pLM embedding tensor
         noised_coords = _sample[1].cuda(non_blocking=True)  # prediction after noise added ?
-        noise_levels = _sample[2].cuda(non_blocking=True)  # how much noise ?
+        noise_levels = _sample[2].cuda(non_blocking=True)  # how much noise to add ??
         # ntcodes = sample[4].cuda(non_blocking=True)
         aacodes = _sample[4].cuda(non_blocking=True)  # Enumeration of amino acids (0-19)
         atomcodes = _sample[5].cuda(non_blocking=True)  # Enumeration of atoms (0-37 or 0-186)
@@ -354,12 +354,11 @@ def main():
         aaindices = _sample[6].cuda(non_blocking=True)  # Position of amino acid in protein.
         bb_coords = _sample[7].cuda(non_blocking=True)  # X,Y,Z coordinates of the chosen backbone atoms (`CA`).
         target_coords = _sample[8].cuda(non_blocking=True)  # X,Y,Z coordinates of all of the other atoms ? Or
-        # specifically non-backbone atoms.. Is it possible to know exactly which atoms are definitely from side-chains?
 
         # pred_denoised, pred_coords, pred_confs = network(inputs, ntcodes, atomcodes, ntindices, noised_coords, noise_levels)
         pred_denoised, pred_coords, pred_confs = network(inputs, aacodes, atomcodes, aaindices, noised_coords, noise_levels)
 
-        predmap = torch.cdist(pred_coords, pred_coords)  # What does this do. What is this for ?
+        predmap = torch.cdist(pred_coords, pred_coords)  # What does this do? What is this for ?
         bb_coords = bb_coords.unsqueeze(0)
         targmap = torch.cdist(bb_coords, bb_coords)
 
