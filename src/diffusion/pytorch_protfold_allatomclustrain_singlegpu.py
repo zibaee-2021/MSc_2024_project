@@ -183,7 +183,7 @@ class DMPDataset(Dataset):
         # length = ntseq.shape[0]
         length = aaseq.shape[0]
 
-        if FINETUNE_FLAG:
+        if FINETUNE_FLAG:  # False
             croplen = 20
         else:
             croplen = random.randint(10, min(20, length))
@@ -295,7 +295,7 @@ def main():
                                  pin_memory=True,
                                  collate_fn=my_collate)
 
-    if FINETUNE_FLAG:
+    if FINETUNE_FLAG:  # False
         max_lr = 1e-5
     else:
         max_lr = 3e-4
@@ -304,7 +304,7 @@ def main():
     start_epoch = 0
     max_epochs = 2000
 
-    if RESTART_FLAG:
+    if RESTART_FLAG:  # True
         try:
             # pretrained_dict = torch.load(Filename.prot_e2e_model_train_pt.value, map_location='cuda')
             pretrained_dict = torch.load('prot_e2e_model_train.pt', map_location='cuda')
