@@ -312,6 +312,7 @@ def main():
             pretrained_dict = {k: v for k, v in pretrained_dict.items() if (k in model_dict) and (model_dict[k].shape == pretrained_dict[k].shape)}
             network.load_state_dict(pretrained_dict, strict=False)
         except:
+            print("Could not read in a pretrained 'prot_e2e_model_train.pt' model (as it likely doesn't exist yet.)")
             pass
 
         try:
@@ -321,6 +322,7 @@ def main():
             val_err_min = checkpoint['val_err_min']
             print("Checkpoint file loaded.")
         except:
+            print("Could not read in a pretrained 'checkpoint.pt' model (as it likely doesn't exist yet.)")
             pass
 
     optimizer = torch.optim.RAdam(network.parameters(), lr=max_lr)
