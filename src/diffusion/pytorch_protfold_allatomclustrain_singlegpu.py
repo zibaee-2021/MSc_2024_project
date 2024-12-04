@@ -30,7 +30,7 @@ _pdbx_poly_seq_scheme:
 import sys
 import os
 from typing import List
-from enum import Enum
+# from enum import Enum
 import time
 import random
 from math import sqrt, log
@@ -50,28 +50,20 @@ from src.enums import ColNames, CIF
 
 
 # `rp_` stands for relative path:
-class Path(Enum):
-    rp_diffdata_cif_dir = 'diff_data/mmCIF'
-    rp_diffdata_emb_dir = 'diff_data/emb'
-    rp_diffdata_tokenised_dir = 'diff_data/tokenised'
-    rp_diffdata_573_SD_PDBid_lst = 'diff_data/PDBid_list/SD_573.lst'
-    rp_diffdata_10_Globins_PDBid_lst = 'diff_data/PDBid_list/globins_10.lst'
-    rp_diffdata_1_Globin_PDBid_lst = 'diff_data/PDBid_list/globin_1.lst'
-    rp_diffdata_9_PDBids_lst = 'diff_data/PDBid_list/pdbchains_9.lst'
+# class Path(Enum):
+#     rp_diffdata_emb_dir = 'diff_data/emb'
 
 
-class Filename(Enum):
-    # OUTPUT FILE NAMES:
-    prot_e2e_prot_model_pt = 'prot_e2e_model.pt'
-    # CAN BE INPUT OR OUTPUT:
-    prot_e2e_prot_model_train_pt = 'prot_e2e_model_train.pt'
-    checkpoint_pt = 'checkpoint.pt'
+# class Filename(Enum):
+#     # OUTPUT FILE NAMES:
+#     prot_e2e_prot_model_pt = 'prot_e2e_model.pt'
+#     # CAN BE INPUT OR OUTPUT:
+#     prot_e2e_model_train_pt = 'prot_e2e_model_train.pt'
+#     checkpoint_pt = 'checkpoint.pt'
 
 
-class FileExt(Enum):
-    ssv = 'ssv'
-    dot_ssv = '.ssv'
-    dot_pt = '.pt'
+# class FileExt(Enum):
+    # dot_pt = '.pt'
 
 
 os.environ['CUDA_VISIBLE_DEVICES'] = "0"
@@ -184,12 +176,14 @@ class DMPDataset(Dataset):
         target = sample[4]
         target_coords = sample[5]
 
-        embed = torch.load(f'{Path.rp_diffdata_emb_dir.value}/{target}{FileExt.dot_pt.value}')
+        embed_pt = f'diff_data/emb/{target}.pt'
+        embed = torch.load(embed_pt)
+        # embed = torch.load(f'{Path.rp_diffdata_emb_dir.value}/{target}{FileExt.dot_pt.value}')
         
         # length = ntseq.shape[0]
         length = aaseq.shape[0]
 
-        if FINETUNE_FLAG:
+        if FINETUNE_FLAG:  # False
             croplen = 20
         else:
             croplen = random.randint(10, min(20, length))
@@ -301,7 +295,7 @@ def main():
                                  pin_memory=True,
                                  collate_fn=my_collate)
 
-    if FINETUNE_FLAG:
+    if FINETUNE_FLAG:  # False
         max_lr = 1e-5
     else:
         max_lr = 3e-4
@@ -310,21 +304,25 @@ def main():
     start_epoch = 0
     max_epochs = 2000
 
-    if RESTART_FLAG:
+    if RESTART_FLAG:  # True
         try:
+            # pretrained_dict = torch.load(Filename.prot_e2e_model_train_pt.value, map_location='cuda')
             pretrained_dict = torch.load('prot_e2e_model_train.pt', map_location='cuda')
             model_dict = network.state_dict()
             pretrained_dict = {k: v for k, v in pretrained_dict.items() if (k in model_dict) and (model_dict[k].shape == pretrained_dict[k].shape)}
             network.load_state_dict(pretrained_dict, strict=False)
         except:
+            print("Could not read in a pretrained 'prot_e2e_model_train.pt' model (as it likely doesn't exist yet.)")
             pass
 
         try:
-            checkpoint = torch.load(Filename.checkpoint_pt.value)
+            # checkpoint = torch.load(Filename.checkpoint_pt.value)
+            checkpoint = torch.load('checkpoint.pt')
             start_iteration = checkpoint['iteration']
             val_err_min = checkpoint['val_err_min']
             print("Checkpoint file loaded.")
         except:
+            print("Could not read in a pretrained 'checkpoint.pt' model (as it likely doesn't exist yet.)")
             pass
 
     optimizer = torch.optim.RAdam(network.parameters(), lr=max_lr)
@@ -346,9 +344,9 @@ def main():
         """
         # I'M NOT 100% CLEAR ON THIS NON_BLOCKING ARGUMENT. DOES IT REDUCE COMPUTATION TIME, IN ASYNCHRONOUS CONTEXT ?
         # (embed, noised_coords, noise_levels, noise, aacodes, atomcodes, aaindices, bb_coords, target_coords, target)
-        inputs = _sample[0].cuda(non_blocking=True)  # pLM embedding tensor
+        inputs = _sample[0].cuda(non_blocking=True)  # `embed` is pLM embedding tensor
         noised_coords = _sample[1].cuda(non_blocking=True)  # prediction after noise added ?
-        noise_levels = _sample[2].cuda(non_blocking=True)  # how much noise ?
+        noise_levels = _sample[2].cuda(non_blocking=True)  # how much noise to add ??
         # ntcodes = sample[4].cuda(non_blocking=True)
         aacodes = _sample[4].cuda(non_blocking=True)  # Enumeration of amino acids (0-19)
         atomcodes = _sample[5].cuda(non_blocking=True)  # Enumeration of atoms (0-37 or 0-186)
@@ -356,12 +354,11 @@ def main():
         aaindices = _sample[6].cuda(non_blocking=True)  # Position of amino acid in protein.
         bb_coords = _sample[7].cuda(non_blocking=True)  # X,Y,Z coordinates of the chosen backbone atoms (`CA`).
         target_coords = _sample[8].cuda(non_blocking=True)  # X,Y,Z coordinates of all of the other atoms ? Or
-        # specifically non-backbone atoms.. Is it possible to know exactly which atoms are definitely from side-chains?
 
         # pred_denoised, pred_coords, pred_confs = network(inputs, ntcodes, atomcodes, ntindices, noised_coords, noise_levels)
         pred_denoised, pred_coords, pred_confs = network(inputs, aacodes, atomcodes, aaindices, noised_coords, noise_levels)
 
-        predmap = torch.cdist(pred_coords, pred_coords)  # What does this do. What is this for ?
+        predmap = torch.cdist(pred_coords, pred_coords)  # What does this do? What is this for ?
         bb_coords = bb_coords.unsqueeze(0)
         targmap = torch.cdist(bb_coords, bb_coords)
 
@@ -430,15 +427,18 @@ def main():
 
             if val_err < val_err_min:
                 val_err_min = val_err
+                # torch.save(network.state_dict(), Filename.prot_e2e_model_pt.value)
                 torch.save(network.state_dict(), 'prot_e2e_model.pt')
                 print("Saving model...", flush=True)
                     
+            # torch.save(network.state_dict(), Filename.prot_e2e_model_train_pt.value)
             torch.save(network.state_dict(), 'prot_e2e_model_train.pt')
 
             torch.save({
                 'epoch': epoch,
                 'val_err_min': val_err_min,
-            }, Filename.checkpoint_pt.value)
+            }, 'checkpoint.pt')
+            # }, Filename.checkpoint_pt.value)
 
 
 if __name__ == "__main__":
