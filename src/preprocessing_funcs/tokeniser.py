@@ -568,9 +568,16 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=Path.rp_diffdata_cif_d
     return cif_pdfs_per_chain
 
 
+def _chdir_to_tokeniser():
+    cwd = os.getcwd()
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    # print(f'Path changed from {cwd} to = {os.getcwd()}. (This is intended to be temporary).')
+    return cwd
+
+
 def load_dataset():
     print('Starting `load_dataset()`...')
-    cwd = dh._chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
+    cwd = _chdir_to_tokeniser()  # Store cwd to return to at end. Change current dir to data layer
     tnum = 0
     sum_d2 = 0
     sum_d = 0
@@ -683,7 +690,7 @@ def load_dataset():
         print(f'Data s.d. = , {sigma_data}')
         print(f'Data unit var scaling = , {1 / sigma_data}')
 
-    dh._restore_original_working_dir(cwd)
+    os.chdir(cwd)  # restore original working directory
     print('Finished `load_dataset()`...')
     return train_list, validation_list
 
