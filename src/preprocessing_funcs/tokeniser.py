@@ -578,7 +578,7 @@ def load_dataset():
 
     # GET THE LIST OF PDB NAMES FOR PROTEINS TO TOKENISE:
     targetfile_lst_path = Path.rp_diffdata_9_PDBids_lst.value
-    assert os.path.exists(targetfile_lst_path)
+    assert os.path.exists(targetfile_lst_path), f'{targetfile_lst_path} cannot be found. Btw, cwd={os.getcwd()}'
     targetfile = ''
     try:
         with open(targetfile_lst_path, 'r') as lst_f:
