@@ -1,17 +1,18 @@
 import json
-from enum import Enum
+# from enum import Enum
 from src.preprocessing_funcs import FASTA_reader as fasta_r
 from data_layer import data_handler as dh
-from src.enums import CIF
+# from src.enums import CIF
 
 
-class Path(Enum):
-    tokenised_dir = '../diffusion/diff_data/tokenised'
-    per_residue_atoms_json = '../../data/residues_atoms/per_residue_atoms.json'
+# class Path(Enum):
+#     tokenised_dir = '../diffusion/diff_data/tokenised'
+#     per_residue_atoms_json = '../../data/residues_atoms/per_residue_atoms.json'
 
 
 def  _get_aa_to_atom_map() -> dict:
-    relpath_json_f = Path.per_residue_atoms_json.value
+    # relpath_json_f = Path.per_residue_atoms_json.value
+    relpath_json_f = '../../data/residues_atoms/per_residue_atoms.json'
     try:
         with open(relpath_json_f, 'r') as json_f:
             aa_to_atoms_map = json.load(json_f)
@@ -53,10 +54,14 @@ def translate_aa_to_atoms(uniprot_ids=None, pdbid_chains=None) -> dict:
 
         for pdbid_chain in pdbid_chains:
             pdf = dh.read_tokenised_cif_chain_ssv_to_pdf(pdbid_chain=pdbid_chain,
-                                                         relpath_tokensd_dir=Path.tokenised_dir.value)
-            aa_position_sequence = pdf[[CIF.S_seq_id.value, CIF.S_mon_id.value]]
-            aa_position_sequence = aa_position_sequence.drop_duplicates(subset=CIF.S_seq_id.value, keep='first')
-            aa_sequence = ''.join(aa_position_sequence[CIF.S_mon_id.value])
+                                                         # relpath_tokensd_dir=Path.tokenised_dir.value)
+                                                         relpath_tokensd_dir='../diffusion/diff_data/tokenised')
+            # aa_position_sequence = pdf[[CIF.S_seq_id.value, CIF.S_mon_id.value]]
+            aa_position_sequence = pdf[['S_seq_id', 'S_mon_id']]
+            # aa_position_sequence = aa_position_sequence.drop_duplicates(subset=CIF.S_seq_id.value, keep='first')
+            aa_position_sequence = aa_position_sequence.drop_duplicates(subset='S_seq_id', keep='first')
+            # aa_sequence = ''.join(aa_position_sequence[CIF.S_mon_id.value])
+            aa_sequence = ''.join(aa_position_sequence['S_mon_id'])
             for aa in aa_sequence:
                 if aa in aa_to_atoms_map:
                     atomic_sequence.extend(aa_to_atoms_map[aa])

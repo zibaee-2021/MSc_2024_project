@@ -5,7 +5,7 @@ from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 from src.preprocessing_funcs import tokeniser as tk
 from src.preprocessing_funcs import cif_parser
 from data_layer import data_handler as dh
-from src.enums import CIF
+# from src.enums import CIF
 
 """
 Expected 17 columns of output dataframe of `parse_tokenise_cif_write_flatfile()`:
@@ -122,6 +122,7 @@ class TestPreprocessingFuncs(TestCase):
     def test_some_pd_func(self):
         pdf_target = pd.read_csv(f'{self.test_tokenised_dir}/{self.test_1V5H_ssv_small}', sep=' ')
         pdf_target_deduped = (pdf_target
-                              .drop_duplicates(subset=CIF.S_seq_id.value, keep='first')
+                              # .drop_duplicates(subset=CIF.S_seq_id.value, keep='first')
+                              .drop_duplicates(subset='S_seq_id', keep='first')
                               .reset_index(drop=True))
         pass

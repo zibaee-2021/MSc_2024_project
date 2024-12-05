@@ -4,7 +4,7 @@ and validation datasets.
 """
 
 import pandas as pd
-from src.preprocessing_funcs.cif_parser import CIF
+# from src.preprocessing_funcs.cif_parser import CIF
 
 
 def check_protein_and_atom_numbering_of_parsed_tokenised_cif_ssv(pdb: dict):
@@ -25,31 +25,46 @@ def check_protein_and_atom_numbering_of_parsed_tokenised_cif_ssv(pdb: dict):
         print("Missing values found at:")
         for row, col in missing_locations:
             print(f"Row: {row}, Column: {col}")
-    num_of_chains = pdf_to_profile[CIF.S_asym_id.value].nunique()
-    chains = pdf_to_profile[CIF.S_asym_id.value].unique().tolist()
+    # num_of_chains = pdf_to_profile[CIF.S_asym_id.value].nunique()
+    num_of_chains = pdf_to_profile['S_asym_id'].nunique()
+    # chains = pdf_to_profile[CIF.S_asym_id.value].unique().tolist()
+    chains = pdf_to_profile['S_asym_id'].unique().tolist()
     print(f'cif with pdb id={pdb_id} has {num_of_chains} chains. \nThey are {chains}.')
 
     for chain in chains:
         print('CHAIN {chain}')
-        one_chain_pdf = pdf_to_profile[pdf_to_profile[CIF.S_asym_id.value] == chain]
+        # one_chain_pdf = pdf_to_profile[pdf_to_profile[CIF.S_asym_id.value] == chain]
+        one_chain_pdf = pdf_to_profile[pdf_to_profile['S_asym_id'] == chain]
 
-        first_value = one_chain_pdf.iloc[0][CIF.S_seq_id.value]
-        print(f'First row value: {first_value} in column: {CIF.S_seq_id.value}')
-        last_value = one_chain_pdf.iloc[-1][CIF.S_seq_id.value]
-        print(f'Last row value: {last_value} in column: {CIF.S_seq_id.value}')
+        # first_value = one_chain_pdf.iloc[0][CIF.S_seq_id.value]
+        first_value = one_chain_pdf.iloc[0]['S_seq_id']
+        # print(f'First row value: {first_value} in column: {CIF.S_seq_id.value}')
+        print(f'First row value: {first_value} in column: S_seq_id')
+        # last_value = one_chain_pdf.iloc[-1][CIF.S_seq_id.value]
+        last_value = one_chain_pdf.iloc[-1]['S_seq_id']
+        # print(f'Last row value: {last_value} in column: {CIF.S_seq_id.value}')
+        print(f'Last row value: {last_value} in column: S_seq_id')
 
-        first_value = one_chain_pdf.iloc[0][CIF.A_id.value]
-        print(f'First row value: {first_value} in column: {CIF.A_id.value}')
-        last_value = one_chain_pdf.iloc[-1][CIF.A_id.value]
-        print(f'Last row value: {last_value} in column: {CIF.A_id.value}')
+        # first_value = one_chain_pdf.iloc[0][CIF.A_id.value]
+        first_value = one_chain_pdf.iloc[0]['A_id']
+        # print(f'First row value: {first_value} in column: {CIF.A_id.value}')
+        print(f'First row value: {first_value} in column: {'A_id'}')
+        # last_value = one_chain_pdf.iloc[-1][CIF.A_id.value]
+        last_value = one_chain_pdf.iloc[-1]['A_id']
+        # print(f'Last row value: {last_value} in column: {CIF.A_id.value}')
+        print(f'Last row value: {last_value} in column: {'A_id'}')
 
-        is_incremental = (one_chain_pdf[CIF.S_seq_id.value].diff().iloc[1:] == 1).all()
+        # is_incremental = (one_chain_pdf[CIF.S_seq_id.value].diff().iloc[1:] == 1).all()
+        is_incremental = (one_chain_pdf['S_seq_id'].diff().iloc[1:] == 1).all()
         increment = '' if is_incremental else 'not '
-        print(f'Numbers in {CIF.S_seq_id.value} do {increment}increment by one as you go down each row.')
+        # print(f'Numbers in {CIF.S_seq_id.value} do {increment}increment by one as you go down each row.')
+        print(f"Numbers in 'S_seq_id' do {increment} increment by one as you go down each row.")
 
-        is_increasing = (one_chain_pdf[CIF.A_id.value].diff().iloc[1:] > 0).all()
+        # is_increasing = (one_chain_pdf[CIF.A_id.value].diff().iloc[1:] > 0).all()
+        is_increasing = (one_chain_pdf['A_id'].diff().iloc[1:] > 0).all()
         increase = '' if is_increasing else 'not '
-        print(f'Numbers in {CIF.A_id.value} do {increase}always increase as you go down the rows.')
+        # print(f'Numbers in {CIF.A_id.value} do {increase} always increase as you go down the rows.')
+        print(f"Numbers in 'A_id' do {increase} always increase as you go down the rows.")
 
 
 # Some code that may be useful for checking types etc

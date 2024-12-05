@@ -56,7 +56,7 @@ mean_corrected_z      # Z COORDINATES FOR EACH ATOM SUBTRACTED BY THE MEAN OF XY
 
 import os
 import re
-from enum import Enum
+# from enum import Enum
 from typing import List
 import numpy as np
 import pandas as pd
@@ -66,40 +66,40 @@ from src.preprocessing_funcs import cif_parser as parser
 from data_layer import data_handler as dh
 from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 from src.preprocessing_funcs import api_caller as api
-from src.enums import ColNames, CIF, PolypeptideAtoms
+# from src.enums import ColNames, CIF, PolypeptideAtoms
 # If more than this proportion of residues have no backbone atoms, remove the chain.
 MIN_RATIO_MISSING_BACKBONE_ATOMS = 0.0
 
 
-# `rp_` stands for relative path:
-class Path(Enum):
-    rp_diffdata_tokenised_dir = '../diffusion/diff_data/tokenised'
-    rp_diffdata_cif_dir = '../diffusion/diff_data/mmCIF'
-    rp_diffdata_sd573_lst = '../diffusion/diff_data/SD_573.lst'
-    rp_diffdata_globins10_lst = '../diffusion/diff_data/globins_10.lst'
-    rp_diffdata_globin1_lst = '../diffusion/diff_data/globin_1.lst'
-    rp_diffdata_pdbid_dir = '../diffusion/diff_data/PDBid_list'
-    rp_diffdata_9_PDBids_lst = '../diffusion/diff_data/PDBid_list/pdbchains_9.lst'
-    rp_diffdata_emb_dir = '../diffusion/diff_data/emb'
+# # `rp_` stands for relative path:
+# class Path(Enum):
+#     rp_diffdata_tokenised_dir = '../diffusion/diff_data/tokenised'
+#     rp_diffdata_cif_dir = '../diffusion/diff_data/mmCIF'
+#     rp_diffdata_sd573_lst = '../diffusion/diff_data/SD_573.lst'
+#     rp_diffdata_globins10_lst = '../diffusion/diff_data/globins_10.lst'
+#     rp_diffdata_globin1_lst = '../diffusion/diff_data/globin_1.lst'
+#     rp_diffdata_pdbid_dir = '../diffusion/diff_data/PDBid_list'
+#     rp_diffdata_9_PDBids_lst = '../diffusion/diff_data/PDBid_list/pdbchains_9.lst'
+#     rp_diffdata_emb_dir = '../diffusion/diff_data/emb'
 
 
-class Filename(Enum):
-    aa_atoms_no_h = 'residues_atoms_no_hydrogens'
-    atoms_no_h = 'unique_atoms_only_no_hydrogens'
-    aa = 'residues'
+# class Filename(Enum):
+#     aa_atoms_no_h = 'residues_atoms_no_hydrogens'
+#     atoms_no_h = 'unique_atoms_only_no_hydrogens'
+#     aa = 'residues'
 
 
-class FileExt(Enum):
-    dot_CIF = '.cif'
-    ssv = 'ssv'
-    dot_ssv = '.ssv'
-    dot_lst = '.lst'
-    dot_pt = '.pt'
+# class FileExt(Enum):
+#     dot_CIF = '.cif'
+#     ssv = 'ssv'
+#     dot_ssv = '.ssv'
+#     dot_lst = '.lst'
+#     dot_pt = '.pt'
 
 
-class ColValue(Enum):
-    bb = 'bb'  # backbone
-    sc = 'sc'  # side-chain
+# class ColValue(Enum):
+#     bb = 'bb'  # backbone
+#     sc = 'sc'  # side-chain
 
 
 def nums_of_missing_data(pdf):
@@ -137,12 +137,14 @@ def _assign_mean_corrected_coordinates(pdfs: List[pd.DataFrame], pdb_id: str) ->
     result_pdfs = list()
     for pdf in pdfs:
         # SUBTRACT EACH COORDINATE BY THE MEAN OF ALL 3 PER ATOM:
-        pdf.loc[:, ColNames.MEAN_COORDS.value] = pdf[[CIF.A_Cartn_x.value,
-                                                      CIF.A_Cartn_y.value,
-                                                      CIF.A_Cartn_z.value]].mean(axis=1)
-        pdf.loc[:, ColNames.MEAN_CORR_X.value] = pdf[CIF.A_Cartn_x.value] - pdf[ColNames.MEAN_COORDS.value]
-        pdf.loc[:, ColNames.MEAN_CORR_Y.value] = pdf[CIF.A_Cartn_y.value] - pdf[ColNames.MEAN_COORDS.value]
-        pdf.loc[:, ColNames.MEAN_CORR_Z.value] = pdf[CIF.A_Cartn_z.value] - pdf[ColNames.MEAN_COORDS.value]
+        # pdf.loc[:, ColNames.MEAN_COORDS.value] = pdf[[CIF.A_Cartn_x.value,CIF.A_Cartn_y.value, CIF.A_Cartn_z.value]].mean(axis=1)
+        pdf.loc[:, 'mean_xyz'] = pdf[['A_Cartn_x', 'A_Cartn_y', 'A_Cartn_z']].mean(axis=1)
+        # pdf.loc[:, ColNames.MEAN_CORR_X.value] = pdf[CIF.A_Cartn_x.value] - pdf[ColNames.MEAN_COORDS.value]
+        pdf.loc[:, 'mean_corrected_x'] = pdf['A_Cartn_x'] - pdf['mean_xyz']
+        # pdf.loc[:, ColNames.MEAN_CORR_Y.value] = pdf[CIF.A_Cartn_y.value] - pdf[ColNames.MEAN_COORDS.value]
+        pdf.loc[:, 'mean_corrected_y'] = pdf['A_Cartn_y'] - pdf['mean_xyz']
+        # pdf.loc[:, ColNames.MEAN_CORR_Z.value] = pdf[CIF.A_Cartn_z.value] - pdf[ColNames.MEAN_COORDS.value]
+        pdf.loc[:, 'mean_corrected_z'] = pdf['A_Cartn_z'] - pdf['mean_xyz']
         expected_num_of_cols = 18
         assert len(pdf.columns) == expected_num_of_cols, \
             f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf.columns)}'
@@ -159,17 +161,22 @@ def _enumerate_residues_atoms(pdf: pd.DataFrame) -> pd.DataFrame:
     :return: Given dataframe with two new columns holding the enumerated residue-atom pairs data, as well as a column
     holding the intermediate data of residue-atom pairs. Expected to have 14 columns.
     """
-    residues_atoms_enumerated = dh.read_enumerations_json(fname=Filename.aa_atoms_no_h.value)
+    # residues_atoms_enumerated = dh.read_enumerations_json(fname=Filename.aa_atoms_no_h.value)
+    residues_atoms_enumerated = dh.read_enumerations_json(fname='residues_atoms_no_hydrogens')
     # CAST THE STRING REPRESENTATION OF A TUPLE TO AN ACTUAL TUPLE FOR KEY TO WORK IN MAPPING:
     residues_atoms_enumerated = {eval(k): v for k, v in residues_atoms_enumerated.items()}
     # FIRST MAKE NEW COLUMN OF RESIDUE-ATOM PAIRS. E.G. CONTAINS ('ASP':'C'), ('ASP':'CA'), ETC:
-    pdf[ColNames.AA_ATOM_PAIR.value] = list(zip(pdf[CIF.S_mon_id.value],
-                                                pdf[CIF.A_label_atom_id.value]))
+    # pdf[ColNames.AA_ATOM_PAIR.value] = list(zip(pdf[CIF.S_mon_id.value],
+    # pdf['aa_atom_tuple'] = list(zip(pdf[CIF.S_mon_id.value], pdf[CIF.A_label_atom_id.value]))
+    # pdf['aa_atom_tuple'] = list(zip(pdf['S_mon_id'], pdf[CIF.A_label_atom_id.value]))
+    pdf['aa_atom_tuple'] = list(zip(pdf['S_mon_id'], pdf['A_label_atom_id']))
 
     # MAKE NEW COLUMN FOR ENUMERATED RESIDUE-ATOM PAIRS, VIA RESIDUE-ATOM PAIRS:
-    pdf[ColNames.AA_ATOM_LABEL_NUM.value] = (pdf[ColNames.AA_ATOM_PAIR.value]
-                                             .map(residues_atoms_enumerated)
-                                             .astype('Int64'))
+    # pdf[ColNames.AA_ATOM_LABEL_NUM.value] = (pdf[ColNames.AA_ATOM_PAIR.value]
+    # pdf[ColNames.AA_ATOM_LABEL_NUM.value] = (pdf['aa_atom_tuple'   ]
+    pdf['aa_atom_label_num'] = (pdf['aa_atom_tuple']
+                                .map(residues_atoms_enumerated)
+                                .astype('Int64'))
     expected_num_of_cols = 14
     assert len(pdf.columns) == expected_num_of_cols, \
         f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf.columns)}'
@@ -185,10 +192,13 @@ def _enumerate_atoms(pdf: pd.DataFrame) -> pd.DataFrame:
     :return: Given dataframe with one new column holding the enumerated atoms data. Expected to have 12 columns.
     """
     # MAKE NEW COLUMN FOR ENUMERATED ATOMS ('C', 'CA', ETC), USING JSON->DICT, CAST TO INT:
-    atoms_enumerated = dh.read_enumerations_json(fname=Filename.atoms_no_h.value)
-    pdf[ColNames.ATOM_LABEL_NUM.value] = (pdf[CIF.A_label_atom_id.value]
-                                          .map(atoms_enumerated)
-                                          .astype('Int64'))
+    # atoms_enumerated = dh.read_enumerations_json(fname=Filename.atoms_no_h.value)
+    atoms_enumerated = dh.read_enumerations_json(fname='unique_atoms_only_no_hydrogens')
+    # pdf[ColNames.ATOM_LABEL_NUM.value] = (pdf[CIF.A_label_atom_id.value]
+    # pdf['atom_label_num'] = (pdf[CIF.A_label_atom_id.value]
+    pdf['atom_label_num'] = (pdf['A_label_atom_id']
+                             .map(atoms_enumerated)
+                             .astype('Int64'))
     expected_num_of_cols = 12
     assert len(pdf.columns) == expected_num_of_cols, \
         f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf.columns)}'
@@ -198,10 +208,13 @@ def _enumerate_atoms(pdf: pd.DataFrame) -> pd.DataFrame:
 def _enumerate_residues(pdf: pd.DataFrame) -> pd.DataFrame:
     # MAKE NEW COLUMN FOR ENUMERATED RESIDUES, USING JSON->DICT, CAST TO INT.
     # `residues_enumerated` DICT KEY AND `S_mon_id` COLUMN VALUES MAP VIA 3-LETTER RESIDUE NAMES:
-    residues_enumerated = dh.read_enumerations_json(fname=Filename.aa.value)
-    pdf.loc[:, ColNames.AA_LABEL_NUM.value] = (pdf[CIF.S_mon_id.value]
-                                                   .map(residues_enumerated)
-                                                   .astype('Int64'))
+    # residues_enumerated = dh.read_enumerations_json(fname=Filename.aa.value)
+    residues_enumerated = dh.read_enumerations_json(fname='residues')
+    # pdf.loc[:, ColNames.AA_LABEL_NUM.value] = (pdf[CIF.S_mon_id.value]
+    # pdf.loc[:, 'aa_label_num' ] = (pdf[CIF.S_mon_id.value]
+    pdf.loc[:, 'aa_label_num'] = (pdf['S_mon_id']
+                                  .map(residues_enumerated)
+                                  .astype('Int64'))
     # pdf_cif[ColNames.AA_LABEL_NUM.value] = pdf_cif[CIF.S_mon_id.value].map(residues_enumerated).astype('Int64')
     expected_num_of_cols = 11
     assert len(pdf.columns) == expected_num_of_cols, \
@@ -236,36 +249,47 @@ def _assign_backbone_index_to_all_residue_rows(pdfs: List[pd.DataFrame], pdb_id:
     for pdf in pdfs:
 
         # ASSIGN INDEX OF CHOSEN BACKBONE ATOM (ALPHA-CARBON) FOR ALL ROWS IN EACH ROW-WISE-RESIDUE SUBSETS:
-        chain = pdf[CIF.S_asym_id.value].unique()[0]
+        # chain = pdf[CIF.S_asym_id.value].unique()[0]
+        chain = pdf['S_asym_id'].unique()[0]
 
         # Even though `a_id` is always an int (when no NaNs), and I cast to Int64 below. The column remains float64.
         # Apparently I have to cast this column beforehand ? Very odd behaviour.
-        pdf[ColNames.BB_ATOM_POS.value] = pd.Series(dtype="Int64")
+        # pdf[ColNames.BB_ATOM_POS.value] = pd.Series(dtype="Int64")
+        pdf['bb_atom_pos'] = pd.Series(dtype='Int64')
 
-        for S_seq_id, aa_group in pdf.groupby(CIF.S_seq_id.value):  # GROUP BY RESIDUE POSITION VALUE
+        # for S_seq_id, aa_group in pdf.groupby(CIF.S_seq_id.value):  # GROUP BY RESIDUE POSITION VALUE
+        for S_seq_id, aa_group in pdf.groupby('S_seq_id'):  # GROUP BY RESIDUE POSITION VALUE
             # GET ATOM INDEX ('A_id') WHERE ATOM ('A_label_atom_id') IS 'CA' IN THIS RESIDUE GROUP.
-            a_id_of_CA = aa_group.loc[aa_group[CIF.A_label_atom_id.value] == CIF.ALPHA_CARBON.value, CIF.A_id.value]
+            # a_id_of_CA = aa_group.loc[aa_group[CIF.A_label_atom_id.value] == CIF.ALPHA_CARBON.value, CIF.A_id.value]
+            # a_id_of_CA = aa_group.loc[aa_group[CIF.A_label_atom_id.value] == CIF.ALPHA_CARBON.value, 'A_id']
+            a_id_of_CA = aa_group.loc[aa_group['A_label_atom_id'] == 'CA', 'A_id']
 
             # IF NO 'CA' FOR THIS RESIDUE, USE MOST C-TERMINAL NON-CA BACKBONE ATOM POSITION INSTEAD:
             if a_id_of_CA.empty:
-                print(f"No 'CA' for {aa_group[CIF.S_mon_id.value].iloc[0]} at {S_seq_id} "
+                # print(f"No 'CA' for {aa_group[CIF.S_mon_id.value].iloc[0]} at {S_seq_id} "
+                print(f"No 'CA' for {aa_group['S_mon_id'].iloc[0]} at {S_seq_id} "
                       f"(PDBid={pdb_id}, chain={chain})")
-                positions_of_all_bb_atoms = aa_group.loc[aa_group[ColNames.BB_OR_SC.value]
-                                                         == ColValue.bb.value, CIF.A_id.value].to_numpy()
+                # positions_of_all_bb_atoms = aa_group.loc[aa_group[ColNames.BB_OR_SC.value]
+                # positions_of_all_bb_atoms = aa_group.loc[aa_group['bb_or_sc'] == 'bb', CIF.A_id.value].to_numpy()
+                positions_of_all_bb_atoms = aa_group.loc[aa_group['bb_or_sc'] == 'bb', 'A_id'].to_numpy()
 
                 # IF NO BACKBONE ATOMS FOR THIS RESIDUE AT ALL, REMOVE THIS RESIDUE FROM THIS CIF:
                 if positions_of_all_bb_atoms.size == 0:
-                    aa = {aa_group[CIF.S_mon_id.value].iloc[0]}
-                    print(f'{aa} at {S_seq_id} only has atoms {str(list(aa_group[CIF.A_label_atom_id.value]))}. '
+                    # aa = {aa_group[CIF.S_mon_id.value].iloc[0]}
+                    aa = {aa_group['S_mon_id'].iloc[0]}
+                    # print(f'{aa} at {S_seq_id} only has atoms {str(list(aa_group[CIF.A_label_atom_id.value]))}. '
+                    print(f'{aa} at {S_seq_id} only has atoms {str(list(aa_group['A_label_atom_id']))}. '
                           f'Hence, no backbone atoms at all, so {aa} at {S_seq_id} will be completely removed from '
                           f'this dataframe.')
-                    pdf = pdf[pdf[CIF.S_seq_id.value] != S_seq_id]
+                    # pdf = pdf[pdf[CIF.S_seq_id.value] != S_seq_id]
+                    pdf = pdf[pdf['S_seq_id'] != S_seq_id]
                     continue  # continue to next residue
                 else:
                     a_id = max(positions_of_all_bb_atoms)
                     print(f'Instead, assigning position of most C-terminal non-CA backbone atom={a_id}.')
-                    most_cterm_bb_atom = aa_group.loc[aa_group[CIF.A_id.value]
-                                                      == a_id, CIF.A_label_atom_id.value].values[0]
+                    # most_cterm_bb_atom = aa_group.loc[aa_group[CIF.A_id.value]
+                    # most_cterm_bb_atom = aa_group.loc[aa_group['A_id'] == a_id, CIF.A_label_atom_id.value].values[0]
+                    most_cterm_bb_atom = aa_group.loc[aa_group['A_id'] == a_id, 'A_label_atom_id'].values[0]
                     print(f'Non-CA backbone atoms for this residue are at: {str(list(positions_of_all_bb_atoms))}, '
                           f'so {a_id} is selected. (The atom at this position is: {most_cterm_bb_atom}.)')
                     continue
@@ -275,16 +299,22 @@ def _assign_backbone_index_to_all_residue_rows(pdfs: List[pd.DataFrame], pdb_id:
                 a_id = a_id_of_CA.iloc[0]
 
                 # ASSIGN THIS ATOM INDEX TO BB_ATOM_POS ('bb_atom_pos') FOR ALL ROWS IN THIS GROUP:
-            pdf.loc[aa_group.index, ColNames.BB_ATOM_POS.value] = a_id
+            # pdf.loc[aa_group.index, ColNames.BB_ATOM_POS.value] = a_id
+            pdf.loc[aa_group.index, 'bb_atom_pos'] = a_id
 
         # CAST NEW COLUMN TO INT64 (FOR CONSISTENCY):
-        print(f'Type of `bb_atom_pos` column, before any casting operations={pdf[ColNames.BB_ATOM_POS.value].dtype}')
+        # print(f'Type of `bb_atom_pos` column, before any casting operations={pdf[ColNames.BB_ATOM_POS.value].dtype}')
+        print(f'Type of `bb_atom_pos` column, before any casting operations={pdf['bb_atom_pos'].dtype}')
 
-        pdf.loc[:, ColNames.BB_ATOM_POS.value] = pd.to_numeric(pdf[ColNames.BB_ATOM_POS.value], errors='coerce')
-        print(f'`b_atom_pos` column should be numeric type={pdf[ColNames.BB_ATOM_POS.value].dtype}')
+        # pdf.loc[:, ColNames.BB_ATOM_POS.value] = pd.to_numeric(pdf[ColNames.BB_ATOM_POS.value], errors='coerce')
+        pdf.loc[:, 'bb_atom_pos'] = pd.to_numeric(pdf['bb_atom_pos'], errors='coerce')
+        # print(f'`b_atom_pos` column should be numeric type={pdf[ColNames.BB_ATOM_POS.value].dtype}')
+        print(f'`b_atom_pos` column should be numeric type={pdf['bb_atom_pos'].dtype}')
 
-        pdf.loc[:, ColNames.BB_ATOM_POS.value] = pdf[ColNames.BB_ATOM_POS.value].astype('Int64')
-        print(f'`bb_atom_pos` column should be integer type={pdf[ColNames.BB_ATOM_POS.value].dtype}')
+        # pdf.loc[:, ColNames.BB_ATOM_POS.value] = pdf[ColNames.BB_ATOM_POS.value].astype('Int64')
+        pdf.loc[:, 'bb_atom_pos'] = pdf['bb_atom_pos'].astype('Int64')
+        # print(f'`bb_atom_pos` column should be integer type={pdf[ColNames.BB_ATOM_POS.value].dtype}')
+        print(f'`bb_atom_pos` column should be integer type={pdf['bb_atom_pos'].dtype}')
         result_pdfs.append(pdf)
 
     return result_pdfs
@@ -321,9 +351,12 @@ def _only_keep_chains_with_enuf_bckbone_atoms(pdfs: List[pd.DataFrame], pdb_id: 
     result_pdfs = []
     for pdf in pdfs:
         aa_w_no_bbatom_count = (pdf
-                       .groupby(CIF.S_seq_id.value)[ColNames.BB_OR_SC.value]
-                       .apply(lambda x: ColValue.bb.value not in x.values)
-                       .sum())
+                                # .groupby(CIF.S_seq_id.value)['bb_or_sc' ]
+                                .groupby('S_seq_id')['bb_or_sc']
+                                .apply(lambda x: 'bb' not in x.values)
+                                # .groupby(CIF.S_seq_id.value)[ColNames.BB_OR_SC.value]
+                                # .apply(lambda x: ColValue.bb.value not in x.values)
+                                .sum())
         total_atom_count = pdf.shape[0]
         if (aa_w_no_bbatom_count / total_atom_count) <= MIN_RATIO_MISSING_BACKBONE_ATOMS:
             result_pdfs.append(pdf)
@@ -350,16 +383,21 @@ def _only_keep_chains_of_polypeptide(pdfs: List[pd.DataFrame], pdb_id: str) -> L
     result_pdfs = []
     for pdf in pdfs:
         try:
-            chain = pdf[CIF.S_asym_id.value].iloc[0]
-            atleast_one_row_isna = pdf[ColNames.BB_OR_SC.value].isna().any()
-            all_rows_isna = pdf[ColNames.BB_OR_SC.value].isna().all()
+            # chain = pdf[CIF.S_asym_id.value].iloc[0]
+            chain = pdf['S_asym_id'].iloc[0]
+            # atleast_one_row_isna = pdf[ColNames.BB_OR_SC.value].isna().any()
+            atleast_one_row_isna = pdf['bb_or_sc' ].isna().any()
+            # all_rows_isna = pdf[ColNames.BB_OR_SC.value].isna().all()
+            all_rows_isna = pdf['bb_or_sc' ].isna().all()
             if atleast_one_row_isna:
-                nat_indices = pdf[pd.isna(pdf[ColNames.BB_OR_SC.value])].index
+                # nat_indices = pdf[pd.isna(pdf[ColNames.BB_OR_SC.value])].index
+                nat_indices = pdf[pd.isna(pdf['bb_or_sc' ])].index
                 print(f'nat_indices={nat_indices}')
                 print(f'There are atoms in chain={chain} of PDB id={pdb_id} which are not polypeptide atoms, so this chain '
                       f'will be excluded.')
                 if not all_rows_isna:
-                    print(f'It seems that while at least one row in column {ColNames.BB_OR_SC.value} has null, '
+                    # print(f'It seems that while at least one row in column {ColNames.BB_OR_SC.value} has null, '
+                    print(f"It seems that while at least one row in column 'bb_or_sc' has null, "
                           f'not all rows are null. This is unexpected and should be investigated further. '
                           f'(Chain {chain} of PDB id {pdb_id}).')
             else:
@@ -369,20 +407,29 @@ def _only_keep_chains_of_polypeptide(pdfs: List[pd.DataFrame], pdb_id: str) -> L
                       f'This should not occur, so needs to be investigated further.')
         except IndexError:
             print(f' `chain = pdf[CIF.S_asym_id.value].iloc[0]` fails. '
-                  f'\nCIF.S_asym_id.value={CIF.S_asym_id.value} '
-                  f'\npdf[CIF.S_asym_id.value]={pdf[CIF.S_asym_id.value]}')
+                  # f'\nCIF.S_asym_id.value={CIF.S_asym_id.value} '
+                  f'\nCIF.S_asym_id.value=S_asym_id '
+                  # f'\npdf[CIF.S_asym_id.value]={pdf[CIF.S_asym_id.value]}')
+                  f'\npdf[CIF.S_asym_id.value]={pdf['S_asym_id']}')
     return result_pdfs
 
 
 def _make_new_bckbone_or_sdchain_col(pdfs: List[pd.DataFrame], pdb_id: str=None) -> List[pd.DataFrame]:
+    BACKBONE = ('N', 'CA', 'C', 'O', 'OXT')  # AKA "MAIN-CHAIN"
+    SIDECHAIN = ('CB', 'CD', 'CD1', 'CD2', 'CE', 'CE1', 'CE2', 'CE3', 'CG', 'CG1', 'CG2', 'CH2', 'CZ', 'CZ2',
+                 'CZ3', 'ND1', 'ND2', 'NE', 'NE1', 'NE2', 'NH1', 'NH2', 'NZ', 'OD1', 'OD2', 'OE1', 'OE2', 'OG',
+                 'OG1', 'OG2', 'OH', 'SD', 'SG')
+
     if pdb_id:
         print(f'PDBid={pdb_id}: make new column `bb_or_sc` - indicates whether atom is backbone or side-chain.')
 
     result_pdfs = list()
 
     for pdf in pdfs:
-        is_backbone_atom = pdf[CIF.A_label_atom_id.value].isin(PolypeptideAtoms.BACKBONE.value)
-        is_sidechain_atom = pdf[CIF.A_label_atom_id.value].isin(PolypeptideAtoms.SIDECHAIN.value)
+        # is_backbone_atom = pdf[CIF.A_label_atom_id.value].isin(PolypeptideAtoms.BACKBONE.value)
+        is_backbone_atom = pdf['A_label_atom_id'].isin(BACKBONE)
+        # is_sidechain_atom = pdf[CIF.A_label_atom_id.value].isin(PolypeptideAtoms.SIDECHAIN.value)
+        is_sidechain_atom = pdf['A_label_atom_id'].isin(SIDECHAIN)
 
         # MAKE NEW COLUMN TO INDICATE IF ATOM IS FROM POLYPEPTIDE BACKBONE ('bb) OR SIDE-CHAIN ('sc'):
         pdf.loc[:, ColNames.BB_OR_SC.value] = np.select([is_backbone_atom, is_sidechain_atom],
@@ -398,10 +445,12 @@ def _make_new_bckbone_or_sdchain_col(pdfs: List[pd.DataFrame], pdb_id: str=None)
 def _remove_all_hydrogen_atoms(pdfs: List[pd.DataFrame], pdb_id: str=None) -> List[pd.DataFrame]:
     if pdb_id:
         print(f'PDBid={pdb_id}: remove Hydrogens')
-    hydrogen_atoms = dh.read_lst_file_from_data_dir(dh.Path.enumeration_h_list.value)
+    # hydrogen_atoms = dh.read_lst_file_from_data_dir(dh.Path.enumeration_h_list.value)
+    hydrogen_atoms = dh.read_lst_file_from_data_dir('enumeration/hydrogens.lst')
     result_pdfs = []
     for pdf in pdfs:
-        _pdf = pdf.loc[~pdf[CIF.A_label_atom_id.value].isin(hydrogen_atoms)]
+        # _pdf = pdf.loc[~pdf[CIF.A_label_atom_id.value].isin(hydrogen_atoms)]
+        _pdf = pdf.loc[~pdf['A_label_atom_id'].isin(hydrogen_atoms)]
         result_pdfs.append(_pdf)
     return result_pdfs
 
@@ -411,7 +460,8 @@ def _keep_only_the_given_chain(pdfs: List[pd.DataFrame], chain: str, pdb_id: str
         print(f'PDBid={pdb_id}: only keep the specified chain={chain}.')
     result_pdfs = list()
     for pdf in pdfs:
-        if pdf[CIF.S_asym_id.value].isin([chain]).any():
+        # if pdf[CIF.S_asym_id.value].isin([chain]).any():
+        if pdf['S_asym_id'].isin([chain]).any():
             result_pdfs.append(pdf)
             return result_pdfs
     return result_pdfs
@@ -436,23 +486,28 @@ def _get_mmcif_data(pdb_id: str, relpath_cif_dir: str) -> dict:
     :param relpath_cif_dir:
     :return:
     """
-    relpath_cif_dir = relpath_cif_dir.removesuffix(FileExt.dot_CIF.value).removeprefix('/').removesuffix('/')
-    pdb_id = pdb_id.removesuffix(FileExt.dot_CIF.value)
-    relpath_cif = f'{relpath_cif_dir}/{pdb_id}{FileExt.dot_CIF.value}'
+    # relpath_cif_dir = relpath_cif_dir.removesuffix(FileExt.dot_CIF.value).removeprefix('/').removesuffix('/')
+    relpath_cif_dir = relpath_cif_dir.removesuffix('.cif').removeprefix('/').removesuffix('/')
+    # pdb_id = pdb_id.removesuffix(FileExt.dot_CIF.value)
+    pdb_id = pdb_id.removesuffix('.cif')
+    # relpath_cif = f'{relpath_cif_dir}/{pdb_id}{FileExt.dot_CIF.value}'
+    relpath_cif = f'{relpath_cif_dir}/{pdb_id}.cif'
     if os.path.exists(relpath_cif):
         try:
             MMCIF2Dict(relpath_cif)
         except ValueError:
-            print(f'{pdb_id}{FileExt.dot_CIF.value} appears to be empty. '
-                  f'Attempt to read {pdb_id} directly from {api.Urls.PDB.value}/{pdb_id}')
+            print(f"{pdb_id}.cif appears to be empty. "
+                  # f'Attempt to read {pdb_id} directly from {api.Urls.PDB.value}{pdb_id}')
+                  f"Attempt to read {pdb_id} directly from 'https://files.rcsb.org/download/'{pdb_id}")
             __fetch_mmcif_from_pdb_api_and_write(pdb_id=pdb_id, relpath_dst_cif=relpath_cif)
     else:
         print(f'Did not find this CIF locally ({relpath_cif}). '
-              f'Attempt to read {pdb_id} directly from {api.Urls.PDB.value}/{pdb_id}')
+              # f'Attempt to read {pdb_id} directly from {api.Urls.PDB.value}{pdb_id}')
+              f"Attempt to read {pdb_id} directly from 'https://files.rcsb.org/download/'{pdb_id}")
         __fetch_mmcif_from_pdb_api_and_write(pdb_id=pdb_id, relpath_dst_cif=relpath_cif)
     mmcif = MMCIF2Dict(relpath_cif)
     if not mmcif:
-        print(f'{relpath_cif}/{pdb_id}{FileExt.dot_CIF.value} appears to be empty. ')
+        print(f'{relpath_cif}/{pdb_id}.cif appears to be empty. ')
     return mmcif
 
 
@@ -465,10 +520,13 @@ def __split_pdbid_chain(pdbid_chain):
         return pdbid_chain, None
 
 
-def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=Path.rp_diffdata_cif_dir.value,
-                                          relpath_toknsd_ssv_dir=Path.rp_diffdata_tokenised_dir.value,
+def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_data/mmCIF',
+                                          # relpath_cif_dir=Path.rp_diffdata_cif_dir.value,
+                                          # relpath_toknsd_ssv_dir=Path.rp_diffdata_tokenised_dir.value,
+                                          relpath_toknsd_ssv_dir='../diffusion/diff_data/tokenised',
                                           relpath_pdblst: str = None,
-                                          flatfile_format_to_write: str = FileExt.ssv.value,
+                                          # flatfile_format_to_write: str = FileExt.ssv.value,
+                                          flatfile_format_to_write: str = 'ssv',
                                           pdb_ids=None,
                                           write_lst_file=False) -> List[pd.DataFrame]:
     """
@@ -504,18 +562,21 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=Path.rp_diffdata_cif_d
     if relpath_pdblst:
         pdb_ids.extend(dh.read_pdb_lst_from_src_diff_dir(relpath_pdblst=relpath_pdblst))
 
-    cif_tokenised_ssv_dir = Path.rp_diffdata_tokenised_dir.value
+    # cif_tokenised_ssv_dir = Path.rp_diffdata_tokenised_dir.value
+    cif_tokenised_ssv_dir = '../diffusion/diff_data/tokenised'
     pdbid_chains_of_pretokenised = []
     if os.path.exists(cif_tokenised_ssv_dir):
-        pdbid_chains_of_pretokenised = [item.removesuffix(FileExt.dot_ssv.value)
-                                             for item in os.listdir(cif_tokenised_ssv_dir)
-                                             if item.endswith(FileExt.dot_ssv.value)]
+        # pdbid_chains_of_pretokenised = [item.removesuffix(FileExt.dot_ssv.value)
+        pdbid_chains_of_pretokenised = [item.removesuffix('.ssv')
+                                        for item in os.listdir(cif_tokenised_ssv_dir)
+                                        if item.endswith('.ssv')]
+                                        # if item.endswith(FileExt.dot_ssv.value)]
     cif_pdfs_per_chain = []
 
     for pdb_id in pdb_ids:  # Expecting only one PDB id per line. Can be PDBid_chain.
         pdb_id = pdb_id.rstrip().split()[0]
         flatfile_format_to_write = flatfile_format_to_write.removeprefix('.').lower()
-        pdb_id = pdb_id.removesuffix(FileExt.dot_CIF.value)
+        pdb_id = pdb_id.removesuffix('.cif')
         print(f'Starting PDBid={pdb_id} ---------------------------------------------------------')
 
         # THE LOGIC EXPECTS THAT IF IT HAS BEEN TOKENISED AND SAVED AS ssv, THEN IT WILL BE BY THE CHAIN AND SO
@@ -557,14 +618,16 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=Path.rp_diffdata_cif_d
         for pdf_chain in cif_pdfs_per_chain:
             nums_of_missing_data(pdf_chain)
             _each_column_has_expected_values(pdf_chain)
-            chain = pdf_chain[CIF.S_asym_id.value].iloc[0]
+            # chain = pdf_chain[CIF.S_asym_id.value].iloc[0]
+            chain = pdf_chain['S_asym_id'].iloc[0]
             pdbid_chain = f'{pdbid}_{chain}'
             for_pdbchain_lst.append(pdbid_chain)
 
     if write_lst_file:
         dh.write_list_to_lst_file(list_to_write=for_pdbchain_lst,
-                                  path_fname=f'{Path.rp_diffdata_pdbid_dir.value}/pdbchains_{len(for_pdbchain_lst)}'
-                                             f'{FileExt.dot_lst.value}')
+                                  path_fname=f'../diffusion/diff_data/PDBid_list/pdbchains_{len(for_pdbchain_lst)}.lst')
+                                  # path_fname=f'{Path.rp_diffdata_pdbid_dir.value}/pdbchains_{len(for_pdbchain_lst)}'
+                                             # f'{FileExt.dot_lst.value}')
     return cif_pdfs_per_chain
 
 
@@ -584,7 +647,8 @@ def load_dataset():
     nn = 0
 
     # GET THE LIST OF PDB NAMES FOR PROTEINS TO TOKENISE:
-    targetfile_lst_path = Path.rp_diffdata_9_PDBids_lst.value
+    # targetfile_lst_path = Path.rp_diffdata_9_PDBids_lst.value
+    targetfile_lst_path = '../diffusion/diff_data/PDBid_list/pdbchains_9.lst'
     assert os.path.exists(targetfile_lst_path), f'{targetfile_lst_path} cannot be found. Btw, cwd={os.getcwd()}'
     targetfile = ''
     try:
@@ -599,35 +663,44 @@ def load_dataset():
 
     for line in targetfile:  # It is expected that there is only one pdb id per line.
         target_pdbid = line.rstrip().split()[0]
-        print(f'Read in PDBid={target_pdbid}{FileExt.dot_ssv.value}')
+        # print(f'Read in PDBid={target_pdbid}{FileExt.dot_ssv.value}')
+        print(f'Read in PDBid={target_pdbid}.ssv')
         sp = []
-        pdf_target = pd.read_csv(f'{Path.rp_diffdata_tokenised_dir.value}/{target_pdbid}{FileExt.dot_ssv.value}',
-                                 sep=' ')
+        # pdf_target = pd.read_csv(f'{Path.rp_diffdata_tokenised_dir.value}/{target_pdbid}{FileExt.dot_ssv.value}', sep=' ')
+        pdf_target = pd.read_csv(f'{'../diffusion/diff_data/tokenised'}/{target_pdbid}.ssv', sep=' ')
         # GET MEAN-CORRECTED COORDINATES VIA 'mean_corrected_x', '_y', '_z' TO 3-ELEMENT LIST:
-        coords = pdf_target[[ColNames.MEAN_CORR_X.value, ColNames.MEAN_CORR_Y.value, ColNames.MEAN_CORR_Z.value]].values
+        # coords = pdf_target[[ColNames.MEAN_CORR_X.value, ColNames.MEAN_CORR_Y.value, ColNames.MEAN_CORR_Z.value]].values
+        coords = pdf_target[['mean_corrected_x', 'mean_corrected_y', 'mean_corrected_z']].values
         len_coords = len(coords)  # should be same as
         # GET `atomcodes` VIA 'atom_label_num' COLUMN, WHICH HOLDS ENUMERATED ATOMS VALUES:
-        atomcodes = pdf_target[ColNames.ATOM_LABEL_NUM.value].tolist()
+        # atomcodes = pdf_target[ColNames.ATOM_LABEL_NUM.value].tolist()
+        atomcodes = pdf_target['atom_label_num' ].tolist()
 
         # GET `aaatomcodes` VIA 'aa_atom_label_num' COLUMN, WHICH HOLDS ENUMERATED RESIDUE-ATOM PAIRS VALUES:
-        aaatomcodes = pdf_target[ColNames.AA_ATOM_LABEL_NUM.value].tolist()
+        # aaatomcodes = pdf_target[ColNames.AA_ATOM_LABEL_NUM.value].tolist()
+        aaatomcodes = pdf_target['aa_atom_label_num'].tolist()
 
         # GET `aaindices`. EXPECTED TO HAVE REPEATED VALUES BECAUSE 1 AA HAS 5 OR MORE ATOMS (NOT DUPLICATE ROWS):
-        aaindices = pdf_target[CIF.S_seq_id.value].tolist()
+        # aaindices = pdf_target[CIF.S_seq_id.value].tolist()
+        aaindices = pdf_target['S_seq_id'].tolist()
 
         # ASSIGN DATAFRAME INDEX OF BACKBONE ATOM POSITION PER RESIDUE IN NEW COLUMN `BBINDICES`:
-        indices_of_atom_positions = {value: index for index, value in pdf_target[CIF.A_id.value].items()}
-        pdf_target[ColNames.BBINDICES.value] = pdf_target[ColNames.BB_ATOM_POS.value].map(indices_of_atom_positions)
+        # indices_of_atom_positions = {value: index for index, value in pdf_target[CIF.A_id.value].items()}
+        indices_of_atom_positions = {value: index for index, value in pdf_target['A_id'].items()}
+        # pdf_target[ColNames.BBINDICES.value] = pdf_target[ColNames.BB_ATOM_POS.value].map(indices_of_atom_positions)
+        pdf_target['bbindices'] = pdf_target['bb_atom_pos'].map(indices_of_atom_positions)
 
         # DE-DUPLICATE ROWS ON RESIDUE POSITION (`S_seq_id`) TO GET CORRECT DIMENSION OF `aacodes` and `bbindices`:
         pdf_target_deduped = (pdf_target
-                              .drop_duplicates(subset=CIF.S_seq_id.value, keep='first')
+                              # .drop_duplicates(subset=CIF.S_seq_id.value, keep='first')
+                              .drop_duplicates(subset='S_seq_id', keep='first')
                               .reset_index(drop=True))
 
         # GET `aacodes`, VIA 'aa_label_num' COLUMN, WHICH HOLDS ENUMERATED RESIDUES VALUES:
-        aacodes = pdf_target_deduped[ColNames.AA_LABEL_NUM.value].tolist()
+        # aacodes = pdf_target_deduped[ColNames.AA_LABEL_NUM.value].tolist()
+        aacodes = pdf_target_deduped['aa_label_num' ].tolist()
 
-        bbindices = pdf_target_deduped[ColNames.BBINDICES.value].tolist()
+        bbindices = pdf_target_deduped['bbindices'].tolist()
 
         # ONLY INCLUDE PROTEINS WITHIN A CERTAIN SIZE RANGE:
         if len(aacodes) < 10 or len(aacodes) > 500:
@@ -636,7 +709,8 @@ def load_dataset():
             continue
 
         # READ PRE-COMPUTED EMBEDDING OF THIS PROTEIN:
-        path_pdb_embed = f'{Path.rp_diffdata_emb_dir.value}/{target_pdbid}{FileExt.dot_pt.value}'
+        # path_pdb_embed = f'{Path.rp_diffdata_emb_dir.value}/{target_pdbid}{FileExt.dot_pt.value}'
+        path_pdb_embed = f'../diffusion/diff_data/emb/{target_pdbid}.pt'
         pdb_embed = torch.load(path_pdb_embed)
         pdbembed_dim1 = pdb_embed.size(1)
         # AND MAKE SURE IT HAS SAME NUMBER OF RESIDUES AS THE PARSED-TOKENISED SEQUENCE FROM MMCIF:
@@ -704,7 +778,7 @@ if __name__ == '__main__':
     #                                       pdb_ids=['1ECA', '2DN1', '2DN2', '1OJ6', '1V5H',
     #                                                '1MBN', '2GDM', '1GDI', '2WY4'],
     #                                       write_lst_file=True)
-    train_list, validation_list = load_dataset()
+    _train_list, _validation_list = load_dataset()
     pass
     # Note: '4C0N' has 18 missing values
     # dh.clear_diffdatacif_dir()

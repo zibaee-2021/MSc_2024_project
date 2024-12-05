@@ -1,7 +1,7 @@
 # Placeholder file for script that will contain all the functions that read/write from/to `data` subdirs, to just make
 # the other functions a bit tidier.
 import os
-from enum import Enum
+# from enum import Enum
 import glob
 import shutil
 import re
@@ -11,56 +11,56 @@ import pandas as pd
 import torch
 import yaml
 from typing import Tuple
-from src.enums import CIF, ColNames
+# from src.enums import CIF, ColNames
 from src.preprocessing_funcs import api_caller as api
 
 
-class Path(Enum):
-    data_pdbid_dir = '../data/PDBid_list'
-    sd_573_cifs_dir = '../data/dataset/big_files_to_git_ignore/SD_573_CIFs'
-    rp_bigdata_cif_dir = '../data/dataset/big_files_to_git_ignore/SD_573_CIFs'
-    rp_bigdata_toknsd_dir = '../data/dataset/big_files_to_git_ignore/tokenised_573'
-
-    enumeration_dir = 'enumeration'
-    data_dir = '../data'
-    fasta_dir = 'FASTA'
-    data_fasta_dir = '../data/FASTA'
-    data_tokenised_dir = '../data/tokenised'
-    aa_atoms_yaml = '../data/yaml/residues_atoms.yaml'
-    data_per_aa_atoms_json = '../data/residues_atoms/per_residue_atoms.json'
-    diffdata_cif_dir = '../src/diffusion/diff_data/mmCIF'
-    enumeration_h_list = 'enumeration/hydrogens.lst'
-
-    rp_diffdata_pdbid_lst_dir = '../diffusion/diff_data/PDBid_list'
-    rp_diffdata_sd573_lst = '../diffusion/diff_data/PDBid_list/SD_573.lst'
-    rp_diffdata_globins10_lst = '../diffusion/diff_data/PDBid_list/globins_10.lst'
-    rp_diffdata_globin1_lst = '../diffusion/diff_data/PDBid_list/globin_1.lst'
-
-
-class Filename(Enum):
-    aa_atoms_no_h = 'residues_atoms_no_hydrogens'
-    atoms_no_h = 'unique_atoms_only_no_hydrogens'
-    aa = 'residues'
+# class Path(Enum):
+#     data_pdbid_dir = '../data/PDBid_list'
+#     sd_573_cifs_dir = '../data/dataset/big_files_to_git_ignore/SD_573_CIFs'
+#     rp_bigdata_cif_dir = '../data/dataset/big_files_to_git_ignore/SD_573_CIFs'
+#     rp_bigdata_toknsd_dir = '../data/dataset/big_files_to_git_ignore/tokenised_573'
+#
+#     enumeration_dir = 'enumeration'
+#     data_dir = '../data'
+#     fasta_dir = 'FASTA'
+#     data_fasta_dir = '../data/FASTA'
+#     data_tokenised_dir = '../data/tokenised'
+#     aa_atoms_yaml = '../data/yaml/residues_atoms.yaml'
+#     data_per_aa_atoms_json = '../data/residues_atoms/per_residue_atoms.json'
+#     diffdata_cif_dir = '../src/diffusion/diff_data/mmCIF'
+#     enumeration_h_list = 'enumeration/hydrogens.lst'
+#
+#     rp_diffdata_pdbid_lst_dir = '../diffusion/diff_data/PDBid_list'
+#     rp_diffdata_sd573_lst = '../diffusion/diff_data/PDBid_list/SD_573.lst'
+#     rp_diffdata_globins10_lst = '../diffusion/diff_data/PDBid_list/globins_10.lst'
+#     rp_diffdata_globin1_lst = '../diffusion/diff_data/PDBid_list/globin_1.lst'
 
 
-class FileExt(Enum):
-    CIF = 'cif'
-    dot_CIF = '.cif'
-    ssv = 'ssv'
-    dot_ssv = '.ssv'
-    csv = 'csv'
-    tsv = 'tsv'
-    dot_lst = '.lst'
-    dot_json = '.json'
-    dot_txt = '.txt'
-    dot_pt = '.pt'
+# class Filename(Enum):
+#     aa_atoms_no_h = 'residues_atoms_no_hydrogens'
+#     atoms_no_h = 'unique_atoms_only_no_hydrogens'
+#     aa = 'residues'
 
 
-class YamlKey(Enum):
-    root = 'ROOT'
-    aas = 'AAs'
-    atoms_by_aa = 'ATOMS_BY_AA'
-    aa_3to1 = 'AA_3to1'
+# class FileExt(Enum):
+#     CIF = 'cif'
+#     dot_CIF = '.cif'
+#     ssv = 'ssv'
+#     dot_ssv = '.ssv'
+#     csv = 'csv'
+#     tsv = 'tsv'
+#     dot_lst = '.lst'
+#     dot_json = '.json'
+#     dot_txt = '.txt'
+#     dot_pt = '.pt'
+
+
+# class YamlKey(Enum):
+#     root = 'ROOT'
+#     aas = 'AAs'
+#     atoms_by_aa = 'ATOMS_BY_AA'
+#     aa_3to1 = 'AA_3to1'
 
 
 def _chdir_to_data_layer():
@@ -111,10 +111,14 @@ def copy_files_over(path_src_dir: str, path_dst_dir: str, file_ext: str) -> int:
 
 def copy_cifs_from_bigfilefolder_to_diff_data():
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer.
-    file_count = copy_files_over(path_src_dir=Path.sd_573_cifs_dir.value,
-                                 path_dst_dir=Path.diffdata_cif_dir.value,
-                                 file_ext=FileExt.CIF.value)
-    print(f"Number of '.{FileExt.CIF.value}' files copied over = {file_count}")
+    file_count = copy_files_over(path_src_dir='../data/dataset/big_files_to_git_ignore/SD_573_CIFs',
+                                 # path_src_dir=Path.sd_573_cifs_dir.value,
+                                 # path_dst_dir=Path.diffdata_cif_dir.value,
+                                 path_dst_dir='../src/diffusion/diff_data/mmCIF',
+                                 # file_ext=FileExt.CIF.value)
+                                 file_ext='cif')
+    # print(f"Number of '.{FileExt.CIF.value}' files copied over = {file_count}")
+    print(f"Number of '.cif' files copied over = {file_count}")
     _restore_original_working_dir(cwd)
 
 
@@ -123,14 +127,17 @@ def clear_diffdatacif_dir() -> None:
     Note: As we're likely dealing with less than 10,000 files, I am not using Linux via subprocess, which would be:
     ```subprocess.run(['rm', '-rf', f'{directory_path}/*'], check=True, shell=True)```
     """
-    for cif_file in os.listdir(Path.diffdata_cif_dir.value):
-        cif_path = os.path.join(Path.diffdata_cif_dir.value, cif_file)
+    # for cif_file in os.listdir(Path.diffdata_cif_dir.value):
+    for cif_file in os.listdir('../src/diffusion/diff_data/mmCIF'):
+        # cif_path = os.path.join(Path.diffdata_cif_dir.value, cif_file)
+        cif_path = os.path.join('../src/diffusion/diff_data/mmCIF', cif_file)
         os.unlink(cif_path)
 
 
 def read_list_of_pdbids_from_text_file(filename: str):
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer.
-    path_file = os.path.join(Path.data_pdbid_dir.value, filename)
+    # path_file = os.path.join(Path.data_pdbid_dir.value, filename)
+    path_file = os.path.join('../data/PDBid_list', filename)
     with open(path_file, 'r') as f:
         pdb_ids = f.read()
     pdbids = pdb_ids.split()
@@ -163,7 +170,8 @@ def read_pdb_lst_from_src_diff_dir(relpath_pdblst: str) -> list:
 
 def get_list_of_pdbids_of_local_single_domain_cifs() -> list:
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
-    cifs = glob.glob(os.path.join(Path.sd_573_cifs_dir.value, f'*{FileExt.dot_CIF.value}'))
+    # cifs = glob.glob(os.path.join(Path.sd_573_cifs_dir.value, f'*{FileExt.dot_CIF.value}'))
+    cifs = glob.glob(os.path.join('../data/dataset/big_files_to_git_ignore/SD_573_CIFs', f'*.cif'))
     path_cifs = [cif.upper() for cif in cifs if os.path.isfile(cif)]
     pdb_id_list = []
 
@@ -180,46 +188,54 @@ def get_list_of_pdbids_of_local_single_domain_cifs() -> list:
 
 
 def write_list_to_lst_file(list_to_write: list, path_fname: str) -> None:
-    path_fname = path_fname.removesuffix(FileExt.dot_lst.value)
-    path_fname = f'{path_fname}{FileExt.dot_lst.value}'
+    # path_fname = path_fname.removesuffix(FileExt.dot_lst.value)
+    path_fname = path_fname.removesuffix('.lst')
+    path_fname = f'{path_fname}.lst'
     with open(path_fname, 'w') as f:
         for item in list_to_write:
             f.write(f'{item}\n')
 
 
 def write_list_to_space_separated_txt_file(list_to_write: list, fname: str) -> None:
-    fname = fname.removesuffix(FileExt.dot_txt.value)
-    fname = fname + FileExt.dot_txt.value
+    fname = fname.removesuffix('.txt')
+    fname = fname + '.txt'
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
     space_sep_str = ' '.join(list_to_write)
-    with open(f'{Path.data_dir.value}/{fname}', 'w') as f:
+    # with open(f'{Path.data_dir.value}/{fname}', 'w') as f:
+    with open(f'../data/{fname}', 'w') as f:
         f.write(space_sep_str)
     _restore_original_working_dir(cwd)
 
 
 def write_enumerations_json(fname: str, dict_to_write: dict) -> None:
-    fname = fname.removesuffix(FileExt.dot_json.value)
-    _write_to_json_to_data_dir(fname=f'{Path.enumeration_dir.value}/{fname}{FileExt.dot_json.value}',
+    fname = fname.removesuffix('.json')
+    # _write_to_json_to_data_dir(fname=f'{Path.enumeration_dir.value}/{fname}{FileExt.dot_json.value}',
+    _write_to_json_to_data_dir(fname=f'enumeration/{fname}.json',
                                dict_to_write=dict_to_write)
 
 
 def read_enumerations_json(fname: str) -> dict:
-    fname = fname.removesuffix(FileExt.dot_json.value)
-    return _read_json_from_data_dir(fname=f'{Path.enumeration_dir.value}/{fname}{FileExt.dot_json.value}')
+    fname = fname.removesuffix('.json')
+    # return _read_json_from_data_dir(fname=f'{Path.enumeration_dir.value}/{fname}{FileExt.dot_json.value}')
+    return _read_json_from_data_dir(fname=f'enumeration/{fname}.json')
 
 
 def read_enumeration_mappings() -> Tuple[dict, dict, dict]:
-    residues_atoms_enumerated = read_enumerations_json(fname=Filename.aa_atoms_no_h.value)
+    # residues_atoms_enumerated = read_enumerations_json(fname=Filename.aa_atoms_no_h.value)
+    residues_atoms_enumerated = read_enumerations_json(fname='residues_atoms_no_hydrogens')
     residues_atoms_enumerated = {eval(k): v for k, v in residues_atoms_enumerated.items()}
-    atoms_enumerated = read_enumerations_json(fname=Filename.atoms_no_h.value)
-    residues_enumerated = read_enumerations_json(fname=Filename.aa.value)
+    # atoms_enumerated = read_enumerations_json(fname=Filename.atoms_no_h.value)
+    atoms_enumerated = read_enumerations_json(fname='unique_atoms_only_no_hydrogens')
+    # residues_enumerated = read_enumerations_json(fname=Filename.aa.value)
+    residues_enumerated = read_enumerations_json(fname='residues')
     return residues_atoms_enumerated, atoms_enumerated, residues_enumerated
 
 
 def _write_to_json_to_data_dir(fname: str, dict_to_write: dict):
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
-    fname = fname.removeprefix('/').removesuffix(FileExt.dot_json.value)
-    relpath_json = f'{Path.data_dir.value}/{fname}{FileExt.dot_json.value}'
+    fname = fname.removeprefix('/').removesuffix('.json')
+    # relpath_json = f'{Path.data_dir.value}/{fname}{FileExt.dot_json.value}'
+    relpath_json = f'../data/{fname}.json'
 
     with open(relpath_json, 'w') as json_f:
         json.dump(dict_to_write, json_f, indent=4)
@@ -231,11 +247,14 @@ def read_aa_atoms_yaml() -> Tuple[list, dict]:
     aas_atoms = dict()
     aas = list()
 
-    with open(Path.aa_atoms_yaml.value, 'r') as stream:
+    # with open(Path.aa_atoms_yaml.value, 'r') as stream:
+    with open('../data/yaml/residues_atoms.yaml', 'r') as stream:
         try:
             atoms_aas = yaml.load(stream, Loader=yaml.Loader)
-            aas = atoms_aas[YamlKey.root.value][YamlKey.aas.value]
-            aas_atoms = atoms_aas[YamlKey.root.value][YamlKey.atoms_by_aa.value]
+            # aas = atoms_aas[YamlKey.root.value][YamlKey.aas.value]
+            aas = atoms_aas['ROOT']['AAs']
+            # aas_atoms = atoms_aas[YamlKey.root.value][YamlKey.atoms_by_aa.value]
+            aas_atoms = atoms_aas['ROOT']['ATOMS_BY_AA']
 
         except yaml.YAMLError as exc:
             print(exc)
@@ -247,10 +266,12 @@ def read_aa_3to1_yaml() -> dict:
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
     aa_3to1 = dict()
 
-    with open(Path.aa_atoms_yaml.value, 'r') as stream:
+    # with open(Path.aa_atoms_yaml.value, 'r') as stream:
+    with open('../data/yaml/residues_atoms.yaml', 'r') as stream:
         try:
             atoms_aas = yaml.load(stream, Loader=yaml.Loader)
-            aa_3to1 = atoms_aas[YamlKey.root.value][YamlKey.aa_3to1.value]
+            # aa_3to1 = atoms_aas[YamlKey.root.value][YamlKey.aa_3to1.value]
+            aa_3to1 = atoms_aas['ROOT']['AA_3to1']
 
         except yaml.YAMLError as exc:
             print(exc)
@@ -260,8 +281,8 @@ def read_aa_3to1_yaml() -> dict:
 
 def write_pdb_uniprot_fasta_recs_to_json(recs: dict, filename: str) -> None:
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
-    fname = filename.removesuffix(FileExt.dot_json.value)
-    with open(f'{Path.data_fasta_dir.value}/{fname}{FileExt.dot_json.value}', 'w') as json_f:
+    fname = filename.removesuffix('.json')
+    with open(f'../data/FASTA/{fname}.json', 'w') as json_f:
         json.dump(recs, json_f, indent=4)  # Works ok (despite warning that it expected SupportsWrite[str], not TextIO).
     _restore_original_working_dir(cwd)
 
@@ -272,7 +293,8 @@ def _remove_null_entries(pdbids_fasta_json: dict):
 
 
 def read_nonnull_fastas_from_json_to_dict(fname: str) -> dict:
-    pdbids_fasta_json = _read_json_from_data_dir(fname=f'{Path.fasta_dir.value}/{fname}')
+    # pdbids_fasta_json = _read_json_from_data_dir(fname=f'{Path.fasta_dir.value}/{fname}')
+    pdbids_fasta_json = _read_json_from_data_dir(fname=f'FASTA/{fname}')
     pdbids_fasta_json = _remove_null_entries(pdbids_fasta_json)
     return pdbids_fasta_json
 
@@ -281,8 +303,10 @@ def make_api_calls_to_fetch_mmcif_and_write_locally(pdb_id: str, cif_dst_dir: st
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
     non_200_count = 0
     cif_dst_dir = cif_dst_dir.removesuffix('/').removeprefix('/')
-    pdb_id = pdb_id.removesuffix(FileExt.dot_CIF.value)
-    mmcif_file = f'{cif_dst_dir}/{pdb_id}{FileExt.dot_CIF.value}'
+    # pdb_id = pdb_id.removesuffix(FileExt.dot_CIF.value)
+    pdb_id = pdb_id.removesuffix('.cif')
+    # mmcif_file = f'{cif_dst_dir}/{pdb_id}{FileExt.dot_CIF.value}'
+    mmcif_file = f'{cif_dst_dir}/{pdb_id}.cif'
     if os.path.exists(mmcif_file):
         print(f'{mmcif_file} already exists. No API call required.')
     else:
@@ -299,7 +323,7 @@ def make_api_calls_to_fetch_mmcif_and_write_locally(pdb_id: str, cif_dst_dir: st
 
 def save_torch_tensor(pt: torch.Tensor, dst_dir: str, pdbid_chain: str):
     os.makedirs(dst_dir, exist_ok=True)
-    pt_file = f'{dst_dir}/{pdbid_chain}{FileExt.dot_pt.value}'
+    pt_file = f'{dst_dir}/{pdbid_chain}.pt'
     torch.save(pt, pt_file)
 
 
@@ -315,8 +339,10 @@ def write_tokenised_cif_to_ssv(pdb_id: str, pdf: pd.DataFrame, path_dst_dir=None
     print(f'PDBid={pdb_id}: write tokenised to ssv')
     os.makedirs(path_dst_dir, exist_ok=True)
     path_dst_dir = path_dst_dir.removesuffix('/').removeprefix('/')
-    pdb_id = pdb_id.removesuffix(FileExt.dot_CIF.value)
-    pdf.to_csv(path_or_buf=f'{path_dst_dir}/{pdb_id}{FileExt.dot_ssv.value}', sep=' ', index=False)
+    # pdb_id = pdb_id.removesuffix(FileExt.dot_CIF.value)
+    pdb_id = pdb_id.removesuffix('.cif')
+    # pdf.to_csv(path_or_buf=f'{path_dst_dir}/{pdb_id}{FileExt.dot_ssv.value}', sep=' ', index=False)
+    pdf.to_csv(path_or_buf=f'{path_dst_dir}/{pdb_id}.ssv', sep=' ', index=False)
 
 
 def write_tokenised_cifs_to_flatfiles(pdb_id: str, pdfs: List[pd.DataFrame], dst_data_dir=None, flatfiles=None):
@@ -335,7 +361,8 @@ def write_tokenised_cifs_to_flatfiles(pdb_id: str, pdfs: List[pd.DataFrame], dst
     print(f'PDBid={pdb_id}: write tokenised to flatfile')
     for pdf in pdfs:
         if flatfiles is None:
-            flatfiles = [FileExt.ssv.value]
+            # flatfiles = [FileExt.ssv.value]
+            flatfiles = ['ssv']
         elif isinstance(flatfiles, str):
             flatfiles = [flatfiles]
         cwd = ''  # to return to at end of this function.
@@ -344,20 +371,25 @@ def write_tokenised_cifs_to_flatfiles(pdb_id: str, pdfs: List[pd.DataFrame], dst
             print(f'You did not pass any destination dir path for writing the tokenised cif flat flatfile to. '
                   f'Therefore it will be written to the top-level data dir (`diffSock/data/tokenised`).')
             cwd = _chdir_to_data_layer()
-            dst_data_dir = Path.data_tokenised_dir.value
+            # dst_data_dir = Path.data_tokenised_dir.value
+            dst_data_dir = '../data/tokenised'
         else:
             os.makedirs(dst_data_dir, exist_ok=True)
 
-        chain = pdf[CIF.S_asym_id.value].unique()
+        # chain = pdf[CIF.S_asym_id.value].unique()
+        chain = pdf['S_asym_id'].unique()
         chain = chain[0]
         for flatfile in flatfiles:
             sep = ' '
-            if flatfile == FileExt.tsv.value:
+            # if flatfile == FileExt.tsv.value:
+            if flatfile == 'tsv':
                 sep = '\t'
-            elif flatfile == FileExt.csv.value:
+            # elif flatfile == FileExt.csv.value:
+            elif flatfile == 'csv':
                 sep = ','
             dst_data_dir = dst_data_dir.removesuffix('/')
-            pdb_id = pdb_id.removesuffix(FileExt.dot_CIF.value)
+            # pdb_id = pdb_id.removesuffix(FileExt.dot_CIF.value)
+            pdb_id = pdb_id.removesuffix('.cif')
             pdf.to_csv(path_or_buf=f'{dst_data_dir}/{pdb_id}_{chain}.{flatfile}', sep=sep, index=False)
 
         # # For a more human-readable set of column-names:
@@ -387,7 +419,8 @@ def read_tokenised_cif_ssv_to_pdf(pdb_id: str, relpath_tokensd_dir: str) -> List
     """
     os.makedirs(relpath_tokensd_dir, exist_ok=True)
     relpath_tokensd_dir = relpath_tokensd_dir.removesuffix('/').removeprefix('/')
-    pattern = fr'{pdb_id}_[A-Z]\{FileExt.dot_ssv.value}'
+    # pattern = fr'{pdb_id}_[A-Z]\{FileExt.dot_ssv.value}'
+    pattern = fr'{pdb_id}_[A-Z]\.ssv'
     ssvs = []
     for f in os.listdir(relpath_tokensd_dir):
         if os.path.isfile(os.path.join(relpath_tokensd_dir, f)) and re.match(pattern, f):
@@ -397,7 +430,8 @@ def read_tokenised_cif_ssv_to_pdf(pdb_id: str, relpath_tokensd_dir: str) -> List
         path_cif_ssv = f'{relpath_tokensd_dir}/{ssv}'
         print(f'Reading flatfile of tokenised cif: {path_cif_ssv} into dataframe')
         pdf = pd.read_csv(path_cif_ssv, sep=' ')
-        nan_indices = pdf[pdf[ColNames.AA_ATOM_LABEL_NUM.value].isna()].index
+        # nan_indices = pdf[pdf[ColNames.AA_ATOM_LABEL_NUM.value].isna()].index
+        nan_indices = pdf[pdf['aa_atom_label_num'].isna()].index
         if not nan_indices.empty:
             print(f'Row indices with NaN values: {list(nan_indices)}')
         pdfs.append(pdf)
@@ -413,10 +447,12 @@ def read_tokenised_cif_chain_ssv_to_pdf(pdbid_chain: str, relpath_tokensd_dir: s
     :return: Pre-tokenised CIF for specified chain, stored as a ssv flatfile, read into dataframe.
     """
     relpath_tokensd_dir = relpath_tokensd_dir.removesuffix('/').removeprefix('/')
-    path_cif_ssv = f'{relpath_tokensd_dir}/{pdbid_chain}{FileExt.dot_ssv.value}'
+    # path_cif_ssv = f'{relpath_tokensd_dir}/{pdbid_chain}{FileExt.dot_ssv.value}'
+    path_cif_ssv = f'{relpath_tokensd_dir}/{pdbid_chain}.ssv'
     print(f'Reading flatfile of tokenised cif: {path_cif_ssv} into dataframe')
     pdf = pd.read_csv(path_cif_ssv, sep=' ')
-    nan_indices = pdf[pdf[ColNames.AA_ATOM_LABEL_NUM.value].isna()].index
+    # nan_indices = pdf[pdf[ColNames.AA_ATOM_LABEL_NUM.value].isna()].index
+    nan_indices = pdf[pdf['aa_atom_label_num'].isna()].index
     if not nan_indices.empty:
         print(f'Row indices with NaN values: {list(nan_indices)}')
     return pdf
@@ -430,8 +466,9 @@ def _read_json_from_data_dir(fname: str) -> dict:
     :return: The read-in json file, as a Python dict.
     """
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
-    fname = fname.removeprefix('/').removesuffix(FileExt.dot_json.value)
-    relpath_json = f'{Path.data_dir.value}/{fname}{FileExt.dot_json.value}'
+    fname = fname.removeprefix('/').removesuffix('.json')
+    # relpath_json = f'{Path.data_dir.value}/{fname}{FileExt.dot_json.value}'
+    relpath_json = f'../data/{fname}.json'
     assert os.path.exists(relpath_json)
     try:
         with open(relpath_json, 'r') as json_f:
@@ -447,8 +484,9 @@ def _read_json_from_data_dir(fname: str) -> dict:
 
 def read_lst_file_from_data_dir(fname):
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
-    fname = fname.removeprefix('/').removesuffix(FileExt.dot_lst.value)
-    relpath_lst = f'{Path.data_dir.value}/{fname}{FileExt.dot_lst.value}'
+    fname = fname.removeprefix('/').removesuffix('.lst')
+    # relpath_lst = f'{Path.data_dir.value}/{fname}{FileExt.dot_lst.value}'
+    relpath_lst = f'../data/{fname}.lst'
     assert os.path.exists(relpath_lst)
     try:
         with open(relpath_lst, 'r') as lst_f:

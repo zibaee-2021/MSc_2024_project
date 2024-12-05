@@ -1,18 +1,18 @@
 from typing import Tuple
-from enum import Enum
+# from enum import Enum
 import torch
 from data_layer import data_handler as dh
 from transformers import AutoTokenizer
 from transformers import AutoModelForSeq2SeqLM, AutoModel
 
 
-class Path(Enum):
-    tokenised_dir = '../diffusion/diff_data/tokenised'
-    local_emb_dir = '../diffusion/diff_data/emb'
+# class Path(Enum):
+#     tokenised_dir = '../diffusion/diff_data/tokenised'
+#     local_emb_dir = '../diffusion/diff_data/emb'
 
 
-class HFModelName(Enum):
-    ANKH_BASE = 'ElnaggarLab/ankh-base'
+# class HFModelName(Enum):
+#     ANKH_BASE = 'ElnaggarLab/ankh-base'
 
 
 def load_tokeniser_and_eval_model(model_name: str) -> Tuple[AutoTokenizer, AutoModel]:
@@ -48,7 +48,8 @@ def generate_embeddings_from_fastas_of_pdbids(tokeniser, eval_model, pdbids_fast
         aa_seq_embedding = embedding.encoder_last_hidden_state
         raw_tok_emb['embedding'] = aa_seq_embedding
         pdbid_raw_tok_emb[pdbid] = raw_tok_emb
-        dh.save_torch_tensor(pt=aa_seq_embedding, dst_dir=f'{Path.local_emb_dir.value}/{pdbid}')
+        # dh.save_torch_tensor(pt=aa_seq_embedding, dst_dir=f'{Path.local_emb_dir.value}/{pdbid}')
+        dh.save_torch_tensor(pt=aa_seq_embedding, dst_dir=f'../diffusion/diff_data/emb/{pdbid}', pdbid_chain=pdbid)
     return pdbid_raw_tok_emb
 
 
@@ -72,6 +73,7 @@ def generate_embeddings_from_aminoacid_sequence(tokeniser, eval_model, pdbid_cha
     aa_seq_embedding = embedding.encoder_last_hidden_state
     raw_tok_emb['embedding'] = aa_seq_embedding
     pdbid_raw_tok_emb[pdbid_chain] = raw_tok_emb
-    dh.save_torch_tensor(pt=aa_seq_embedding, dst_dir=Path.local_emb_dir.value, pdbid_chain=pdbid_chain)
+    # dh.save_torch_tensor(pt=aa_seq_embedding, dst_dir=Path.local_emb_dir.value, pdbid_chain=pdbid_chain)
+    dh.save_torch_tensor(pt=aa_seq_embedding, dst_dir='../diffusion/diff_data/emb', pdbid_chain=pdbid_chain)
 
     return pdbid_raw_tok_emb
