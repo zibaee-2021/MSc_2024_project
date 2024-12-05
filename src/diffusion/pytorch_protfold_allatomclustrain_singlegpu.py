@@ -303,7 +303,7 @@ def main():
                                  pin_memory=True,
                                  collate_fn=my_collate)
 
-    if FINETUNE_FLAG:  # False
+    if FINETUNE_FLAG:
         max_lr = 1e-5
     else:
         max_lr = 3e-4
@@ -312,7 +312,7 @@ def main():
     start_epoch = 0
     max_epochs = 2000
 
-    if RESTART_FLAG:  # True
+    if RESTART_FLAG:
         try:
             # pretrained_dict = torch.load(Filename.prot_e2e_model_train_pt.value, map_location='cuda')
             pretrained_dict = torch.load('prot_e2e_model_train.pt', map_location='cuda')
@@ -343,7 +343,7 @@ def main():
     # Process one sample and return loss
     def calculate_sample_loss(_sample: List[torch.Tensor]) -> float:
         """
-        Calculate loss for a single sample, combining 3 difference loss components in a weight ed sum of backbone loss,
+        Calculate loss for a single sample, combining 3 difference loss components in a weighted sum of backbone loss,
         confidence loss and difference loss.
         :param _sample: Tuple of the following 10 elements: `embed`, `noised_coords`, `noise_levels`, `noise`,
         `aacodes`, `atomcodes`, `aaindices`, `bb_coords`, `target_coords` and `target`. All of which are used except
