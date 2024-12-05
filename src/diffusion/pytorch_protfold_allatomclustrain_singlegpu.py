@@ -73,7 +73,7 @@ BATCH_SIZE = 8
 NSAMPLES = 12
 SIGDATA = 16
 
-RESTART_FLAG = True
+RESTART_FLAG = False  # False to build first train model
 FINETUNE_FLAG = False
 
 
@@ -252,6 +252,14 @@ class DMPDataset(Dataset):
 
 
 def main():
+    if not RESTART_FLAG:
+        print(f"`RESTART_FLAG` is False, hence don't try to use the pre-built models: 'prot_e2e_model_train.pt' and "
+              f"'checkpoint.pt'")
+    else:
+        assert os.path.exists('prot_e2e_model_train.pt'), ("Expected 'prot_e2e_model_train.pt' model file is absent. "
+                                                           "Cannot proceed until this is addressed.")
+    print(f'FINETUNE_FLAG={FINETUNE_FLAG}')
+
     global BATCH_SIZE
     
     # Create neural network model
@@ -429,16 +437,18 @@ def main():
                 val_err_min = val_err
                 # torch.save(network.state_dict(), Filename.prot_e2e_model_pt.value)
                 torch.save(network.state_dict(), 'prot_e2e_model.pt')
-                print("Saving model...", flush=True)
+                print(f"Saving model 'prot_e2e_model.pt'", flush=True)
                     
             # torch.save(network.state_dict(), Filename.prot_e2e_model_train_pt.value)
             torch.save(network.state_dict(), 'prot_e2e_model_train.pt')
+            print(f"Saving model 'prot_e2e_model_train.pt'", flush=True)
 
             torch.save({
                 'epoch': epoch,
                 'val_err_min': val_err_min,
             }, 'checkpoint.pt')
             # }, Filename.checkpoint_pt.value)
+            print(f"Saving 'checkpoint.pt'", flush=True)
 
 
 if __name__ == "__main__":
