@@ -48,6 +48,7 @@ from data_layer import data_handler as dh
 from src.preprocessing_funcs import tokeniser as tk
 from src.enums import ColNames, CIF
 
+from src.losses import loss_plotter
 
 # `rp_` stands for relative path:
 # class Path(Enum):
@@ -494,5 +495,10 @@ if __name__ == "__main__":
         print(f'sys.version = {sys.version}')
 
     _epochs, _train_losses, _val_losses = main()
+    # _epochs = [1, 2, 3, 4, 5]
+    # _train_losses = [340.45, 300.34, 34.45, 3.45, 3.11]
+    # _val_losses = [400.45, 350.34, 100.45, 78.45, 35.11]
     losses_per_epoch = np.column_stack((_epochs, _train_losses, _val_losses))
-    np.savetxt('../losses/losses_per_epoch.txt', losses_per_epoch, fmt='%d', delimiter=',')
+    path_lpe_txt = '../losses/losses_per_epoch.txt'
+    np.savetxt(path_lpe_txt, losses_per_epoch, fmt=("%d", "%.2f", "%.2f"), delimiter=',')
+    loss_plotter.plot_train_val_errors_per_epoch(path_lpe_txt)
