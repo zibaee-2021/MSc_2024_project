@@ -432,8 +432,11 @@ def _make_new_bckbone_or_sdchain_col(pdfs: List[pd.DataFrame], pdb_id: str=None)
         is_sidechain_atom = pdf['A_label_atom_id'].isin(SIDECHAIN)
 
         # MAKE NEW COLUMN TO INDICATE IF ATOM IS FROM POLYPEPTIDE BACKBONE ('bb) OR SIDE-CHAIN ('sc'):
-        pdf.loc[:, ColNames.BB_OR_SC.value] = np.select([is_backbone_atom, is_sidechain_atom],
-                                                        [ColValue.bb.value, ColValue.sc.value], default=pd.NaT)
+        # pdf.loc[:, ColNames.BB_OR_SC.value] = np.select([is_backbone_atom, is_sidechain_atom],
+                                                        # [ColValue.bb.value, ColValue.sc.value], default='placeholder')
+        pdf.loc[:, 'bb_or_sc'] = np.select([is_backbone_atom, is_sidechain_atom], ['bb', 'sc'], default='placeholder')
+        pdf.loc[pdf['bb_or_sc'] == 'placeholder', 'bb_or_sc'] = pd.NA
+
         expected_num_of_cols = 9
         assert len(pdf.columns) == expected_num_of_cols, \
             f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf.columns)}'
