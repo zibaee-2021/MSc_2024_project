@@ -178,6 +178,7 @@ class DMPDataset(Dataset):
         target_coords = sample[5]
 
         embed_pt = f'diff_data/emb/{target}.pt'
+        assert os.path.exists(embed_pt), f'{embed_pt} is missing!'
         embed = torch.load(embed_pt)
         # embed = torch.load(f'{Path.rp_diffdata_emb_dir.value}/{target}{FileExt.dot_pt.value}')
         
