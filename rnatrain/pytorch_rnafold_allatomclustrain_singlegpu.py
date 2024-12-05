@@ -377,7 +377,7 @@ def main():
 
         loss = bb_loss + 0.01 * conf_loss + diff_loss
 
-        print(f'debugging --> loss = {loss}')
+        # print(f'debugging --> loss = {loss}')
         # Return zero if NaN
         if loss != loss:
             loss = 0
@@ -421,6 +421,7 @@ def main():
             val_err /= val_samples
             #scheduler.step(val_err)
 
+
             print(f"Epoch {epoch}, train loss: {train_err:.4f}, val loss: {val_err:.4f}")
             print(f"Time taken = {time.time() - last_time:.2f}", flush=True)
             last_time = time.time()
@@ -428,14 +429,16 @@ def main():
             if val_err < val_err_min:
                 val_err_min = val_err
                 torch.save(network.state_dict(), 'rna_e2e_model.pt')
-                print("Saving model...", flush=True)
+                print(f"Saving model 'rna_e2e_model.pt'", flush=True)
                     
             torch.save(network.state_dict(), 'rna_e2e_model_train.pt')
+            print(f"Saving model 'rna_e2e_model_train.pt'", flush=True)
 
             torch.save({
                 'epoch': epoch,
                 'val_err_min': val_err_min,
             }, 'checkpoint.pt')
+            print(f"Saving 'checkpoint.pt'", flush=True)
 
 
 if __name__ == "__main__":
