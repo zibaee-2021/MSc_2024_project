@@ -46,7 +46,7 @@ from nndef_protfold_atompyt2 import DiffusionNet
 
 from data_layer import data_handler as dh
 from src.preprocessing_funcs import tokeniser as tk
-from src.enums import ColNames, CIF
+# from src.enums import ColNames, CIF
 
 from src.losses import loss_plotter
 
