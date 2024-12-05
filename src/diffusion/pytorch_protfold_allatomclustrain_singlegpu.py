@@ -29,7 +29,7 @@ _pdbx_poly_seq_scheme:
 
 import sys
 import os
-from typing import List
+from typing import List, Tuple
 # from enum import Enum
 import time
 import random
@@ -251,7 +251,8 @@ class DMPDataset(Dataset):
         return sample
 
 
-def main():
+def main() -> Tuple[List[int], List[float], List[float]]:
+    epochs, train_losses, val_losses = [], [], []
     if not RESTART_FLAG:
         print(f"`RESTART_FLAG` is False, hence don't try to use the pre-built models: 'prot_e2e_model_train.pt' and "
               f"'checkpoint.pt'")
@@ -415,6 +416,7 @@ def main():
             train_samples += len(sample_batch)
 
         train_err /= train_samples
+        _train_losses.append(train_err)
 
         # Run validation samples
         network.eval()
@@ -428,6 +430,7 @@ def main():
 
             val_err /= val_samples
             #  scheduler.step(val_err)
+            _val_losses.append(val_err)
 
             print(f"Epoch {epoch}, train loss: {train_err:.4f}, val loss: {val_err:.4f}")
             print(f"Time taken = {time.time() - last_time:.2f}", flush=True)
@@ -449,6 +452,10 @@ def main():
             }, 'checkpoint.pt')
             # }, Filename.checkpoint_pt.value)
             print(f"Saving 'checkpoint.pt'", flush=True)
+
+        epochs.append(epoch)
+
+    return epochs, train_losses, val_losses
 
 
 if __name__ == "__main__":
@@ -486,5 +493,6 @@ if __name__ == "__main__":
         print(f'torch.__version__={torch.__version__}')
         print(f'sys.version = {sys.version}')
 
-    main()
-
+    _epochs, _train_losses, _val_losses = main()
+    losses_per_epoch = np.column_stack((_epochs, _train_losses, _val_losses))
+    np.savetxt('../losses/losses_per_epoch.txt', losses_per_epoch, fmt='%d', delimiter=',')
