@@ -177,6 +177,7 @@ class DMPDataset(Dataset):
         target = sample[4]
         target_coords = sample[5]
 
+        # embed = torch.load(f'{Path.rp_diffdata_emb_dir.value}/{target}{FileExt.dot_pt.value}')
         embed_pt = f'diff_data/emb/{target}.pt'
         assert os.path.exists(embed_pt), f'{embed_pt} is missing!'
         embed = torch.load(embed_pt)
@@ -366,7 +367,7 @@ def main() -> Tuple[List[int], List[float], List[float]]:
         # ntindices = sample[6].cuda(non_blocking=True)
         aaindices = _sample[6].cuda(non_blocking=True)  # Position of amino acid in protein.
         bb_coords = _sample[7].cuda(non_blocking=True)  # X,Y,Z coordinates of the chosen backbone atoms (`CA`).
-        target_coords = _sample[8].cuda(non_blocking=True)  # X,Y,Z coordinates of all of the other atoms ? Or
+        target_coords = _sample[8].cuda(non_blocking=True)  # X,Y,Z coordinates of all the other atoms ? Or
 
         # pred_denoised, pred_coords, pred_confs = network(inputs, ntcodes, atomcodes, ntindices, noised_coords, noise_levels)
         pred_denoised, pred_coords, pred_confs = network(inputs, aacodes, atomcodes, aaindices, noised_coords, noise_levels)
