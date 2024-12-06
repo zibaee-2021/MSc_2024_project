@@ -71,6 +71,7 @@ def generate_embeddings_from_aminoacid_sequence(tokeniser, eval_model, pdbid_cha
     # embedding = embedding.last_hidden_state
     # aa_sequence_embedding = embedding[0]
     aa_seq_embedding = embedding.encoder_last_hidden_state
+    aa_seq_embedding = aa_seq_embedding.detach()
     raw_tok_emb['embedding'] = aa_seq_embedding
     pdbid_raw_tok_emb[pdbid_chain] = raw_tok_emb
     # dh.save_torch_tensor(pt=aa_seq_embedding, dst_dir=Path.local_emb_dir.value, pdbid_chain=pdbid_chain)

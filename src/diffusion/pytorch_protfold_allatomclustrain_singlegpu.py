@@ -180,8 +180,10 @@ class DMPDataset(Dataset):
         embed_pt = f'diff_data/emb/{target}.pt'
         assert os.path.exists(embed_pt), f'{embed_pt} is missing!'
         embed = torch.load(embed_pt)
-        # embed = torch.load(f'{Path.rp_diffdata_emb_dir.value}/{target}{FileExt.dot_pt.value}')
-        
+        linear_layer = nn.Linear(768, 1024, bias=False)
+        embed = linear_layer(embed)
+        embed = embed.detach()
+
         # length = ntseq.shape[0]
         length = aaseq.shape[0]
 
