@@ -105,14 +105,16 @@ MIN_RATIO_MISSING_BACKBONE_ATOMS = 0.0
 def nums_of_missing_data(pdf):
 
     counts = {
-        'NaN': (pdf.map(lambda x: isinstance(x, float) and pd.isna(x))).sum().sum(),
-        'pd.NA': (pdf.map(lambda x: x is pd.NA)).sum().sum(),
-        'pd.NaT': (pdf.map(lambda x: x is pd.NaT)).sum().sum(),
-        ' ': (pdf.map(lambda x: x == ' ')).sum().sum(),
-        'na': (pdf.map(lambda x: x.lower() == 'na')).sum().sum(),
-        'nan': (pdf.map(lambda x: x.lower() == 'nan')).sum().sum(),
-        'none': (pdf.map(lambda x: x.lower() == 'none')).sum().sum(),
-        'null': (pdf.map(lambda x: x.lower() == 'null')).sum().sum()
+        'NaN': int((pdf.map(lambda x: isinstance(x, float) and pd.isna(x))).sum().sum()),
+        'pd.NA': int((pdf.map(lambda x: x is pd.NA)).sum().sum()),
+        'pd.NaT': int((pdf.map(lambda x: x is pd.NaT)).sum().sum()),
+        'np.nan': int((pdf.map(lambda x: x is np.nan)).sum().sum()),
+        'None': int((pdf.map(lambda x: x is None)).sum().sum()),
+        ' ': int((pdf.map(lambda x: x == ' ')).sum().sum()),
+        "na": int((pdf.map(lambda x: x == 'na' or x == 'NA')).sum().sum()),
+        "nan": int((pdf.map(lambda x: x == 'nan' or x == 'NAN' or x == 'NaN')).sum().sum()),
+        "none": int((pdf.map(lambda x: x == 'none' or x == 'None')).sum().sum()),
+        "null": int((pdf.map(lambda x: x == 'null' or x == 'Null')).sum().sum())
     }
     print(counts)
     has_missing_data = any(value > 0 for value in counts.values())
