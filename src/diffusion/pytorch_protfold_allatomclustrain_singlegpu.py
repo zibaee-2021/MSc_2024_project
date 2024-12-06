@@ -421,7 +421,7 @@ def main() -> Tuple[List[int], List[float], List[float]]:
             train_samples += len(sample_batch)
 
         train_err /= train_samples
-        _train_losses.append(train_err)
+        train_losses.append(train_err)
 
         # Run validation samples
         network.eval()
