@@ -64,9 +64,9 @@ class MultiheadAttention(nn.Module):
     def forward(self, query, key, value, posbias=None, return_att=False):
         B, L = query.shape[:2]
 
-        q = self.to_query(query).view(B, L, self.heads, self.d_k).permute(0,2,1,3).contiguous()  # (B, h, l, k)
-        k = self.to_key(key).view(B, L, self.heads, self.d_k).permute(0,2,3,1).contiguous()  # (B, h, k, l)
-        v = self.to_value(value).view(B, L, self.heads, self.d_k).permute(0,2,1,3).contiguous()  # (B, h, l, k)
+        q = self.to_query(query).view(B, L, self.heads, self.d_k).permute(0, 2, 1, 3).contiguous()  # (B, h, l, k)
+        k = self.to_key(key).view(B, L, self.heads, self.d_k).permute(0, 2, 3, 1).contiguous()  # (B, h, k, l)
+        v = self.to_value(value).view(B, L, self.heads, self.d_k).permute(0, 2, 1, 3).contiguous()  # (B, h, l, k)
 
         # Scale both Q & K to help avoid fp16 overflows
         q = q * self.scaling
@@ -74,11 +74,11 @@ class MultiheadAttention(nn.Module):
         attention = torch.einsum('bhik,bhkj->bhij', q, k)
         if posbias is not None:
             attention = attention + posbias
-        attention = F.softmax(attention, dim=-1) # (B, h, L, L)
+        attention = F.softmax(attention, dim=-1)  # (B, h, L, L)
         #
         out = torch.matmul(attention, v) # (B, h, L, d_k)
         #print(out)
-        out = out.permute(0,2,1,3).contiguous().view(B, L, -1)
+        out = out.permute(0, 2, 1, 3).contiguous().view(B, L, -1)
         return self.to_out(out)
     
 
@@ -101,10 +101,10 @@ class SeqEncoderLayer(nn.Module):
 
         # Feedforward
         self.ff = nn.Sequential(
-            nn.Linear(d_model, d_model*8, bias=None),
+            nn.Linear(d_model, d_model * 8, bias=None),
             SwiGLU(),
             nn.Dropout(p_drop),
-            nn.Linear(d_model*4, d_model, bias=None)
+            nn.Linear(d_model * 4, d_model, bias=None)
         )
 
         nn.init.zeros_(self.ff[3].weight)
@@ -281,7 +281,7 @@ class DiffusionNet(nn.Module):
         # Expand sequence embedding to atoms
         atom_x = x[:,ntindices]
 
-        coordscale = (nlev_in.view(-1,1,1).pow(2) + VARDATA).sqrt()
+        coordscale = (nlev_in.view(-1, 1, 1).pow(2) + VARDATA).sqrt()
         
         atom_x = atom_x + self.nt_embed(ntcodes)[ntindices].unsqueeze(0) + self.atom_embed(atcodes).unsqueeze(0) + self.ntidx_embed(ntindices).unsqueeze(0) + self.nlev_embed(nlev_in).unsqueeze(1) + self.coord_embed(noised_coords_in / coordscale)
 
@@ -290,7 +290,8 @@ class DiffusionNet(nn.Module):
         with torch.autocast(device_type="cuda", dtype=torch.float16):
             atom_x = checkpoint_sequential(self.atomencoder, 3, atom_x)
 
-        t_h = nlev_in.view(-1,1,1)
-        pred_denoised = self.out_denoise_vecs(atom_x) * SIGDATA * t_h / (VARDATA + t_h ** 2).sqrt() + noised_coords_in * VARDATA / (VARDATA + t_h ** 2)
+        t_h = nlev_in.view(-1, 1, 1)
+        pred_denoised = (self.out_denoise_vecs(atom_x) * SIGDATA * t_h / (VARDATA + t_h ** 2).sqrt()
+                         + noised_coords_in * VARDATA / (VARDATA + t_h ** 2))
 
         return pred_denoised, pred_coords, pred_confs
