@@ -239,11 +239,16 @@ class DiffusionNet(nn.Module):
         self.norm2 = nn.LayerNorm(atomwidth)
         self.norm3 = nn.LayerNorm(atomwidth)
         
-        self.nt_embed = nn.Embedding(5, atomwidth)
+        # self.nt_embed = nn.Embedding(5, atomwidth)  # 5 is number of nucleotides + 1 (presumably for unknown?)
+        NUM_OF_AMINO_ACIDS = 20
+        self.aa_embed = nn.Embedding(NUM_OF_AMINO_ACIDS, atomwidth)  # CHANGE TO 20
 
-        self.atom_embed = nn.Embedding(28, atomwidth)
-        
-        self.ntidx_embed = PositionalEncoding(atomwidth)
+        # self.atom_embed = nn.Embedding(28, atomwidth)  # 28 is number of nucleotide atoms.
+        NUM_OF_AA_ATOMS = 38
+        self.atom_embed = nn.Embedding(NUM_OF_AA_ATOMS, atomwidth)  # 38 is number of nucleotide atoms.
+
+        # self.ntidx_embed = PositionalEncoding(atomwidth)
+        self.aaidx_embed = PositionalEncoding(atomwidth)
 
         self.coord_embed = nn.Linear(3, atomwidth, bias=None)
 
@@ -260,7 +265,9 @@ class DiffusionNet(nn.Module):
             nn.Linear(atomwidth, 3, bias=None)
         )
 
-    def forward(self, x, ntcodes, atcodes, ntindices, noised_coords_in, nlev_in):
+    #      network(inputs, aacodes, atomcodes, aaindices, noised_coords, noise_levels) # from line 371 in main()
+    # def forward(self, x, ntcodes, atcodes, ntindices, noised_coords_in, nlev_in):
+    def forward(self, x, aacodes, atcodes, aaindices, noised_coords_in, nlev_in):
 
         B, L = x.shape[0:2]
 
@@ -279,11 +286,19 @@ class DiffusionNet(nn.Module):
         x = self.norm2(self.to_atom(x))
 
         # Expand sequence embedding to atoms
-        atom_x = x[:,ntindices]
+        # atom_x = x[:,ntindices]
+        atom_x = x[:, aaindices]
 
         coordscale = (nlev_in.view(-1, 1, 1).pow(2) + VARDATA).sqrt()
         
-        atom_x = atom_x + self.nt_embed(ntcodes)[ntindices].unsqueeze(0) + self.atom_embed(atcodes).unsqueeze(0) + self.ntidx_embed(ntindices).unsqueeze(0) + self.nlev_embed(nlev_in).unsqueeze(1) + self.coord_embed(noised_coords_in / coordscale)
+        atom_x = (atom_x
+                  # + self.nt_embed(ntcodes)[ntindices].unsqueeze(0)
+                  + self.aa_embed(aacodes)[aaindices].unsqueeze(0)
+                  + self.atom_embed(atcodes).unsqueeze(0)
+                  # + self.ntidx_embed(ntindices).unsqueeze(0)
+                  + self.aaidx_embed(aaindices).unsqueeze(0)
+                  + self.nlev_embed(nlev_in).unsqueeze(1)
+                  + self.coord_embed(noised_coords_in / coordscale))
 
         atom_x = self.norm3(atom_x)
 
