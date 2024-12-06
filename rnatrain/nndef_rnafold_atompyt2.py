@@ -283,7 +283,12 @@ class DiffusionNet(nn.Module):
 
         coordscale = (nlev_in.view(-1,1,1).pow(2) + VARDATA).sqrt()
         
-        atom_x = atom_x + self.nt_embed(ntcodes)[ntindices].unsqueeze(0) + self.atom_embed(atcodes).unsqueeze(0) + self.ntidx_embed(ntindices).unsqueeze(0) + self.nlev_embed(nlev_in).unsqueeze(1) + self.coord_embed(noised_coords_in / coordscale)
+        atom_x = (atom_x
+                  + self.nt_embed(ntcodes)[ntindices].unsqueeze(0)
+                  + self.atom_embed(atcodes).unsqueeze(0)
+                  + self.ntidx_embed(ntindices).unsqueeze(0)
+                  + self.nlev_embed(nlev_in).unsqueeze(1)
+                  + self.coord_embed(noised_coords_in / coordscale))
 
         atom_x = self.norm3(atom_x)
 
