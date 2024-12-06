@@ -465,6 +465,8 @@ def main() -> Tuple[List[int], List[float], List[float]]:
 
 if __name__ == "__main__":
 
+    os.environ["CUDA_LAUNCH_BLOCKING"] = "1"  # TO HELP DEBUGGING
+
     check_runtime_specs = False
 
     if check_runtime_specs:
