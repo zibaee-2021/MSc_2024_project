@@ -60,8 +60,8 @@ if __name__ == '__main__':
     # pdbid_chains = dh.read_pdb_lst_from_src_diff_dir(relpath_pdblst=dh.Path.rp_diffdata_globins10_lst.value)
     # pdbid_chains = dh.read_pdb_lst_from_src_diff_dir(relpath_pdblst=f'{dh.Path.rp_diffdata_pdbid_lst_dir.value}/'
     _pdbid_chains = dh.read_pdb_lst_from_src_diff_dir(relpath_pdblst=f'../diffusion/diff_data/PDBid_list/'
-                                                                    f'pdbchains_9.lst')
-                                                                    # f'pdbchains_9{dh.FileExt.dot_lst.value}')
+                                                                     f'pdbchains_9.lst')
+                                                                     # f'pdbchains_9{dh.FileExt.dot_lst.value}')
     for _pdbid_chain in _pdbid_chains:
         globins_pdbid_raw_tok_emb_ = generate_ankh_base_embeddings_from_seq_id_of_tokenised_cifs(_pdbid_chain)
         pass
