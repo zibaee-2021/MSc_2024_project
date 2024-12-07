@@ -348,6 +348,8 @@ def main() -> Tuple[List[int], List[float], List[float]]:
         aaindices = _sample[6].cuda(non_blocking=True)  # Position of amino acid in protein.
         bb_coords = _sample[7].cuda(non_blocking=True)  # X,Y,Z coordinates of the chosen backbone atoms (`CA`).
         target_coords = _sample[8].cuda(non_blocking=True)  # X,Y,Z coordinates of all the other atoms ? Or
+        print(f'Protein PDBid={_sample[9]}. inputs.shape={inputs.shape}. len(aacodes)={len(aacodes)}. '
+              f'len(aaindices)={len(aaindices)}. len(bb_coords)={len(bb_coords)}.')
 
         # pred_denoised, pred_coords, pred_confs = network(inputs, ntcodes, atomcodes, ntindices, noised_coords, noise_levels)
         pred_denoised, pred_coords, pred_confs = network(inputs, aacodes, atomcodes, aaindices, noised_coords, noise_levels)
