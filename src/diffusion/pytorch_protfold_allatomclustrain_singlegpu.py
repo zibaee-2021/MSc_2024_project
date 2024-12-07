@@ -1,30 +1,8 @@
 #!/home/jones/miniconda3/bin/python
 """
 DJ's diffusion method for training and inference of RNA structures from primary sequence, adapted here for proteins.
-
 General notes:
-
-- `pdf_` in any variable name refers to it being Pandas dataframe.
-
-
-atom_site:
-    group_PDB,          # 'ATOM' or 'HETATM'    - Filter on this then remove.
-    label_seq_id,       # residue position     - used to join with S_seq_id, then remove.
-    label_comp_id,      # residue (3-letter)    - used to sanity-check with S_mon_id, then remove.
-    id,                 # atom position         - sort on this, keep.
-    label_atom_id,      # atom                  - keep
-    label_asym_id,      # chain                 - join on this, keep.
-    Cartn_x,            # atom x-coordinates
-    Cartn_y,            # atom y-coordinates
-    Cartn_z,            # atom z-coordinates
-    occupancy           # occupancy
-
-_pdbx_poly_seq_scheme:
-    seq_id,             # residue position      - join on this, sort on this, keep.
-    mon_id,             # residue (3-letter)    - used to sanity-check with A_label_comp_id, keep*.
-    pdb_seq_num,        # residue position      - keep for now, as may relate to sequence as input to make embeddings.
-    asym_id,            # chain                 - join on this, sort on this, then remove.
-
+`pdf_` in any variable name refers to it being Pandas dataframe.
 """
 
 import sys
