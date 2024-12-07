@@ -688,6 +688,7 @@ def load_dataset():
         # GET `aaindices`. EXPECTED TO HAVE REPEATED VALUES BECAUSE 1 AA HAS 5 OR MORE ATOMS (NOT DUPLICATE ROWS):
         # aaindices = pdf_target[CIF.S_seq_id.value].tolist()
         aaindices = pdf_target['S_seq_id'].tolist()
+        aaindices = [x - 1 for x in aaindices]
 
         # ASSIGN DATAFRAME INDEX OF BACKBONE ATOM POSITION PER RESIDUE IN NEW COLUMN `BBINDICES`:
         # indices_of_atom_positions = {value: index for index, value in pdf_target[CIF.A_id.value].items()}
