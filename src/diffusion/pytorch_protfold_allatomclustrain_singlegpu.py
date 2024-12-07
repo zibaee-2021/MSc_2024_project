@@ -158,6 +158,7 @@ class DMPDataset(Dataset):
         # embed = torch.load(f'{Path.rp_diffdata_emb_dir.value}/{target}{FileExt.dot_pt.value}')
         print(f'os.getcwd()={os.getcwd()}')
         embed_pt = f'diff_data/emb/{target}.pt'
+        embed_pt = os.path.join(abs_path, embed_pt)
         assert os.path.exists(embed_pt), f'{embed_pt} is missing!'
         embed = torch.load(embed_pt)
         linear_layer = nn.Linear(768, 1024, bias=False)
@@ -448,6 +449,9 @@ def main() -> Tuple[List[int], List[float], List[float]]:
 
 if __name__ == "__main__":
     print(f'os.getcwd()={os.getcwd()}')
+
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+
     os.environ["CUDA_LAUNCH_BLOCKING"] = "1"  # TO HELP DEBUGGING
 
     check_runtime_specs = False
@@ -484,6 +488,7 @@ if __name__ == "__main__":
         print(f'sys.version = {sys.version}')
 
     path_lpe_txt = '../losses/losses_per_epoch.txt'
+    path_lpe_txt = os.path.join(abs_path, path_lpe_txt)
     assert os.path.exists(path_lpe_txt), ("Missing `losses` directory. Needed for saving loss per epoch data. "
                                           "It should be present in `src` directory at same level as `diffusion` dir.")
     _epochs, _train_losses, _val_losses = main()
