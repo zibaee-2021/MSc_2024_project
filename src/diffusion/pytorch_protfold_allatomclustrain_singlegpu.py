@@ -156,6 +156,7 @@ class DMPDataset(Dataset):
         target_coords = sample[5]
 
         # embed = torch.load(f'{Path.rp_diffdata_emb_dir.value}/{target}{FileExt.dot_pt.value}')
+        print(f'os.getcwd()={os.getcwd()}')
         embed_pt = f'diff_data/emb/{target}.pt'
         assert os.path.exists(embed_pt), f'{embed_pt} is missing!'
         embed = torch.load(embed_pt)
@@ -446,7 +447,7 @@ def main() -> Tuple[List[int], List[float], List[float]]:
 
 
 if __name__ == "__main__":
-
+    print(f'os.getcwd()={os.getcwd()}')
     os.environ["CUDA_LAUNCH_BLOCKING"] = "1"  # TO HELP DEBUGGING
 
     check_runtime_specs = False
