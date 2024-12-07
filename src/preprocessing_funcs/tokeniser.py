@@ -718,7 +718,7 @@ def load_dataset():
         # path_pdb_embed = f'{Path.rp_diffdata_emb_dir.value}/{target_pdbid}{FileExt.dot_pt.value}'
         path_pdb_embed = f'../diffusion/diff_data/emb/{target_pdbid}.pt'
         pdb_embed = torch.load(path_pdb_embed)
-        pdbembed_dim1 = pdb_embed.size(1)
+
         # AND MAKE SURE IT HAS SAME NUMBER OF RESIDUES AS THE PARSED-TOKENISED SEQUENCE FROM MMCIF:
         assert pdb_embed.size(1) == len(aacodes)
 
