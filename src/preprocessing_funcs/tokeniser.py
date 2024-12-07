@@ -719,7 +719,7 @@ def load_dataset():
         pdb_embed = torch.load(path_pdb_embed)
         pdbembed_dim1 = pdb_embed.size(1)
         # AND MAKE SURE IT HAS SAME NUMBER OF RESIDUES AS THE PARSED-TOKENISED SEQUENCE FROM MMCIF:
-        assert pdb_embed.size(1) == len(aacodes) + 1  # BECAUSE ANKH-BASE ADDS AN EXTRA TOKEN AT THE END. MAYBE 'EOS'.
+        assert pdb_embed.size(1) == len(aacodes)
 
         # ONE BACKBONE ATOM (ALPHA-CARBON) PER RESIDUE. SO `len(bbindices)` SHOULD EQUAL NUMBER OF RESIDUES:
         assert len(aacodes) == len(bbindices)

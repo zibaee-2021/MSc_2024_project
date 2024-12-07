@@ -63,11 +63,12 @@ def generate_embeddings_from_aminoacid_sequence(tokeniser, eval_model, pdbid_cha
 
     inputs = tokeniser(aa_sequence, return_tensors='pt')
     decoder_input_ids = inputs['input_ids']
+    # REMOVE EOS TOKEN:
+    decoder_input_ids = decoder_input_ids[:, :-1]
     raw_tok_emb['tokenised'] = decoder_input_ids
 
     # with torch.no_grad():
-    embedding = eval_model(input_ids=inputs['input_ids'], decoder_input_ids=decoder_input_ids)
-
+    embedding = eval_model(input_ids=decoder_input_ids, decoder_input_ids=decoder_input_ids)
     # embedding = embedding.last_hidden_state
     # aa_sequence_embedding = embedding[0]
     aa_seq_embedding = embedding.encoder_last_hidden_state
