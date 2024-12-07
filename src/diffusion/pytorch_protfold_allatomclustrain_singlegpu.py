@@ -171,6 +171,8 @@ class DMPDataset(Dataset):
         else:
             croplen = random.randint(10, min(20, length))
 
+        print(f'croplen={croplen}')
+
         if self.augment and length > croplen:
             lcut = random.randint(0, length-croplen)
             # ntseq = ntseq[lcut:lcut+croplen]
