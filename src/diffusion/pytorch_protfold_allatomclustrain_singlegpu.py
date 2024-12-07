@@ -435,7 +435,7 @@ def main() -> Tuple[List[int], List[float], List[float]]:
 
             val_err /= val_samples
             #  scheduler.step(val_err)
-            _val_losses.append(val_err)
+            val_losses.append(val_err)
 
             print(f"Epoch {epoch}, train loss: {train_err:.4f}, val loss: {val_err:.4f}")
             print(f"Time taken = {time.time() - last_time:.2f}", flush=True)
