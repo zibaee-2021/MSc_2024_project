@@ -449,13 +449,9 @@ def main(targetfile_lst_path: str) -> Tuple[List[int], List[float], List[float]]
 
 if __name__ == "__main__":
     print(f'os.getcwd()={os.getcwd()}')
-
     abs_path = os.path.dirname(os.path.abspath(__file__))
-
     os.environ["CUDA_LAUNCH_BLOCKING"] = "1"  # TO HELP DEBUGGING
-
     check_runtime_specs = False
-
     if check_runtime_specs:
         import pandas
         import numpy
@@ -529,6 +525,5 @@ if __name__ == "__main__":
 
     _epochs.cpu(), _val_losses.cpu(), _train_losses.cpu()
     losses_per_epoch = np.column_stack((_epochs, _train_losses, _val_losses))
-
     np.savetxt(path_lpe_txt, losses_per_epoch, fmt=("%d", "%.2f", "%.2f"), delimiter=',')
     loss_plotter.plot_train_val_errors_per_epoch(path_lpe_txt)
