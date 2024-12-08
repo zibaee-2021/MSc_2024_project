@@ -56,8 +56,8 @@ RESTART_FLAG = False  # False to build first train model
 FINETUNE_FLAG = False
 
 
-def load_dataset():
-    train_list, validation_list = tk.load_dataset()
+def load_dataset(targetfile_lst_path: str) -> Tuple[List, List]:
+    train_list, validation_list = tk.load_dataset(targetfile_lst_path)
     return train_list, validation_list
 
 
@@ -238,7 +238,7 @@ class DMPDataset(Dataset):
         return sample
 
 
-def main() -> Tuple[List[int], List[float], List[float]]:
+def main(targetfile_lst_path: str) -> Tuple[List[int], List[float], List[float]]:
     epochs, train_losses, val_losses = [], [], []
     if not RESTART_FLAG:
         print(f"`RESTART_FLAG` is False, hence don't try to use the pre-built models: 'prot_e2e_model_train.pt' and "
@@ -261,7 +261,7 @@ def main() -> Tuple[List[int], List[float], List[float]]:
 
     # Load the dataset
     print("Loading data...")
-    train_list, validation_list = load_dataset()
+    train_list, validation_list = load_dataset(targetfile_lst_path)
 
     ntrain = len(train_list)
     nvalidation = len(validation_list)
@@ -491,10 +491,43 @@ if __name__ == "__main__":
     path_lpe_txt = os.path.join(abs_path, path_lpe_txt)
     assert os.path.exists(path_lpe_txt), ("Missing `losses` directory. Needed for saving loss per epoch data. "
                                           "It should be present in `src` directory at same level as `diffusion` dir.")
-    _epochs, _train_losses, _val_losses = main()
-    # _epochs = [1, 2, 3, 4, 5]
-    # _train_losses = [340.45, 300.34, 34.45, 3.45, 3.11]
-    # _val_losses = [400.45, 350.34, 100.45, 78.45, 35.11]
+
+    # _targetfile_lst_path = Path.rp_diffdata_9_PDBids_lst.value
+    lst_file = 'pdbchains_9.lst'
+    _targetfile_lst_path = f'../diffusion/diff_data/PDBid_list/{lst_file}'
+    assert os.path.exists(_targetfile_lst_path), f'{_targetfile_lst_path} cannot be found. Btw, cwd={os.getcwd()}'
+
+    _epochs, _train_losses, _val_losses = main(_targetfile_lst_path)
+    print(type(_epochs))  # Check if it's still a Python list
+    if isinstance(_epochs, torch.Tensor):
+        print("`_epochs` is actually a tensor!")
+    else:
+        print("`_epochs` is a plain list")
+
+    print(type(_train_losses))  # Check if it's still a Python list
+    if isinstance(_train_losses, torch.Tensor):
+        print("`_train_losses` is actually a tensor!")
+    else:
+        print("`_train_losses` is a plain list")
+
+    print(type(_val_losses))  # Check if it's still a Python list
+    if isinstance(_val_losses, torch.Tensor):
+        print("`_val_losses` is actually a tensor!")
+    else:
+        print("`_val_losses` is a plain list")
+
+    for i, item in enumerate(_epochs):
+        print(f"Index {i}: Value = {item}, Type = {type(item)}")
+    for i, item in enumerate(_train_losses):
+        print(f"Index {i}: Value = {item}, Type = {type(item)}")
+    for i, item in enumerate(_val_losses):
+        print(f"Index {i}: Value = {item}, Type = {type(item)}")
+
+    torch.save(_epochs, 'epochs.pt')
+    torch.save(_train_losses, 'train_losses.pt')
+    torch.save(_val_losses, 'val_losses.pt')
+
+    _epochs.cpu(), _val_losses.cpu(), _train_losses.cpu()
     losses_per_epoch = np.column_stack((_epochs, _train_losses, _val_losses))
 
     np.savetxt(path_lpe_txt, losses_per_epoch, fmt=("%d", "%.2f", "%.2f"), delimiter=',')

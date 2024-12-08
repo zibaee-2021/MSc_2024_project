@@ -57,7 +57,7 @@ mean_corrected_z      # Z COORDINATES FOR EACH ATOM SUBTRACTED BY THE MEAN OF XY
 import os
 import re
 # from enum import Enum
-from typing import List
+from typing import List, Tuple
 import numpy as np
 import pandas as pd
 import torch
@@ -643,7 +643,7 @@ def _chdir_to_tokeniser():
     return cwd
 
 
-def load_dataset():
+def load_dataset(targetfile_lst_path: str) -> Tuple[List, List]:
     print('Starting `load_dataset()`...')
     cwd = _chdir_to_tokeniser()  # Store cwd to return to at end. Change current dir to data layer
     tnum = 0
@@ -652,9 +652,6 @@ def load_dataset():
     nn = 0
 
     # GET THE LIST OF PDB NAMES FOR PROTEINS TO TOKENISE:
-    # targetfile_lst_path = Path.rp_diffdata_9_PDBids_lst.value
-    targetfile_lst_path = '../diffusion/diff_data/PDBid_list/pdbchains_9.lst'
-    assert os.path.exists(targetfile_lst_path), f'{targetfile_lst_path} cannot be found. Btw, cwd={os.getcwd()}'
     targetfile = ''
     try:
         with open(targetfile_lst_path, 'r') as lst_f:
@@ -784,7 +781,12 @@ if __name__ == '__main__':
     #                                       pdb_ids=['1ECA', '2DN1', '2DN2', '1OJ6', '1V5H',
     #                                                '1MBN', '2GDM', '1GDI', '2WY4'],
     #                                       write_lst_file=True)
-    _train_list, _validation_list = load_dataset()
+    # _targetfile_lst_path = Path.rp_diffdata_9_PDBids_lst.value
+    lst_file = 'pdbchains_9.lst'
+    _targetfile_lst_path = f'../diffusion/diff_data/PDBid_list/{lst_file}'
+    assert os.path.exists(_targetfile_lst_path), f'{_targetfile_lst_path} cannot be found. Btw, cwd={os.getcwd()}'
+
+    _train_list, _validation_list = load_dataset(_targetfile_lst_path)
     pass
     # Note: '4C0N' has 18 missing values
     # dh.clear_diffdatacif_dir()

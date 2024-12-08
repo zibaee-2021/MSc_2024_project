@@ -1,3 +1,4 @@
+import os
 # from enum import Enum
 from data_layer import data_handler as dh
 import plm_embedder as pe
@@ -57,11 +58,15 @@ if __name__ == '__main__':
     # globins_pdbid_raw_tok_emb_ = generate_ankh_base_embeddings_of_5_globins_from_fastas_of_pdbids()
     # globins_pdbid_raw_tok_emb_ = generate_ankh_base_embeddings_from_seq_id_of_tokenised_cifs(pdbid_chain='1ECA_A')
 
-    # pdbid_chains = dh.read_pdb_lst_from_src_diff_dir(relpath_pdblst=dh.Path.rp_diffdata_globins10_lst.value)
-    # pdbid_chains = dh.read_pdb_lst_from_src_diff_dir(relpath_pdblst=f'{dh.Path.rp_diffdata_pdbid_lst_dir.value}/'
+    # _pdbid_chains = dh.read_pdb_lst_from_src_diff_dir(relpath_pdblst=f'{dh.Path.rp_diffdata_pdbid_lst_dir.value}/'
+                                                                    # f'pdbchains_9{dh.FileExt.dot_lst.value}')
+    # _targetfile_lst_path = Path.rp_diffdata_9_PDBids_lst.value
+    lst_file = 'pdbchains_9.lst'
+    _targetfile_lst_path = f'../diffusion/diff_data/PDBid_list/{lst_file}'
+    assert os.path.exists(_targetfile_lst_path), f'{_targetfile_lst_path} cannot be found. Btw, cwd={os.getcwd()}'
+
     _pdbid_chains = dh.read_pdb_lst_from_src_diff_dir(relpath_pdblst=f'../diffusion/diff_data/PDBid_list/'
                                                                      f'pdbchains_9.lst')
-                                                                     # f'pdbchains_9{dh.FileExt.dot_lst.value}')
     for _pdbid_chain in _pdbid_chains:
         globins_pdbid_raw_tok_emb_ = generate_ankh_base_embeddings_from_seq_id_of_tokenised_cifs(_pdbid_chain)
         pass
