@@ -664,10 +664,10 @@ def load_dataset(targetfile_lst_path: str) -> Tuple[List, List]:
     train_list, validation_list = [], []
 
     for line in targetfile:  # It is expected that there is only one pdb id per line.
+        sp = []
         target_pdbid = line.rstrip().split()[0]
         # print(f'Read in PDBid={target_pdbid}{FileExt.dot_ssv.value}')
         print(f'Read in PDBid={target_pdbid}.ssv')
-        sp = []
         # pdf_target = pd.read_csv(f'{Path.rp_diffdata_tokenised_dir.value}/{target_pdbid}{FileExt.dot_ssv.value}', sep=' ')
         pdf_target = pd.read_csv(f'{'../diffusion/diff_data/tokenised'}/{target_pdbid}.ssv', sep=' ')
         # GET MEAN-CORRECTED COORDINATES VIA 'mean_corrected_x', '_y', '_z' TO 3-ELEMENT LIST:
