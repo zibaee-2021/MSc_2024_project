@@ -491,6 +491,7 @@ if __name__ == "__main__":
     # _targetfile_lst_path = Path.rp_diffdata_9_PDBids_lst.value
     lst_file = 'pdbchains_9.lst'
     _targetfile_lst_path = f'../diffusion/diff_data/PDBid_list/{lst_file}'
+    _targetfile_lst_path = os.path.join(abs_path, _targetfile_lst_path)
     assert os.path.exists(_targetfile_lst_path), f'{_targetfile_lst_path} cannot be found. Btw, cwd={os.getcwd()}'
 
     _epochs, _train_losses, _val_losses = main(_targetfile_lst_path)
