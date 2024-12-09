@@ -419,14 +419,14 @@ def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float1
         # Run validation samples
         network.eval()
         val_err = 0.0
-        val_samples = 0
+        val_sample_count = 0
         with torch.no_grad():
             for batch in val_data_loader:
-                for sample in batch:
-                    val_err += calculate_sample_loss(sample)
-                    val_samples += 1
+                for val_sample in batch:
+                    val_err += calculate_sample_loss(val_sample)
+                    val_sample_count += 1
 
-            val_err /= val_samples
+            val_err /= val_sample_count
             #  scheduler.step(val_err)
             val_losses[epoch] = val_err.item()  # I added this arrays, to save and plot the loss curves.
 
