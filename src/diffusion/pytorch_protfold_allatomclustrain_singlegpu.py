@@ -406,7 +406,8 @@ def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float1
             scaler.step(optimizer)
             scaler.update()
 
-            train_err += batch_loss.item()
+            # train_err += batch_loss.item()  # not sure why DJ put this here.
+            train_err += batch_loss
             train_samples += len(sample_batch)
 
         train_err /= train_samples
