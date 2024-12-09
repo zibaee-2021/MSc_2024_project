@@ -390,8 +390,7 @@ def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float1
     train_losses = np.zeros(max_epochs - 1, dtype=np.float16)
     val_losses = np.zeros(max_epochs - 1, dtype=np.float16)
 
-    # for epoch in range(start_epoch, max_epochs):
-    for epoch in range(start_epoch, 10):  # TODO temporary for debugging
+    for epoch in range(start_epoch, max_epochs):
         last_time = time.time()
         train_err = 0.0
         train_samples = 0
@@ -504,21 +503,6 @@ if __name__ == "__main__":
     assert os.path.exists(_targetfile_lst_path), f'{_targetfile_lst_path} cannot be found. Btw, cwd={os.getcwd()}'
 
     _epochs, _train_losses, _val_losses = main(_targetfile_lst_path)
-
-    for i, item in enumerate(_epochs):
-        print(f"Index {i}: Value = {item}, Type = {type(item)}")
-        if i == 2:
-            break
-
-    for i, item in enumerate(_train_losses):
-        print(f"Index {i}: Value = {item}, Type = {type(item)}")
-        if i == 2:
-            break
-
-    for i, item in enumerate(_val_losses):
-        print(f"Index {i}: Value = {item}, Type = {type(item)}")
-        if i == 2:
-            break
 
     losses_per_epoch = np.column_stack((_epochs, _train_losses, _val_losses))
     np.savetxt(path_lpe_txt, losses_per_epoch, fmt=("%d", "%.2f", "%.2f"), delimiter=',')
