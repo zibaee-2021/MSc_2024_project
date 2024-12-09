@@ -520,11 +520,6 @@ if __name__ == "__main__":
         if i == 2:
             break
 
-    torch.save(_epochs, 'epochs.pt')
-    torch.save(_train_losses, 'train_losses.pt')
-    torch.save(_val_losses, 'val_losses.pt')
-
-    _epochs.cpu(), _val_losses.cpu(), _train_losses.cpu()
     losses_per_epoch = np.column_stack((_epochs, _train_losses, _val_losses))
     np.savetxt(path_lpe_txt, losses_per_epoch, fmt=("%d", "%.2f", "%.2f"), delimiter=',')
     loss_plotter.plot_train_val_errors_per_epoch(path_lpe_txt)
