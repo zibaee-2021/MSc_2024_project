@@ -492,7 +492,7 @@ if __name__ == "__main__":
         print(f'torch.__version__={torch.__version__}')
         print(f'sys.version = {sys.version}')
 
-    path_lpe_txt = '../losses/losses_per_epoch.txt'
+    path_lpe_txt = '../losses/losses_per_epoch_9Dec.txt'
     path_lpe_txt = os.path.join(abs_path, path_lpe_txt)
     assert os.path.exists(path_lpe_txt), ("Missing `losses` directory. Needed for saving loss per epoch data. "
                                           "It should be present in `src` directory at same level as `diffusion` dir.")
