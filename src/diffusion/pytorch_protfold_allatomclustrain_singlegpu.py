@@ -386,6 +386,10 @@ def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float1
         return loss
 
     for epoch in range(start_epoch, max_epochs):
+    # SAVING LOSSES TO ARRAY, TO WRITE TO FILE AND PLOT:
+    epochs = np.zeros(max_epochs - 1, dtype=np.int16)
+    train_losses = np.zeros(max_epochs - 1, dtype=np.float16)
+    val_losses = np.zeros(max_epochs - 1, dtype=np.float16)
         last_time = time.time()
         train_err = 0.0
         train_samples = 0
@@ -406,7 +410,7 @@ def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float1
             train_samples += len(sample_batch)
 
         train_err /= train_samples
-        train_losses.append(train_err)
+        train_losses[epoch] = train_err.item()  # I added this arrays, to save and plot the loss curves.
 
         # Run validation samples
         network.eval()
@@ -420,7 +424,7 @@ def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float1
 
             val_err /= val_samples
             #  scheduler.step(val_err)
-            val_losses.append(val_err)
+            val_losses[epoch] = val_err.item()  # I added this arrays, to save and plot the loss curves.
 
             print(f"Epoch {epoch}, train loss: {train_err:.4f}, val loss: {val_err:.4f}")
             print(f"Time taken = {time.time() - last_time:.2f}", flush=True)
@@ -443,7 +447,7 @@ def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float1
             # }, Filename.checkpoint_pt.value)
             print(f"Saving 'checkpoint.pt'", flush=True)
 
-        epochs.append(epoch)
+        epochs[epoch] = epoch
 
     return epochs, train_losses, val_losses
 
