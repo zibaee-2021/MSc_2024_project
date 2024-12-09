@@ -8,6 +8,7 @@ General notes:
 import sys
 import os
 from typing import List, Tuple
+from numpy.typing import NDArray
 # from enum import Enum
 import time
 import random
@@ -238,8 +239,8 @@ class DMPDataset(Dataset):
         return sample
 
 
-def main(targetfile_lst_path: str) -> Tuple[List[int], List[float], List[float]]:
-    epochs, train_losses, val_losses = [], [], []
+def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float16], NDArray[np.float16]]:
+
     if not RESTART_FLAG:
         print(f"`RESTART_FLAG` is False, hence don't try to use the pre-built models: 'prot_e2e_model_train.pt' and "
               f"'checkpoint.pt'")
@@ -329,7 +330,7 @@ def main(targetfile_lst_path: str) -> Tuple[List[int], List[float], List[float]]
     print("Starting training...", flush=True)
 
     # Process one sample and return loss
-    def calculate_sample_loss(_sample: List[torch.Tensor]) -> float:
+    def calculate_sample_loss(_sample: List[torch.Tensor]) -> torch.FloatTensor:
         """
         Calculate loss for a single sample, combining 3 difference loss components in a weighted sum of backbone loss,
         confidence loss and difference loss.
