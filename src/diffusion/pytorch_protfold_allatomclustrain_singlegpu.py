@@ -431,7 +431,7 @@ def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float1
             val_losses[epoch] = val_err.item()  # I added this arrays, to save and plot the loss curves.
 
             print(f"Epoch {epoch}, train loss: {train_err:.4f}, val loss: {val_err:.4f}")
-            print(f"Time taken = {time.time() - last_time:.2f}", flush=True)
+            print(f"Time taken = {time.time() - last_time:.2f} s", flush=True)
             last_time = time.time()
 
             if val_err < val_err_min:
