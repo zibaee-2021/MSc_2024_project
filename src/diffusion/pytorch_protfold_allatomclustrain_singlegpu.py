@@ -401,7 +401,7 @@ def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float1
 
             batch_loss = 0
             for sample in sample_batch:
-                batch_loss = batch_loss + calculate_sample_loss(sample)
+                batch_loss += calculate_sample_loss(sample)
 
             # Scale the loss and call backward()
             scaling_factor = batch_loss / len(sample_batch)
