@@ -385,11 +385,13 @@ def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float1
 
         return loss
 
-    for epoch in range(start_epoch, max_epochs):
     # SAVING LOSSES TO ARRAY, TO WRITE TO FILE AND PLOT:
     epochs = np.zeros(max_epochs - 1, dtype=np.int16)
     train_losses = np.zeros(max_epochs - 1, dtype=np.float16)
     val_losses = np.zeros(max_epochs - 1, dtype=np.float16)
+
+    # for epoch in range(start_epoch, max_epochs):
+    for epoch in range(start_epoch, 10):  # TODO temporary for debugging
         last_time = time.time()
         train_err = 0.0
         train_samples = 0
@@ -402,7 +404,8 @@ def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float1
                 batch_loss = batch_loss + calculate_sample_loss(sample)
 
             # Scale the loss and call backward()
-            scaler.scale(batch_loss / len(sample_batch)).backward()
+            scaling_factor = batch_loss / len(sample_batch)
+            scaler.scale(scaling_factor).backward()
             scaler.step(optimizer)
             scaler.update()
 
@@ -504,10 +507,18 @@ if __name__ == "__main__":
 
     for i, item in enumerate(_epochs):
         print(f"Index {i}: Value = {item}, Type = {type(item)}")
+        if i == 2:
+            break
+
     for i, item in enumerate(_train_losses):
         print(f"Index {i}: Value = {item}, Type = {type(item)}")
+        if i == 2:
+            break
+
     for i, item in enumerate(_val_losses):
         print(f"Index {i}: Value = {item}, Type = {type(item)}")
+        if i == 2:
+            break
 
     torch.save(_epochs, 'epochs.pt')
     torch.save(_train_losses, 'train_losses.pt')
