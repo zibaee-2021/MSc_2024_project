@@ -156,7 +156,7 @@ class DMPDataset(Dataset):
         target_coords = sample[5]
 
         # embed = torch.load(f'{Path.rp_diffdata_emb_dir.value}/{target}{FileExt.dot_pt.value}')
-        print(f'os.getcwd()={os.getcwd()}')
+        # print(f'os.getcwd()={os.getcwd()}')
         embed_pt = f'diff_data/emb/{target}.pt'
         embed_pt = os.path.join(abs_path, embed_pt)
         assert os.path.exists(embed_pt), f'{embed_pt} is missing!'
@@ -173,7 +173,7 @@ class DMPDataset(Dataset):
         else:
             croplen = random.randint(10, min(20, length))
 
-        print(f'croplen={croplen}')
+        # print(f'croplen={croplen}')
 
         if self.augment and length > croplen:
             lcut = random.randint(0, length-croplen)
@@ -448,7 +448,7 @@ def main(targetfile_lst_path: str) -> Tuple[List[int], List[float], List[float]]
 
 
 if __name__ == "__main__":
-    print(f'os.getcwd()={os.getcwd()}')
+    # print(f'os.getcwd()={os.getcwd()}')
     abs_path = os.path.dirname(os.path.abspath(__file__))
     os.environ["CUDA_LAUNCH_BLOCKING"] = "1"  # TO HELP DEBUGGING
     check_runtime_specs = False
@@ -495,23 +495,6 @@ if __name__ == "__main__":
     assert os.path.exists(_targetfile_lst_path), f'{_targetfile_lst_path} cannot be found. Btw, cwd={os.getcwd()}'
 
     _epochs, _train_losses, _val_losses = main(_targetfile_lst_path)
-    print(type(_epochs))  # Check if it's still a Python list
-    if isinstance(_epochs, torch.Tensor):
-        print("`_epochs` is actually a tensor!")
-    else:
-        print("`_epochs` is a plain list")
-
-    print(type(_train_losses))  # Check if it's still a Python list
-    if isinstance(_train_losses, torch.Tensor):
-        print("`_train_losses` is actually a tensor!")
-    else:
-        print("`_train_losses` is a plain list")
-
-    print(type(_val_losses))  # Check if it's still a Python list
-    if isinstance(_val_losses, torch.Tensor):
-        print("`_val_losses` is actually a tensor!")
-    else:
-        print("`_val_losses` is a plain list")
 
     for i, item in enumerate(_epochs):
         print(f"Index {i}: Value = {item}, Type = {type(item)}")
