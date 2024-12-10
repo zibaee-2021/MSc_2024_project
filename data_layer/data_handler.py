@@ -136,6 +136,19 @@ def clear_diffdatacif_dir() -> None:
         os.unlink(cif_path)
 
 
+def clear_diffdata_tokenised_dir() -> None:
+    """
+    Clear `src/diffusion/diff_data/tokenised` dir.
+    """
+    abspath_cwd = os.path.dirname(os.path.abspath(__file__))
+    abspath_tokenised_dir = os.path.join(abspath_cwd, '../src/diffusion/diff_data/tokenised')
+    abspath_tokenised_dir = os.path.normpath(abspath_tokenised_dir)
+    for ssv_file in os.listdir(abspath_tokenised_dir):
+        # cif_path = os.path.join(Path.diffdata_cif_dir.value, cif_file)
+        ssv_path = os.path.join(abspath_tokenised_dir, ssv_file)
+        os.unlink(ssv_path)
+
+
 def read_list_of_pdbids_from_text_file(filename: str):
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer.
     # path_file = os.path.join(Path.data_pdbid_dir.value, filename)
@@ -536,12 +549,19 @@ def _manually_write_aa_atoms_to_data_dir(path: str) -> None:
     _restore_original_working_dir(cwd)
 
 
+# I RUN EACH FUNCTION ONE AT A TIME, COMMENTING OUT ALL OTHERS:
 if __name__ == '__main__':
-    pdbid_list = generate_list_of_pdbids_in_cif_dir(path_cif_dir='../data/dataset/big_files_to_git_ignore/SD_573_CIFs')
-    write_list_to_lst_file(list_to_write=pdbid_list, path_fname='../src/diffusion/diff_data/PDBid_list/pdbchains_573')
-
-    # copy_cifs_from_bigfilefolder_to_diff_data()
+    pass
+    # 1. EMPTY THE DIFF_DATA/MMCIF DIR:
     # clear_diffdatacif_dir()
-#     # THIS NEED ONLY BE RUN ONCE, TO GENERATE THE JSON FILE.
+
+    # 2. COPY THE CIFS FROM THE GIT-IGNORED BIG DATA FOLDER TO DIFF_DATA/MMCIF
+    # copy_cifs_from_bigfilefolder_to_diff_data()
+
+    # 3. READ THE MMCIF DIR AND WRITE THE PDBIDS AS A .LST FILE IN `PDBid_list`:
+    # pdbid_list = generate_list_of_pdbids_in_cif_dir(path_cif_dir='../data/dataset/big_files_to_git_ignore/SD_573_CIFs')
+    # write_list_to_lst_file(list_to_write=pdbid_list, path_fname='../src/diffusion/diff_data/PDBid_list/pdbchains_573')
+
+# THIS NEED ONLY BE RUN ONCE, TO GENERATE THE JSON FILE.
 #     _manually_write_aa_atoms_to_data_dir(path=Path.data_per_aa_atoms_json.value)
 
