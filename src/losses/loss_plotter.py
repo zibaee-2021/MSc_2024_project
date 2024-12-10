@@ -16,9 +16,10 @@ def plot_train_val_errors_per_epoch(path_losses_txt: str, include_val_in_plot=Tr
     ax.set_xlim(min(epochs), max(epochs) + padding)
     plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.scatter(epochs, train_errors, label='train', color='blue', s=10)
-    ax.scatter(epochs, val_errors, label='val', color='red', s=10)
     ax.plot(epochs, train_errors, color='lightblue')
-    ax.plot(epochs, val_errors, color='salmon')
+    if include_val_in_plot:
+        ax.scatter(epochs, val_errors, label='val', color='red', s=10)
+        ax.plot(epochs, val_errors, color='salmon')
     plt.xlabel('epoch')
     plt.ylabel(f'error')
     ax.spines['top'].set_visible(False)
@@ -26,3 +27,7 @@ def plot_train_val_errors_per_epoch(path_losses_txt: str, include_val_in_plot=Tr
     plt.legend()
     ax.legend(frameon=False, facecolor='none', edgecolor='none')
     plt.show()
+
+
+if __name__ == '__main__':
+    plot_train_val_errors_per_epoch(path_losses_txt='losses_per_epoch_9Dec.txt', include_val_in_plot=False)
