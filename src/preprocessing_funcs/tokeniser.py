@@ -550,9 +550,9 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
     :param relpath_pdblst: <OPTIONAL> Relative path to list file of one or more PDB ids or PDBid_chains names. e.g.
     `globins_10.lst`.
     :param flatfile_format_to_write: Write to ssv, csv or tsv. Use ssv by default.
-    :param pdb_ids: <OPTIONAL> PDB id(s) to parse & tokenised. Expected as a string of one PDB id or a list of PDB ids.
-    Uses `src/diffusion/diff_data/mmCIF` subdir by default, because expecting call from `src/diffusion`.
-    Use `src/diffusion/diff_data/tokenised` by default, because expecting call from `src/diffusion`.
+    :param pdb_ids: <OPTIONAL> PDB id(s) to parse & tokenised. Expect either string of PDB id or list of PDB ids.
+    Otherwise just read from `src/diffusion/diff_data/mmCIF` subdir by default.
+    Use `src/diffusion/diff_data/tokenised` by default, (hence expecting cwd to be `src/diffusion`).
     :return: Parsed and tokenised CIF file as dataframe which is also written to a flatfile (ssv by default)
     at `src/diffusion/diff_data/tokenised`. List of dataframes, one per chain.
     Dataframe currently has these 17 Columns: ['A_label_asym_id', 'S_seq_id', 'A_id', 'A_label_atom_id', 'A_Cartn_x',
