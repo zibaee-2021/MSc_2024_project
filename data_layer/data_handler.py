@@ -169,10 +169,10 @@ def read_pdb_lst_from_src_diff_dir(relpath_pdblst: str) -> list:
     return pdb_ids
 
 
-def get_list_of_pdbids_of_local_single_domain_cifs() -> list:
+def generate_list_of_pdbids_in_cif_dir(path_cif_dir: str) -> list:
     cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer
     # cifs = glob.glob(os.path.join(Path.sd_573_cifs_dir.value, f'*{FileExt.dot_CIF.value}'))
-    cifs = glob.glob(os.path.join('../data/dataset/big_files_to_git_ignore/SD_573_CIFs', f'*.cif'))
+    cifs = glob.glob(os.path.join(path_cif_dir, f'*.cif'))
     path_cifs = [cif.upper() for cif in cifs if os.path.isfile(cif)]
     pdb_id_list = []
 
@@ -535,7 +535,9 @@ def _manually_write_aa_atoms_to_data_dir(path: str) -> None:
     _restore_original_working_dir(cwd)
 
 
-# if __name__ == '__main__':
+if __name__ == '__main__':
+    pdbid_list = generate_list_of_pdbids_in_cif_dir(path_cif_dir='../data/dataset/big_files_to_git_ignore/SD_573_CIFs')
+    write_list_to_lst_file(list_to_write=pdbid_list, path_fname='../src/diffusion/diff_data/PDBid_list/pdbchains_573')
 
     # copy_cifs_from_bigfilefolder_to_diff_data()
     # clear_diffdatacif_dir()
