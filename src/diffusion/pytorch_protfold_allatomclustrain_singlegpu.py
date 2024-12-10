@@ -506,7 +506,9 @@ if __name__ == "__main__":
     _targetfile_lst_path = os.path.join(abs_path, _targetfile_lst_path)
     assert os.path.exists(_targetfile_lst_path), f'{_targetfile_lst_path} cannot be found. Btw, cwd={os.getcwd()}'
 
+    start = time.time()
     _epochs, _train_losses, _val_losses = main(_targetfile_lst_path)
+    print(f"`main()` for 9 PDBs completed in {(time.time() - start) / 60:.2f} minutes", flush=True)
 
     losses_per_epoch = np.column_stack((_epochs, _train_losses, _val_losses))
     np.savetxt(path_lpe_txt, losses_per_epoch, fmt=("%d", "%.2f", "%.2f"), delimiter=',')
