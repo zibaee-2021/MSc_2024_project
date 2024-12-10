@@ -125,8 +125,9 @@ def copy_cifs_from_bigfilefolder_to_diff_data():
 
 def clear_diffdatacif_dir() -> None:
     """
-    Note: As we're likely dealing with less than 10,000 files, I am not using Linux via subprocess, which would be:
-    ```subprocess.run(['rm', '-rf', f'{directory_path}/*'], check=True, shell=True)```
+    Note: As we're likely dealing with less than 10,000 files, I am not using Linux via `subprocess` which is apparently
+    the better choice for large numbers of files. It would be:
+    ```subprocess.run(['rm', '-rf', f'{directory_path}/*'], Fcheck=True, shell=True)```
     """
     # for cif_file in os.listdir(Path.diffdata_cif_dir.value):
     for cif_file in os.listdir('../src/diffusion/diff_data/mmCIF'):
