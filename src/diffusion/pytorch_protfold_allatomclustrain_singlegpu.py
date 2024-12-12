@@ -157,9 +157,9 @@ class DMPDataset(Dataset):
         target_coords = sample[5]
 
         # embed = torch.load(f'{Path.rp_diffdata_emb_dir.value}/{target}{FileExt.dot_pt.value}')
-        # print(f'os.getcwd()={os.getcwd()}')
+        abs_path = os.path.dirname(os.path.abspath(__file__))
         embed_pt = f'diff_data/emb/{target}.pt'
-        embed_pt = os.path.join(abs_path, embed_pt)
+        embed_pt = os.path.normpath(os.path.join(abs_path, embed_pt))
         assert os.path.exists(embed_pt), f'{embed_pt} is missing!'
         embed = torch.load(embed_pt)
         linear_layer = nn.Linear(768, 1024, bias=False)
@@ -172,30 +172,49 @@ class DMPDataset(Dataset):
         if FINETUNE_FLAG:  # False
             croplen = 20
         else:
-            croplen = random.randint(10, min(20, length))
+            croplen = random.randint(10, min(20, length))     # MAYBE INCREASE THE RANGE OF THIS RANDOM NUMBER?
 
         # print(f'croplen={croplen}')
 
         if self.augment and length > croplen:
-            lcut = random.randint(0, length-croplen)
-            # ntseq = ntseq[lcut:lcut+croplen]
-            aaseq = aaseq[lcut:lcut + croplen]
-            bbindices = bbindices[lcut: lcut + croplen]
+            # lcut = random.randint(0, length - croplen)  # PERHAPS, UNLIKE PROTEINS, RNA PDBS ALWAYS START FROM 0.
+            # SO, TO AVOID MAKING MASK OF ALL FALSE, EMPTY AAINDICES & ATOMCODES, I START FROM MINIMUM NUMBER:
+            min_aaindex = int(np.min(aaindices))
+            lcut = random.randint(min_aaindex, length - croplen)    # MAYBE INCREASE THE RANGE OF THIS RANDOM NUMBER?
+            start = lcut
+            end = lcut + croplen
+            mask = np.logical_and(aaindices >= start, aaindices < end)
+            trues_in_mask = np.sum(mask)
+
+            for _ in range(20):
+                if trues_in_mask < 10:
+                    random.randint(min_aaindex, length - croplen)
+                    trues_in_mask = np.sum(mask)
+                else:
+                    break
+
+            aaseq = aaseq[start: end]
+            bbindices = bbindices[start: end]
             bb_coords = target_coords[bbindices]
-            embed = embed[:, lcut: lcut + croplen]
-            # mask = np.logical_and(ntindices >= lcut, ntindices < lcut+croplen)
-            mask = np.logical_and(aaindices >= lcut, aaindices < lcut + croplen)
+            embed = embed[:, start: end]
+            mask = np.logical_and(aaindices >= start, aaindices < end)
             atomcodes = atomcodes[mask]
-            # ntindices = ntindices[mask] - lcut
-            aaindices = aaindices[mask] - lcut
+
+            if np.sum(mask) == 0:
+                print(f'mask all False: target={target};start={start}; croplen={croplen}; end={end}; length={length}; aaseq.size={aaseq.size}\t line 194')
+                print(f'aaindices={aaindices}')
+
+            # aaindices = aaindices[mask] - lcut
+            aaindices = aaindices[mask] - start  # Why are you subtracting the start from the aaindices, but the others?
             target_coords = target_coords[mask]
             length = croplen
+
         else:
             bb_coords = target_coords[bbindices]
 
         if target_coords.shape[0] < 10:
             # print(target, length, ntindices)
-            print(target, length, aaindices)
+            print(f'target={target}, croplen={length}, aaindices={aaindices}')
 
         noised_coords = target_coords - target_coords.mean(axis=0)
 
@@ -457,8 +476,16 @@ def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float1
 
 if __name__ == "__main__":
     # print(f'os.getcwd()={os.getcwd()}')
-    abs_path = os.path.dirname(os.path.abspath(__file__))
-    os.environ["CUDA_LAUNCH_BLOCKING"] = "1"  # TO HELP DEBUGGING
+    os.environ['CUDA_LAUNCH_BLOCKING'] = '1'  # TO HELP DEBUGGING
+    os.environ['TORCH_USE_CUDA_DSA'] = '1'  # TO HELP DEBUGGING
+    # Check if CUDA is available
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+        print("Debugging: CUDA is available. Running on:", device)
+    else:
+        print("Debugging: Not finding your CUDA... something is wrong !! ")
+
+
     check_runtime_specs = False
     if check_runtime_specs:
         import pandas
@@ -491,7 +518,8 @@ if __name__ == "__main__":
         print(f'torch.__version__={torch.__version__}')
         print(f'sys.version = {sys.version}')
 
-    path_lpe_txt = '../losses/losses_per_epoch_9Dec.txt'
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    path_lpe_txt = '../losses/losses_per_epoch_10Dec.txt'  # CHANGE THIS TO AVOID OVERWRITING PREVIOUS ONES!
     path_lpe_txt = os.path.join(abs_path, path_lpe_txt)
     path_lpe_txt = os.path.normpath(path_lpe_txt)
     path_lpe_dir = '../losses'
@@ -501,15 +529,15 @@ if __name__ == "__main__":
                                           "It should be present in `src` directory at same level as `diffusion` dir.")
 
     # _targetfile_lst_path = Path.rp_diffdata_9_PDBids_lst.value
-    lst_file = 'pdbchains_9.lst'
+    lst_file = 'pdbchains_565.lst'
     _targetfile_lst_path = f'../diffusion/diff_data/PDBid_list/{lst_file}'
     _targetfile_lst_path = os.path.join(abs_path, _targetfile_lst_path)
     assert os.path.exists(_targetfile_lst_path), f'{_targetfile_lst_path} cannot be found. Btw, cwd={os.getcwd()}'
 
     start = time.time()
     _epochs, _train_losses, _val_losses = main(_targetfile_lst_path)
-    print(f"`main()` for 9 PDBs completed in {(time.time() - start) / 60:.2f} minutes", flush=True)
+    print(f"`main()` for 565 PDBs completed in {(time.time() - start) / 3600:.2f} hours", flush=True)
 
     losses_per_epoch = np.column_stack((_epochs, _train_losses, _val_losses))
-    np.savetxt(path_lpe_txt, losses_per_epoch, fmt=("%d", "%.2f", "%.2f"), delimiter=',')
+    np.savetxt(path_lpe_txt, losses_per_epoch, fmt=('%d', '%.2f', '%.2f'), delimiter=',')
     loss_plotter.plot_train_val_errors_per_epoch(path_lpe_txt)

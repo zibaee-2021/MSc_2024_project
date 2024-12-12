@@ -22,10 +22,11 @@ def generate_ankh_base_embeddings_of_5_globins_from_fastas_of_pdbids():
     return globins_pdbid_raw_tok_emb
 
 
-def _get_aa_sequence_from_ssv(_pdbid_chain: str) -> str:
-    # pdf = dh.read_tokenised_cif_chain_ssv_to_pdf(pdbid_chain=_pdbid_chain, relpath_tokensd_dir=Path.tokenised_dir.value)
-    pdf = dh.read_tokenised_cif_chain_ssv_to_pdf(pdbid_chain=_pdbid_chain,
-                                                 relpath_tokensd_dir='../diffusion/diff_data/tokenised')
+def _get_aa_sequence_from_ssv(pdbid_chain: str) -> str:
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    path_tokenised_ssv = f'../diffusion/diff_data/tokenised/{pdbid_chain}.ssv' 
+    abspath_tokenised_ssv = os.path.normpath(os.path.join(abs_path, path_tokenised_ssv))
+    pdf = dh.read_tokenised_cif_chain_ssv_to_pdf(abspath_tokenised_ssv)
     tk.nums_of_missing_data(pdf)
     # aa_pos_seq_pdf = pdf[[CIF.S_seq_id.value, CIF.S_mon_id.value]]
     aa_pos_seq_pdf = pdf[['S_seq_id', 'S_mon_id']]
@@ -59,14 +60,17 @@ if __name__ == '__main__':
     # globins_pdbid_raw_tok_emb_ = generate_ankh_base_embeddings_from_seq_id_of_tokenised_cifs(pdbid_chain='1ECA_A')
 
     # _pdbid_chains = dh.read_pdb_lst_from_src_diff_dir(relpath_pdblst=f'{dh.Path.rp_diffdata_pdbid_lst_dir.value}/'
-                                                                    # f'pdbchains_9{dh.FileExt.dot_lst.value}')
+                                                                    #  f'pdbchains_9{dh.FileExt.dot_lst.value}')
     # _targetfile_lst_path = Path.rp_diffdata_9_PDBids_lst.value
-    lst_file = 'pdbchains_9.lst'
+    # lst_file = 'pdbchains_9.lst'
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    lst_file = 'pdbchains_565.lst'
     _targetfile_lst_path = f'../diffusion/diff_data/PDBid_list/{lst_file}'
-    assert os.path.exists(_targetfile_lst_path), f'{_targetfile_lst_path} cannot be found. Btw, cwd={os.getcwd()}'
+    abspath_lst_file = os.path.normpath(os.path.join(abs_path, _targetfile_lst_path))
 
-    _pdbid_chains = dh.read_pdb_lst_from_src_diff_dir(relpath_pdblst=f'../diffusion/diff_data/PDBid_list/'
-                                                                     f'pdbchains_9.lst')
+    assert os.path.exists(abspath_lst_file), f'{abspath_lst_file} cannot be found. Btw, cwd={os.getcwd()}'
+
+    _pdbid_chains = dh.read_pdb_lst_file(relpath_pdblst=abspath_lst_file)
     for _pdbid_chain in _pdbid_chains:
         globins_pdbid_raw_tok_emb_ = generate_ankh_base_embeddings_from_seq_id_of_tokenised_cifs(_pdbid_chain)
         pass
