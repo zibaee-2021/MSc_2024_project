@@ -160,7 +160,7 @@ def read_list_of_pdbids_from_text_file(filename: str):
     return pdbids
 
 
-def read_pdb_lst_from_src_diff_dir(relpath_pdblst: str) -> list:
+def read_pdb_lst_file(relpath_pdblst: str) -> list:
     """
     Read protein PDB id list from `.lst` file, hence expects one PDBid per line.
     E.g.:
@@ -197,7 +197,6 @@ def generate_list_of_pdbids_in_cif_dir(path_cif_dir: str) -> list:
 
     _restore_original_working_dir(cwd)
     return pdb_id_list
-
 
 # def get_list_of_uniprotids_of_locally_downloaded_cifs():
 
@@ -453,23 +452,14 @@ def read_tokenised_cif_ssv_to_pdf(pdb_id: str, relpath_tokensd_dir: str) -> List
     return pdfs
 
 
-def read_tokenised_cif_chain_ssv_to_pdf(pdbid_chain: str, relpath_tokensd_dir: str) -> pd.DataFrame:
+def read_tokenised_cif_chain_ssv_to_pdf(abspath_tokensd_ssv: str) -> pd.DataFrame:
     """
     Read pre-tokenised flatfile (i.e. ssv) of cif for given PDBid_chain.
-    :param pdbid_chain: PDBid, underscore, chain of protein, e.g. '1ECA_A'
-    :param relpath_tokensd_dir: Relative path to the ssv holding the tokenised CIF data.
-    E.g. `src/diffusion/diff_data/tokenised`, or `data/tokenised`.
-    :return: Pre-tokenised CIF for specified chain, stored as a ssv flatfile, read into dataframe.
+    :param abspath_tokensd_ssv: Absolute path to a tokenised CIF ssv file. 
+    :return: Tokenised CIF for specified chain, stored as a ssv flatfile, read into dataframe.
     """
-    relpath_tokensd_dir = relpath_tokensd_dir.removesuffix('/').removeprefix('/')
-    # path_cif_ssv = f'{relpath_tokensd_dir}/{pdbid_chain}{FileExt.dot_ssv.value}'
-    path_cif_ssv = f'{relpath_tokensd_dir}/{pdbid_chain}.ssv'
-    print(f'Reading flatfile of tokenised cif: {path_cif_ssv} into dataframe')
-    pdf = pd.read_csv(path_cif_ssv, sep=' ')
-    # nan_indices = pdf[pdf[ColNames.AA_ATOM_LABEL_NUM.value].isna()].index
-    nan_indices = pdf[pdf['aa_atom_label_num'].isna()].index
-    if not nan_indices.empty:
-        print(f'Row indices with NaN values: {list(nan_indices)}')
+    print(f'Reading flatfile of tokenised cif into dataframe: {abspath_tokensd_ssv}')
+    pdf = pd.read_csv(abspath_tokensd_ssv, sep=' ')
     return pdf
 
 

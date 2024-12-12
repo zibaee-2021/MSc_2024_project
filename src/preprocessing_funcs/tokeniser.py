@@ -56,6 +56,7 @@ mean_corrected_z      # Z COORDINATES FOR EACH ATOM SUBTRACTED BY THE MEAN OF XY
 
 import os
 import re
+import glob
 # from enum import Enum
 from typing import List, Tuple
 import numpy as np
@@ -69,6 +70,13 @@ from src.preprocessing_funcs import api_caller as api
 # from src.enums import ColNames, CIF, PolypeptideAtoms
 # If more than this proportion of residues have no backbone atoms, remove the chain.
 MIN_RATIO_MISSING_BACKBONE_ATOMS = 0.0
+
+os.environ['TORCH_USE_CUDA_DSA'] = '1'  # TO HELP DEBUGGING
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+    print("Debugging: CUDA is available. Running on:", device)
+else:
+    print("Debugging: Not finding your CUDA... something is wrong !! ")
 
 
 # # `rp_` stands for relative path:
@@ -103,23 +111,50 @@ MIN_RATIO_MISSING_BACKBONE_ATOMS = 0.0
 
 
 def nums_of_missing_data(pdf):
+    pd_isna = int((pdf.map(lambda x: isinstance(x, float) and pd.isna(x))).sum().sum())
+    pd_na = int((pdf.map(lambda x: x is pd.NA)).sum().sum())
+    pd_nat = int((pdf.map(lambda x: x is pd.NaT)).sum().sum())
+    np_nan = int((pdf.map(lambda x: x is np.nan)).sum().sum())
+    none = int((pdf.map(lambda x: x is None)).sum().sum())
+    empty_str = int((pdf.map(lambda x: x == ' ')).sum().sum())
+    na_str = int((pdf.map(lambda x: x == 'na' or x == 'NA')).sum().sum())
+    nan_str = int((pdf.map(lambda x: x == 'nan' or x == 'NAN' or x == 'NaN')).sum().sum())
+    none_str = int((pdf.map(lambda x: x == 'none' or x == 'None')).sum().sum())
+    null_str = int((pdf.map(lambda x: x == 'null' or x == 'Null')).sum().sum())
 
     counts = {
-        'NaN': int((pdf.map(lambda x: isinstance(x, float) and pd.isna(x))).sum().sum()),
-        'pd.NA': int((pdf.map(lambda x: x is pd.NA)).sum().sum()),
-        'pd.NaT': int((pdf.map(lambda x: x is pd.NaT)).sum().sum()),
-        'np.nan': int((pdf.map(lambda x: x is np.nan)).sum().sum()),
-        'None': int((pdf.map(lambda x: x is None)).sum().sum()),
-        ' ': int((pdf.map(lambda x: x == ' ')).sum().sum()),
-        "na": int((pdf.map(lambda x: x == 'na' or x == 'NA')).sum().sum()),
-        "nan": int((pdf.map(lambda x: x == 'nan' or x == 'NAN' or x == 'NaN')).sum().sum()),
-        "none": int((pdf.map(lambda x: x == 'none' or x == 'None')).sum().sum()),
-        "null": int((pdf.map(lambda x: x == 'null' or x == 'Null')).sum().sum())
+        'NaN': pd_isna,
+        'pd.NA': pd_na,
+        'pd.NaT': pd_nat,
+        'np.nan': np_nan,
+        'None': none,
+        ' ': empty_str,
+        "na": na_str,
+        "nan": nan_str,
+        "none": none_str,
+        "null": null_str
     }
     print(counts)
     has_missing_data = any(value > 0 for value in counts.values())
 
     if has_missing_data:
+        nan_positions = pdf.map(lambda x: (isinstance(x, float) and pd.isna(x) or
+                                           x is pd.NA or
+                                           x is pd.NaT or
+                                           x is np.nan or
+                                           x is None or
+                                           x == ' ' or
+                                           x in ['na', 'NA'] or
+                                           x in ['nan', 'NAN', 'NaN'] or
+                                           x in ['none', 'None'] or
+                                           x in ['null', 'Null']
+                                           ))
+
+        # Identify the row (index) and column names where the above checks are True
+        nan_positions = nan_positions.stack().reset_index()  # Convert to long format
+        nan_positions = nan_positions[nan_positions[0]]  # Filter only rows where True
+        nan_positions = nan_positions[['level_0', 'level_1']]  # Keep only index and column info
+        nan_positions.columns = ['index', 'column']  # Rename columns
         raise ValueError('There are missing values.. needs to be addressed.')
 
     # missing_strings = ['NaN', 'None', 'N/A', 'missing', 'NULL', '']
@@ -294,6 +329,7 @@ def _assign_backbone_index_to_all_residue_rows(pdfs: List[pd.DataFrame], pdb_id:
                     most_cterm_bb_atom = aa_group.loc[aa_group['A_id'] == a_id, 'A_label_atom_id'].values[0]
                     print(f'Non-CA backbone atoms for this residue are at: {str(list(positions_of_all_bb_atoms))}, '
                           f'so {a_id} is selected. (The atom at this position is: {most_cterm_bb_atom}.)')
+                    pdf.loc[aa_group.index, 'bb_atom_pos'] = a_id
                     continue
                 # raise ValueError(f'No {CIF.ALPHA_CARBON.value} found in {CIF.A_label_atom_id.value} for group '
                 #                  f'{group[CIF.S_seq_id.value].iloc[0]}')
@@ -525,6 +561,18 @@ def __split_pdbid_chain(pdbid_chain):
         return pdbid_chain, None
 
 
+def _generate_list_of_pdbids_in_cif_dir(path_cif_dir: str) -> list:
+    cifs = glob.glob(os.path.join(path_cif_dir, f'*.cif'))
+    path_cifs = [cif.upper() for cif in cifs if os.path.isfile(cif)]
+    pdb_id_list = []
+
+    for path_cif in path_cifs:
+        cif_basename = os.path.basename(path_cif)
+        pdbid = os.path.splitext(cif_basename)[0]
+        pdb_id_list.append(pdbid)
+    return pdb_id_list
+
+
 def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_data/mmCIF',
                                           # relpath_cif_dir=Path.rp_diffdata_cif_dir.value,
                                           # relpath_toknsd_ssv_dir=Path.rp_diffdata_tokenised_dir.value,
@@ -540,7 +588,7 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
     The mmCIFs to parse, tokenise and write to flat flats is specified by one or more of the following 3:
       - Relative path of directory containing pre-downloaded CIF files, e.g. `diff_data/mmCIF`, reading all CIFs in.
       - Relative path of a list file of PDB ids e.g. `diff_data/SD_573.lst`.
-      - A Python list of PDB ids.
+      - One PDB id or a Python list of PDB ids.
     "Parsing" involves extracting required fields from mmCIF files to dataframes.
     "Tokenising" involves enumerating atoms and residues, and calculating mean-adjusted x, y, z coordinates.
     Where a CIF has > 1 chain, parse & tokenise all polypeptide-only chains & only those with sufficient backbone
@@ -551,22 +599,40 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
     `globins_10.lst`.
     :param flatfile_format_to_write: Write to ssv, csv or tsv. Use ssv by default.
     :param pdb_ids: <OPTIONAL> PDB id(s) to parse & tokenised. Expect either string of PDB id or list of PDB ids.
-    Otherwise just read from `src/diffusion/diff_data/mmCIF` subdir by default.
+    Otherwise, just read from `src/diffusion/diff_data/mmCIF` subdir by default.
     Use `src/diffusion/diff_data/tokenised` by default, (hence expecting cwd to be `src/diffusion`).
-    :return: Parsed and tokenised CIF file as dataframe which is also written to a flatfile (ssv by default)
-    at `src/diffusion/diff_data/tokenised`. List of dataframes, one per chain.
+    :return: List of dataframes, one per chain. Each dataframe has the parsed and tokenised data of one CIF file
+     and each is also written to a flatfile (ssv by default) at `src/diffusion/diff_data/tokenised`.
     Dataframe currently has these 17 Columns: ['A_label_asym_id', 'S_seq_id', 'A_id', 'A_label_atom_id', 'A_Cartn_x',
     'A_Cartn_y', 'A_Cartn_z', 'aa_label_num', 'bb_or_sc', 'bb_atom_pos', 'atom_label_num', 'aa_atom_tuple',
     'aa_atom_label_num', 'mean_xyz', 'mean_corrected_x', 'mean_corrected_y', 'mean_corrected_z'].
     """
+    # INIT LIST OF PARSED PDB DATA IN DATAFRAMES (ONE DATAFRAME PER PDB AND PER CHAIN):
+    cif_pdfs_per_chain = []  # THIS IS RETURNED.
+
+    # THIS IS JUST A LIST OF PDBID_CHAIN (MADE UP OF COMBO OF ANY IN TOKENISED AND NEWLY PARSED):
     for_pdbchain_lst = []
 
+    # BUILD LIST OF PDBIDS TO PROCESS, FROM EITHER GIVEN STRING, LIST, .LST FILE OR PATH TO CIFS:
     if pdb_ids:
         if isinstance(pdb_ids, str):  # If string, it is assumed that this is one PDB id.
             pdb_ids = [pdb_ids]
     if relpath_pdblst:
-        pdb_ids.extend(dh.read_pdb_lst_from_src_diff_dir(relpath_pdblst=relpath_pdblst))
+        if pdb_ids is None:
+            pdb_ids = []
+        pdb_ids.extend(dh.read_pdb_lst_file(relpath_pdblst=relpath_pdblst))
+    if relpath_cif_dir:
+        if pdb_ids is None:
+            pdb_ids = []
+        relpath_cif_dir = relpath_cif_dir.removesuffix('/').removeprefix('/')
+        assert os.path.exists(relpath_cif_dir), 'Not found `relpath_cif_dir`.'
+        _pdb_ids = _generate_list_of_pdbids_in_cif_dir(path_cif_dir=relpath_cif_dir)
+        pdb_ids.extend(_pdb_ids)
 
+    assert pdb_ids is not None, 'This is a bug! `pdb_ids` is None ?! It must be a list of at least one PDB id.'
+    assert len(pdb_ids) > 0, 'This is a bug! `pdb_ids` is an empty list ?! It must be a list of at least one PDB id.'
+
+    # MAKE A LIST OF PDBIDS THAT ARE SSVS IN TOKENISED DIR (I.E. HAVE ALREADY BEEN TOKENISED):
     # cif_tokenised_ssv_dir = Path.rp_diffdata_tokenised_dir.value
     cif_tokenised_ssv_dir = '../diffusion/diff_data/tokenised'
     pdbid_chains_of_pretokenised = []
@@ -576,13 +642,15 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
                                         for item in os.listdir(cif_tokenised_ssv_dir)
                                         if item.endswith('.ssv')]
                                         # if item.endswith(FileExt.dot_ssv.value)]
-    cif_pdfs_per_chain = []
 
-    for pdb_id in pdb_ids:  # Expecting only one PDB id per line. Can be PDBid_chain.
+    for pdb_id in pdb_ids:  # Expecting only one PDB id per line. (Can be PDBid_chain or just PDBid.)
         pdb_id = pdb_id.rstrip().split()[0]
         flatfile_format_to_write = flatfile_format_to_write.removeprefix('.').lower()
         pdb_id = pdb_id.removesuffix('.cif')
         print(f'Starting PDBid={pdb_id} ---------------------------------------------------------')
+        if pdb_id == '5TJ5':
+            print(f'{pdb_id} has 2500 missing entries in the aa sequence field, so excluding this one!')
+            continue
 
         # THE LOGIC EXPECTS THAT IF IT HAS BEEN TOKENISED AND SAVED AS ssv, THEN IT WILL BE BY THE CHAIN AND SO
         # MUST HAVE THE SUFFIX `<pdbid>_A.ssv`, `<pdbid>_B.ssv`, ETC, RATHER THAN JUST `<pdbid>.ssv`:
@@ -591,14 +659,16 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
             print(f'PDBid={pdbid_chain} already tokenised. Reading ssv in to pdf. Add to list.')
             _cif_pdfs_per_chain = dh.read_tokenised_cif_ssv_to_pdf(relpath_tokensd_dir=relpath_toknsd_ssv_dir,
                                                                    pdb_id=pdbid_chain)
-            # EXPECTED TO BE FOR ONE CHAIN OF THIS PDBID, SO IT'S A PYTHON LIST OF 1.
+            # FURTHERMORE IT IS EXPECTED THERE IS *ONLY ONE CHAIN* PER PDB ID, SO IT IS A PYTHON LIST OF ONE PDB_ID.
             assert _cif_pdfs_per_chain, 'no cif_pdfs_per_chain returned. Expected list of one pdf for one chain.'
             for_pdbchain_lst.append(pdbid_chain)
             continue
         # OTHERWISE GET THE CIF (LOCALLY OR VIA API), AND EXPECT PDBid TO BE WITHOUT THE CHAIN:
-        relpath_cif_dir = relpath_cif_dir.removesuffix('/').removeprefix('/')
+
         pdbid, chain = __split_pdbid_chain(pdb_id)  # Note: chain should be empty string
         mmcif_dict = _get_mmcif_data(relpath_cif_dir=relpath_cif_dir, pdb_id=pdbid)
+
+        # ** FINALLY! YOU CAN START PARSING THE CIFS (THAT HAVE NOT ALREADY BEEN PARSED) **
         # PARSE mmCIF TO EXTRACT 14 FIELDS, TO FILTER, IMPUTE, SORT & JOIN ON, RETURNING AN 8-COLUMN DATAFRAME:
         # (THIS RETURNS A LIST OF DATAFRAMES, ONE PER POLYPEPTIDE CHAIN).
         cif_pdfs_per_chain = parser.parse_cif(mmcif_dict=mmcif_dict, pdb_id=pdbid)
@@ -620,6 +690,7 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
         dh.write_tokenised_cifs_to_flatfiles(pdfs=cif_pdfs_per_chain,
                                              dst_data_dir=relpath_toknsd_ssv_dir,
                                              flatfiles=flatfile_format_to_write, pdb_id=pdbid)
+        # ADD CHAIN TO NAME OF PDB ID:
         for pdf_chain in cif_pdfs_per_chain:
             nums_of_missing_data(pdf_chain)
             _each_column_has_expected_values(pdf_chain)
@@ -701,7 +772,7 @@ def load_dataset(targetfile_lst_path: str) -> Tuple[List, List]:
 
         # GET `aacodes`, VIA 'aa_label_num' COLUMN, WHICH HOLDS ENUMERATED RESIDUES VALUES:
         # aacodes = pdf_target_deduped[ColNames.AA_LABEL_NUM.value].tolist()
-        aacodes = pdf_target_deduped['aa_label_num' ].tolist()
+        aacodes = pdf_target_deduped['aa_label_num'].tolist()
 
         bbindices = pdf_target_deduped['bbindices'].tolist()
 
@@ -764,8 +835,8 @@ def load_dataset(targetfile_lst_path: str) -> Tuple[List, List]:
         tnum += 1
 
         sigma_data = sqrt((sum_d2 / nn) - (sum_d / nn) ** 2)
-        print(f'Data s.d. = , {sigma_data}')
-        print(f'Data unit var scaling = , {1 / sigma_data}')
+        print(f'Data s.d. = {sigma_data:.2f}')
+        print(f'Data unit var scaling = {(1 / sigma_data):.2f}')
 
     os.chdir(cwd)  # restore original working directory
     print('Finished `load_dataset()`...')
@@ -773,20 +844,33 @@ def load_dataset(targetfile_lst_path: str) -> Tuple[List, List]:
 
 
 if __name__ == '__main__':
+    # # 1. COPY CIFS OVER FROM BIG DATA FOLDER (IF NOT ALREADY DONE FROM DATA_HANDLER.PY):
     # dh.copy_cifs_from_bigfilefolder_to_diff_data()
-    # parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=Path.rp_diffdata_cif_dir.value,
-    #                                       relpath_toknsd_ssv_dir=Path.rp_diffdata_tokenised_dir.value,
-    #                                       relpath_pdblst=None,
-    #                                       flatfile_format_to_write=FileExt.ssv.value,
-    #                                       pdb_ids=['1ECA', '2DN1', '2DN2', '1OJ6', '1V5H',
-    #                                                '1MBN', '2GDM', '1GDI', '2WY4'],
-    #                                       write_lst_file=True)
-    # _targetfile_lst_path = Path.rp_diffdata_9_PDBids_lst.value
-    lst_file = 'pdbchains_9.lst'
-    _targetfile_lst_path = f'../diffusion/diff_data/PDBid_list/{lst_file}'
-    assert os.path.exists(_targetfile_lst_path), f'{_targetfile_lst_path} cannot be found. Btw, cwd={os.getcwd()}'
 
-    _train_list, _validation_list = load_dataset(_targetfile_lst_path)
-    pass
-    # Note: '4C0N' has 18 missing values
+    # # 2. CLEAR TOKENISED DIR:
+    # dh.clear_diffdata_tokenised_dir()
+
+    # 3. PARSE AND TOKENISED CIFS AND WRITE SSV TO TOKENISED DIR:
+    # parse_tokenise_write_cifs_to_flatfile(relpath_ cif_dir=Path.rp_diffdata_cif_dir.value,
+    parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_data/mmCIF',
+                                          # relpath_toknsd_ssv_dir=Path.rp_diffdata_tokenised_dir.value,
+                                          relpath_toknsd_ssv_dir='../diffusion/diff_data/tokenised',
+                                          relpath_pdblst=None,
+                                          # flatfile_format_to_write=FileExt.ssv.value,
+                                          flatfile_format_to_write='ssv',
+                                          # pdb_ids=['1ECA', '2DN1', '2DN2', '1OJ6', '1V5H',
+                                          #          '1MBN', '2GDM', '1GDI', '2WY4'],
+                                          write_lst_file=True)
+
+
+    # # _targetfile_lst_path = Path.rp_diffdata_9_PDBids_lst.value
+    # lst_file = 'pdbchains_9.lst'
+    # _targetfile_lst_path = f'../diffusion/diff_data/PDBid_list/{lst_file}'
+    # assert os.path.exists(_targetfile_lst_path), f'{_targetfile_lst_path} cannot be found. Btw, cwd={os.getcwd()}'
+    #
+    # _train_list, _validation_list = load_dataset(_targetfile_lst_path)
+
+
+
+
     # dh.clear_diffdatacif_dir()
