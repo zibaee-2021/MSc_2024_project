@@ -346,7 +346,7 @@ def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float1
     # Initialize the GradScaler to allow float16 processing
     scaler = GradScaler()
         
-    print("Starting training...", flush=True)
+    print('Starting training...', flush=True)
 
     # Process one sample and return loss
     def calculate_sample_loss(_sample: List[torch.Tensor]) -> torch.FloatTensor:
@@ -448,8 +448,8 @@ def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float1
             #  scheduler.step(val_err)
             val_losses[epoch] = val_err.item()  # I added this arrays, to save and plot the loss curves.
 
-            print(f"Epoch {epoch}, train loss: {train_err:.4f}, val loss: {val_err:.4f}")
-            print(f"Time taken = {time.time() - last_time:.2f} s", flush=True)
+            print(f'Epoch {epoch}, train loss: {train_err:.4f}, val loss: {val_err:.4f}')
+            print(f'Time taken = {time.time() - last_time:.2f} s', flush=True)
             last_time = time.time()
 
             if val_err < val_err_min:
