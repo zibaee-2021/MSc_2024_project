@@ -173,8 +173,8 @@ class DMPDataset(Dataset):
             # croplen = 20
             rand_window_10_20 = 20
         else:
-            # croplen = random.randint(10, min(20, number_of_residues))  # MAYBE INCREASE RANGE ?
-            rand_window_10_20 = random.randint(10, min(20, number_of_residues))  # MAYBE INCREASE RANGE ?
+            # croplen = random.randint(10, min(20, number_of_residues))
+            rand_window_10_20 = random.randint(10, min(20, number_of_residues))
 
         # print(f'croplen={croplen}')
 
@@ -182,9 +182,9 @@ class DMPDataset(Dataset):
             # lcut = random.randint(0, length - croplen)  # PERHAPS, UNLIKE PROTEINS, RNA PDBs ALWAYS START FROM 0 ??
             # SO, TO AVOID MAKING MASK OF ALL FALSE, EMPTY AAINDICES & ATOMCODES, I START FROM MINIMUM NUMBER:
             min_aaindex = int(np.min(aaindices))
-            start = random.randint(min_aaindex, number_of_residues - rand_window_10_20)  # MAYBE INCREASE RANGE ?
+            start = random.randint(min_aaindex, number_of_residues - rand_window_10_20)
             end = start + rand_window_10_20
-            mask = np.logical_and(aaindices >= start, aaindices < end)
+            mask = np.logical_and(aaindices >= start, aaindices < end)  # ATOM-LEVEL MASK
             trues_in_mask = np.sum(mask)
 
             for _ in range(20):
@@ -196,9 +196,9 @@ class DMPDataset(Dataset):
                 else:
                     break
 
-            aacodes = aacodes[start: end]
-            bbindices = bbindices[start: end]
-            bb_coords = target_coords[bbindices]
+            aacodes = aacodes[start: end]  # aacodes HAS SIZE = NUMBER OF RESIDUES
+            bbindices = bbindices[start: end]  # bbindices HAS SIZE = NUMBER OF RESIDUES
+            bb_coords = target_coords[bbindices]  #
             embed = embed[:, start: end]
             mask = np.logical_and(aaindices >= start, aaindices < end)
             atomcodes = atomcodes[mask]
