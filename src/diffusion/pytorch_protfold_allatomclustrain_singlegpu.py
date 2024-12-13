@@ -520,12 +520,12 @@ if __name__ == "__main__":
         print(f'torch.__version__={torch.__version__}')
         print(f'sys.version = {sys.version}')
 
-    abs_path = os.path.dirname(os.path.abspath(__file__))
+    _abs_path = os.path.dirname(os.path.abspath(__file__))
     path_lpe_txt = '../losses/losses_per_epoch_10Dec.txt'  # CHANGE THIS TO AVOID OVERWRITING PREVIOUS ONES!
-    path_lpe_txt = os.path.join(abs_path, path_lpe_txt)
+    path_lpe_txt = os.path.join(_abs_path, path_lpe_txt)
     path_lpe_txt = os.path.normpath(path_lpe_txt)
     path_lpe_dir = '../losses'
-    path_lpe_dir = os.path.join(abs_path, path_lpe_dir)
+    path_lpe_dir = os.path.join(_abs_path, path_lpe_dir)
     path_lpe_dir = os.path.normpath(path_lpe_dir)
     assert os.path.exists(path_lpe_dir), ("Missing `losses` directory. Needed for saving loss per epoch data. "
                                           "It should be present in `src` directory at same level as `diffusion` dir.")
@@ -533,7 +533,7 @@ if __name__ == "__main__":
     # _targetfile_lst_path = Path.rp_diffdata_9_PDBids_lst.value
     lst_file = 'pdbchains_565.lst'
     _targetfile_lst_path = f'../diffusion/diff_data/PDBid_list/{lst_file}'
-    _targetfile_lst_path = os.path.join(abs_path, _targetfile_lst_path)
+    _targetfile_lst_path = os.path.join(_abs_path, _targetfile_lst_path)
     assert os.path.exists(_targetfile_lst_path), f'{_targetfile_lst_path} cannot be found. Btw, cwd={os.getcwd()}'
 
     start_time = time.time()
