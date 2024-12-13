@@ -216,7 +216,7 @@ class DMPDataset(Dataset):
         if target_coords.shape[0] < 10:
             # print(target, length, ntindices)
             # print(f' target={target}, croplen={length}, aaindices={aaindices}')
-            print(f'target={target}, croplen={rand_window_10_20}, aaindices={aaindices}')
+            print(f'target={target}, rand_window_10_20={rand_window_10_20}, aaindices={aaindices}')
 
         noised_coords = target_coords - target_coords.mean(axis=0)
 
@@ -369,7 +369,7 @@ def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float1
         aacodes = _sample[4].cuda(non_blocking=True)  # Enumeration of amino acids (0-19)
         atomcodes = _sample[5].cuda(non_blocking=True)  # Enumeration of atoms (0-37 or 0-186)
         # ntindices = sample[6].cuda(non_blocking=True)
-        aaindices = _sample[6].cuda(non_blocking=True)  # Position of amino acid in protein.
+        aaindices = _sample[6].cuda(non_blocking=True)  # 0-indexed position of amino acid in protein (as seqres).
         bb_coords = _sample[7].cuda(non_blocking=True)  # X,Y,Z coordinates of the chosen backbone atoms (`CA`).
         target_coords = _sample[8].cuda(non_blocking=True)  # X,Y,Z coordinates of all the other atoms ? Or
         # print(f'Protein PDBid={_sample[9]}. inputs.shape={inputs.shape}. len(aacodes)={len(aacodes)}. '
