@@ -487,7 +487,6 @@ if __name__ == "__main__":
     else:
         print("Debugging: Not finding your CUDA... something is wrong !! ")
 
-
     check_runtime_specs = False
     if check_runtime_specs:
         import pandas
