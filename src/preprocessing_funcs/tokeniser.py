@@ -794,7 +794,7 @@ def load_dataset(targetfile_lst_path: str) -> Tuple[List, List]:
         assert len(aacodes) == len(bbindices)
 
         # MAKE SURE YOU HAVE AT LEAST THE MINIMUM NUMBER OF EXPECTED ATOMS IN MMCIF DATA:
-        min_num_atoms_expected_per_residue = 5  # GLYCINE HAS 5 NON-H ATOMS: 2xO, 2xC, 1xN, 5xH.
+        min_num_atoms_expected_per_residue = 4  # GLYCINE HAS 4 NON-H ATOMS: 1xO, 2xC, 1xN, 5xH.
         min_num_expected_atoms = len(bbindices) * min_num_atoms_expected_per_residue
         # THIS IS THE NUMBER OF ATOMS (AS ONE ROW PER ATOM DUE TO OUTER-JOIN. MIMICKS DJ'S RNA CODE:
         num_of_atoms_in_cif = len(aaindices)
