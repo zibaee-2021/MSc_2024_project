@@ -148,7 +148,7 @@ class DMPDataset(Dataset):
         else:
             sample = self.sample_list[tn][0]
         # ntseq = sample[0]
-        aaseq = sample[0]
+        aacodes = sample[0]
         atomcodes = sample[1]
         # ntindices = sample[2]
         aaindices = sample[2]
@@ -167,33 +167,36 @@ class DMPDataset(Dataset):
         embed = embed.detach()
 
         # length = ntseq.shape[0]
-        length = aaseq.shape[0]
+        number_of_residues = aacodes.shape[0]
 
         if FINETUNE_FLAG:  # False
-            croplen = 20
+            # croplen = 20
+            rand_window_10_20 = 20
         else:
-            croplen = random.randint(10, min(20, length))     # MAYBE INCREASE THE RANGE OF THIS RANDOM NUMBER?
+            # croplen = random.randint(10, min(20, number_of_residues))  # MAYBE INCREASE RANGE ?
+            rand_window_10_20 = random.randint(10, min(20, number_of_residues))  # MAYBE INCREASE RANGE ?
 
         # print(f'croplen={croplen}')
 
-        if self.augment and length > croplen:
-            # lcut = random.randint(0, length - croplen)  # PERHAPS, UNLIKE PROTEINS, RNA PDBS ALWAYS START FROM 0.
+        if self.augment and number_of_residues > rand_window_10_20:
+            # lcut = random.randint(0, length - croplen)  # PERHAPS, UNLIKE PROTEINS, RNA PDBs ALWAYS START FROM 0 ??
             # SO, TO AVOID MAKING MASK OF ALL FALSE, EMPTY AAINDICES & ATOMCODES, I START FROM MINIMUM NUMBER:
             min_aaindex = int(np.min(aaindices))
-            lcut = random.randint(min_aaindex, length - croplen)    # MAYBE INCREASE THE RANGE OF THIS RANDOM NUMBER?
-            start = lcut
-            end = lcut + croplen
+            start = random.randint(min_aaindex, number_of_residues - rand_window_10_20)  # MAYBE INCREASE RANGE ?
+            end = start + rand_window_10_20
             mask = np.logical_and(aaindices >= start, aaindices < end)
             trues_in_mask = np.sum(mask)
 
             for _ in range(20):
                 if trues_in_mask < 10:
-                    random.randint(min_aaindex, length - croplen)
+                    start = random.randint(min_aaindex, number_of_residues - rand_window_10_20)
+                    end = start + rand_window_10_20
+                    mask = np.logical_and(aaindices >= start, aaindices < end)
                     trues_in_mask = np.sum(mask)
                 else:
                     break
 
-            aaseq = aaseq[start: end]
+            aacodes = aacodes[start: end]
             bbindices = bbindices[start: end]
             bb_coords = target_coords[bbindices]
             embed = embed[:, start: end]
@@ -201,20 +204,19 @@ class DMPDataset(Dataset):
             atomcodes = atomcodes[mask]
 
             if np.sum(mask) == 0:
-                print(f'mask all False: target={target};start={start}; croplen={croplen}; end={end}; length={length}; aaseq.size={aaseq.size}\t line 194')
-                print(f'aaindices={aaindices}')
-
-            # aaindices = aaindices[mask] - lcut
-            aaindices = aaindices[mask] - start  # Why are you subtracting the start from the aaindices, but the others?
+                print(f'mask all False: target={target};start={start}; croplen={rand_window_10_20}; end={end}; '
+                      f'length={number_of_residues}; aacodes.size={aacodes.size}; aaindices={aaindices} - line 206')
+            aaindices = aaindices[mask] - start  # Why are you subtracting the start from the aaindices, but not others?
             target_coords = target_coords[mask]
-            length = croplen
+            # length = croplen
 
         else:
             bb_coords = target_coords[bbindices]
 
         if target_coords.shape[0] < 10:
             # print(target, length, ntindices)
-            print(f'target={target}, croplen={length}, aaindices={aaindices}')
+            # print(f' target={target}, croplen={length}, aaindices={aaindices}')
+            print(f'target={target}, croplen={rand_window_10_20}, aaindices={aaindices}')
 
         noised_coords = target_coords - target_coords.mean(axis=0)
 
@@ -238,7 +240,7 @@ class DMPDataset(Dataset):
         noise_levels = (sig_max_r7 + tsteps * (sig_min_r7 - sig_max_r7)) ** 7
 
         # ntcodes = torch.from_numpy(ntseq.copy()).long()
-        aacodes = torch.from_numpy(aaseq.copy()).long()
+        aacodes = torch.from_numpy(aacodes.copy()).long()
         bb_coords = torch.from_numpy(bb_coords).float()
         # ntindices = torch.from_numpy(ntindices.copy()).long()
         aaindices = torch.from_numpy(aaindices.copy()).long()
@@ -534,9 +536,9 @@ if __name__ == "__main__":
     _targetfile_lst_path = os.path.join(abs_path, _targetfile_lst_path)
     assert os.path.exists(_targetfile_lst_path), f'{_targetfile_lst_path} cannot be found. Btw, cwd={os.getcwd()}'
 
-    start = time.time()
+    start_time = time.time()
     _epochs, _train_losses, _val_losses = main(_targetfile_lst_path)
-    print(f"`main()` for 565 PDBs completed in {(time.time() - start) / 3600:.2f} hours", flush=True)
+    print(f"`main()` for 565 PDBs completed in {(time.time() - start_time) / 3600:.2f} hours", flush=True)
 
     losses_per_epoch = np.column_stack((_epochs, _train_losses, _val_losses))
     np.savetxt(path_lpe_txt, losses_per_epoch, fmt=('%d', '%.2f', '%.2f'), delimiter=',')
