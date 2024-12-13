@@ -747,13 +747,13 @@ def load_dataset(targetfile_lst_path: str) -> Tuple[List, List]:
         len_coords = len(coords)  # should be same as
         # GET `atomcodes` VIA 'atom_label_num' COLUMN, WHICH HOLDS ENUMERATED ATOMS VALUES:
         # atomcodes = pdf_target[ColNames.ATOM_LABEL_NUM.value].tolist()
-        atomcodes = pdf_target['atom_label_num' ].tolist()
+        atomcodes = pdf_target['atom_label_num'].tolist()
 
         # GET `aaatomcodes` VIA 'aa_atom_label_num' COLUMN, WHICH HOLDS ENUMERATED RESIDUE-ATOM PAIRS VALUES:
         # aaatomcodes = pdf_target[ColNames.AA_ATOM_LABEL_NUM.value].tolist()
         aaatomcodes = pdf_target['aa_atom_label_num'].tolist()
 
-        # GET `aaindices`. EXPECTED TO HAVE REPEATED VALUES BECAUSE 1 AA HAS 5 OR MORE ATOMS (NOT DUPLICATE ROWS):
+        # GET `aaindices`. EXPECTED TO HAVE REPEATED VALUES BECAUSE 1 AA HAS 4 OR MORE ATOMS (NOT DUPLICATE ROWS):
         # aaindices = pdf_target[CIF.S_seq_id.value].tolist()
         aaindices = pdf_target['S_seq_id'].tolist()
         aaindices = [x - 1 for x in aaindices]
