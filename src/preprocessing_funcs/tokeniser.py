@@ -290,7 +290,7 @@ def _assign_backbone_index_to_all_residue_rows(pdfs: List[pd.DataFrame], pdb_id:
         chain = pdf['S_asym_id'].unique()[0]
 
         # Even though `a_id` is always an int (when no NaNs), and I cast to Int64 below. The column remains float64.
-        # Apparently I have to cast this column beforehand ? Very odd behaviour.
+        # Apparently I have to cast this column beforehand ? Very odd behaviour by Pandas.
         # pdf[ColNames.BB_ATOM_POS.value] = pd.Series(dtype="Int64")
         pdf['bb_atom_pos'] = pd.Series(dtype='Int64')
 
@@ -758,7 +758,11 @@ def load_dataset(targetfile_lst_path: str) -> Tuple[List, List]:
         aaindices = pdf_target['S_seq_id'].tolist()
         aaindices = [x - 1 for x in aaindices]
 
-        # ASSIGN DATAFRAME INDEX OF BACKBONE ATOM POSITION PER RESIDUE IN NEW COLUMN `BBINDICES`:
+        # ASSIGN DATAFRAME INDEX OF BACKBONE ATOM POSITION PER RESIDUE IN NEW COLUMN `AAINDICES`:
+        indices_of_aa_positions = pdf_target.groupby('S_seq_id').apply(lambda group: group.index[0]).to_dict()
+        pdf_target['aaindices'] = pdf_target['S_seq_id'].map(indices_of_aa_positions)
+
+        # ASSIGN DATAFRAME INDEX OF BACKBONE ATOM POSITION PER RESIDUE IN NEW COLUMN `BBINDICES` FOR REF TO ATOMS:
         # indices_of_atom_positions = {value: index for index, value in pdf_target[CIF.A_id.value].items()}
         indices_of_atom_positions = {value: index for index, value in pdf_target['A_id'].items()}
         # pdf_target[ColNames.BBINDICES.value] = pdf_target[ColNames.BB_ATOM_POS.value].map(indices_of_atom_positions)
@@ -850,26 +854,27 @@ if __name__ == '__main__':
     # # 2. CLEAR TOKENISED DIR:
     # dh.clear_diffdata_tokenised_dir()
 
-    # 3. PARSE AND TOKENISED CIFS AND WRITE SSV TO TOKENISED DIR:
-    # parse_tokenise_write_cifs_to_flatfile(relpath_ cif_dir=Path.rp_diffdata_cif_dir.value,
-    parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_data/mmCIF',
-                                          # relpath_toknsd_ssv_dir=Path.rp_diffdata_tokenised_dir.value,
-                                          relpath_toknsd_ssv_dir='../diffusion/diff_data/tokenised',
-                                          relpath_pdblst=None,
-                                          # flatfile_format_to_write=FileExt.ssv.value,
-                                          flatfile_format_to_write='ssv',
-                                          # pdb_ids=['1ECA', '2DN1', '2DN2', '1OJ6', '1V5H',
-                                          #          '1MBN', '2GDM', '1GDI', '2WY4'],
-                                          write_lst_file=True)
+    # # 3. PARSE AND TOKENISED CIFS AND WRITE SSV TO TOKENISED DIR:
+    # # parse_tokenise_write_cifs_to_flatfile(relpath_ cif_dir=Path.rp_diffdata_cif_dir.value,
+    # parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_data/mmCIF',
+    #                                       # relpath_toknsd_ssv_dir=Path.rp_diffdata_tokenised_dir.value,
+    #                                       relpath_toknsd_ssv_dir='../diffusion/diff_data/tokenised',
+    #                                       relpath_pdblst=None,
+    #                                       # flatfile_format_to_write=FileExt.ssv.value,
+    #                                       flatfile_format_to_write='ssv',
+    #                                       # pdb_ids=['1ECA', '2DN1', '2DN2', '1OJ6', '1V5H',
+    #                                       #          '1MBN', '2GDM', '1GDI', '2WY4'],
+    #                                       write_lst_file=True)
 
 
     # # _targetfile_lst_path = Path.rp_diffdata_9_PDBids_lst.value
     # lst_file = 'pdbchains_9.lst'
-    # _targetfile_lst_path = f'../diffusion/diff_data/PDBid_list/{lst_file}'
-    # assert os.path.exists(_targetfile_lst_path), f'{_targetfile_lst_path} cannot be found. Btw, cwd={os.getcwd()}'
-    #
-    # _train_list, _validation_list = load_dataset(_targetfile_lst_path)
+    lst_file = 'pdbchains_565.lst'
+    _targetfile_lst_path = f'../diffusion/diff_data/PDBid_list/{lst_file}'
+    assert os.path.exists(_targetfile_lst_path), f'{_targetfile_lst_path} cannot be found. Btw, cwd={os.getcwd()}'
 
+    _train_list, _validation_list = load_dataset(_targetfile_lst_path)
+    pass
 
 
 
