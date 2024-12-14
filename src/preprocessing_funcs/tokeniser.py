@@ -755,18 +755,18 @@ def load_dataset(targetfile_lst_path: str) -> Tuple[List, List]:
 
         # GET `aaindices`. EXPECTED TO HAVE REPEATED VALUES BECAUSE 1 AA HAS 4 OR MORE ATOMS (NOT DUPLICATE ROWS):
         # aaindices = pdf_target[CIF.S_seq_id.value].tolist()
-        aaindices = pdf_target['S_seq_id'].tolist()
-        aaindices = [x - 1 for x in aaindices]
+        # aaindices = pdf_target['S_seq_id'].tolist()
 
-        # ASSIGN DATAFRAME INDEX OF BACKBONE ATOM POSITION PER RESIDUE IN NEW COLUMN `AAINDICES`:
-        indices_of_aa_positions = pdf_target.groupby('S_seq_id').apply(lambda group: group.index[0]).to_dict()
-        pdf_target['aaindices'] = pdf_target['S_seq_id'].map(indices_of_aa_positions)
+        # ASSIGN DATAFRAME ATOM-LEVEL (LOWEST) ROW INDICES OF AMINO ACID POSITIONS TO NEW COLUMN `AAINDICES`:
+        aa_positions_rowindex_map = pdf_target.groupby('S_seq_id').apply(lambda group: group.index[0]).to_dict()
+        pdf_target['aaindices'] = pdf_target['S_seq_id'].map(aa_positions_rowindex_map)
+        aaindices = pdf_target['aaindices'].tolist()
 
         # ASSIGN DATAFRAME INDEX OF BACKBONE ATOM POSITION PER RESIDUE IN NEW COLUMN `BBINDICES` FOR REF TO ATOMS:
-        # indices_of_atom_positions = {value: index for index, value in pdf_target[CIF.A_id.value].items()}
-        indices_of_atom_positions = {value: index for index, value in pdf_target['A_id'].items()}
-        # pdf_target[ColNames.BBINDICES.value] = pdf_target[ColNames.BB_ATOM_POS.value].map(indices_of_atom_positions)
-        pdf_target['bbindices'] = pdf_target['bb_atom_pos'].map(indices_of_atom_positions)
+        # atom_positions_rowindex_map = {value: index for index, value in pdf_target[CIF.A_id.value].items()}
+        atom_positions_rowindex_map = {value: index for index, value in pdf_target['A_id'].items()}
+        # pdf_target[ColNames.BBINDICES.value] = pdf_target[ColNames.BB_ATOM_POS.value].map(atom_positions_rowindex_map)
+        pdf_target['bbindices'] = pdf_target['bb_atom_pos'].map(atom_positions_rowindex_map)
 
         # DE-DUPLICATE ROWS ON RESIDUE POSITION (`S_seq_id`) TO GET CORRECT DIMENSION OF `aacodes` and `bbindices`:
         pdf_target_deduped = (pdf_target
@@ -869,7 +869,7 @@ if __name__ == '__main__':
 
     # # _targetfile_lst_path = Path.rp_diffdata_9_PDBids_lst.value
     # lst_file = 'pdbchains_9.lst'
-    lst_file = 'pdbchains_565.lst'
+    lst_file = 'globin_1.lst'
     _targetfile_lst_path = f'../diffusion/diff_data/PDBid_list/{lst_file}'
     assert os.path.exists(_targetfile_lst_path), f'{_targetfile_lst_path} cannot be found. Btw, cwd={os.getcwd()}'
 
