@@ -185,23 +185,10 @@ class DMPDataset(Dataset):
             start = random.randint(min_aaindex, number_of_residues - rand_window_10_20)
             end = start + rand_window_10_20
             mask = np.logical_and(aaindices >= start, aaindices < end)  # ATOM-LEVEL MASK
-            trues_in_mask = np.sum(mask)
-
-            for _ in range(20):
-                if trues_in_mask < 10:
-                    start = random.randint(min_aaindex, number_of_residues - rand_window_10_20)
-                    end = start + rand_window_10_20
-                    mask = np.logical_and(aaindices >= start, aaindices < end)
-                    trues_in_mask = np.sum(mask)
-                else:
-                    break
-
             aacodes = aacodes[start: end]  # aacodes HAS SIZE = NUMBER OF RESIDUES
             bbindices = bbindices[start: end]  # bbindices HAS SIZE = NUMBER OF RESIDUES
             bb_coords = target_coords[bbindices]  #
             embed = embed[:, start: end]
-            mask = np.logical_and(aaindices >= start, aaindices < end)
-            atomcodes = atomcodes[mask]
 
             if np.sum(mask) == 0:
                 print(f'mask all False: target={target};start={start}; croplen={rand_window_10_20}; end={end}; '
