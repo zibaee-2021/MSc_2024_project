@@ -888,4 +888,6 @@ if __name__ == '__main__':
     ssv_count = sum(1 for file in path.rglob("*.ssv"))
     print(f'Parsed and tokenised {cif_count} CIFs to SSVs. You have {ssv_count} SSVs. '
           f'This took {seconds:.2f} seconds in total.')
+
+    # Parsed and tokenised 573 CIFs to SSVs. You have 565 SSVs. This took 502.31 seconds in total.
     # dh.clear_diffdatacif_dir()
