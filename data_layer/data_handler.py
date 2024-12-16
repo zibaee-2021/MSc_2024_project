@@ -123,17 +123,20 @@ def copy_cifs_from_bigfilefolder_to_diff_data():
     _restore_original_working_dir(cwd)
 
 
-def clear_diffdatacif_dir() -> None:
+def clear_diffdata_mmcif_dir() -> None:
     """
     Note: As we're likely dealing with less than 10,000 files, I am not using Linux via `subprocess` which is apparently
     the better choice for large numbers of files. It would be:
     ```subprocess.run(['rm', '-rf', f'{directory_path}/*'], Fcheck=True, shell=True)```
     """
+    cwd = _chdir_to_data_layer()  # Store cwd to return to at end. Change current dir to data layer.
+    print(f'os.getcwd()={os.getcwd()}')
     # for cif_file in os.listdir(Path.diffdata_cif_dir.value):
     for cif_file in os.listdir('../src/diffusion/diff_data/mmCIF'):
         # cif_path = os.path.join(Path.diffdata_cif_dir.value, cif_file)
         cif_path = os.path.join('../src/diffusion/diff_data/mmCIF', cif_file)
         os.unlink(cif_path)
+    _restore_original_working_dir(cwd)
 
 
 def clear_diffdata_tokenised_dir() -> None:
