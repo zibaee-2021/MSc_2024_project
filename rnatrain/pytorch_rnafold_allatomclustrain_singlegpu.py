@@ -227,6 +227,10 @@ class DMPDataset(Dataset):
             ntindices = ntindices[mask] - lcut
             target_coords = target_coords[mask]
             length = croplen
+            print(f'lcut={lcut}; ntseq slice={len(ntseq)}; bbindices slice={len(bbindices)}; '
+                  f'bb_coords slice={len(bb_coords)}; length={length}; embed shape={embed.shape};'
+                  f' atomcodes slice={len(atomcodes)}; ntindices slice={len(ntindices)}; '
+                  f'target_coords slice={len(target_coords)}.')
         else:
             bb_coords = target_coords[bbindices]
 

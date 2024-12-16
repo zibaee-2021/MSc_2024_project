@@ -757,9 +757,16 @@ def load_dataset(targetfile_lst_path: str) -> Tuple[List, List]:
         # aaindices = pdf_target[CIF.S_seq_id.value].tolist()
         # aaindices = pdf_target['S_seq_id'].tolist()
 
-        # ASSIGN DATAFRAME ATOM-LEVEL (LOWEST) ROW INDICES OF AMINO ACID POSITIONS TO NEW COLUMN `AAINDICES`:
-        aa_positions_rowindex_map = pdf_target.groupby('S_seq_id').apply(lambda group: group.index[0]).to_dict()
-        pdf_target['aaindices'] = pdf_target['S_seq_id'].map(aa_positions_rowindex_map)
+        # ASSIGN DATAFRAME ATOM-LEVEL (LOWEST) ROW INDICES OF AMINO ACID POSITIONS TO NEW COLUMN `aaindices`:
+        # THE 2 COMMENTED-OUT LINES HERE ASSIGN ROW INDICES, I.E. NOT INCREMENTING BY 1, SO NOT SUITABLE FOR HOW IT
+        # `aaindices` IS USED FOR DATA AUGMENTATION IN `__getitem__()` OF `DMPDataset`:
+        # aa_positions_rowindex_map = pdf_target.groupby('S_seq_id').apply(lambda group: group.index[0]).to_dict()
+        # pdf_target['aaindices'] = pdf_target['S_seq_id'].map(aa_positions_rowindex_map)
+
+        # IN CONTRAST TO THE 2 COMMENTED-OUT LINES ABOVE, THE FOLLOWING LINE INCREMENTS BY 1 FOR EVERY SUBSEQUENT
+        # RESIDUE, SUCH THAT FOR A PDB OF 100 RESIDUES, REGARDLESS OF WHAT RESIDUE THE STRUCTURAL DATA STARTS FROM
+        # AND REGARDLESS OF ANY GAPS IN THE SEQUENCE, `aaindices` STARTS FROM 0, INCREMENTS BY 1 AND ENDS AT 99:
+        pdf_target['aaindices'] = pd.factorize(pdf_target['S_seq_id'])[0]
         aaindices = pdf_target['aaindices'].tolist()
 
         # ASSIGN DATAFRAME INDEX OF BACKBONE ATOM POSITION PER RESIDUE IN NEW COLUMN `BBINDICES` FOR REF TO ATOMS:
@@ -862,14 +869,13 @@ if __name__ == '__main__':
     #                                       relpath_pdblst=None,
     #                                       # flatfile_format_to_write=FileExt.ssv.value,
     #                                       flatfile_format_to_write='ssv',
-    #                                       # pdb_ids=['1ECA', '2DN1', '2DN2', '1OJ6', '1V5H',
-    #                                       #          '1MBN', '2GDM', '1GDI', '2WY4'],
+    #                                       # pdb_ids=['3C9P'],
     #                                       write_lst_file=True)
-
 
     # # _targetfile_lst_path = Path.rp_diffdata_9_PDBids_lst.value
     # lst_file = 'pdbchains_9.lst'
-    lst_file = 'globin_1.lst'
+    lst_file = '3C9P.lst'
+    # lst_file = 'globin_1.lst'
     _targetfile_lst_path = f'../diffusion/diff_data/PDBid_list/{lst_file}'
     assert os.path.exists(_targetfile_lst_path), f'{_targetfile_lst_path} cannot be found. Btw, cwd={os.getcwd()}'
 
