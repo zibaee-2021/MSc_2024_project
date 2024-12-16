@@ -71,13 +71,6 @@ from src.preprocessing_funcs import api_caller as api
 # If more than this proportion of residues have no backbone atoms, remove the chain.
 MIN_RATIO_MISSING_BACKBONE_ATOMS = 0.0
 
-os.environ['TORCH_USE_CUDA_DSA'] = '1'  # TO HELP DEBUGGING
-if torch.cuda.is_available():
-    device = torch.device("cuda")
-    print("Debugging: CUDA is available. Running on:", device)
-else:
-    print("Debugging: Not finding your CUDA... something is wrong !! ")
-
 
 # # `rp_` stands for relative path:
 # class Path(Enum):
@@ -629,6 +622,7 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
         _pdb_ids = _generate_list_of_pdbids_in_cif_dir(path_cif_dir=relpath_cif_dir)
         pdb_ids.extend(_pdb_ids)
 
+    pdb_ids = list(set(pdb_ids))
     assert pdb_ids is not None, 'This is a bug! `pdb_ids` is None ?! It must be a list of at least one PDB id.'
     assert len(pdb_ids) > 0, 'This is a bug! `pdb_ids` is an empty list ?! It must be a list of at least one PDB id.'
 
@@ -855,33 +849,43 @@ def load_dataset(targetfile_lst_path: str) -> Tuple[List, List]:
 
 
 if __name__ == '__main__':
+
     # # 1. COPY CIFS OVER FROM BIG DATA FOLDER (IF NOT ALREADY DONE FROM DATA_HANDLER.PY):
+    # dh.clear_diffdata_mmcif_dir()
     # dh.copy_cifs_from_bigfilefolder_to_diff_data()
 
     # # 2. CLEAR TOKENISED DIR:
     # dh.clear_diffdata_tokenised_dir()
 
+    from time import time
+    start_time = time()
+
     # # 3. PARSE AND TOKENISED CIFS AND WRITE SSV TO TOKENISED DIR:
     # # parse_tokenise_write_cifs_to_flatfile(relpath_ cif_dir=Path.rp_diffdata_cif_dir.value,
-    # parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_data/mmCIF',
-    #                                       # relpath_toknsd_ssv_dir=Path.rp_diffdata_tokenised_dir.value,
-    #                                       relpath_toknsd_ssv_dir='../diffusion/diff_data/tokenised',
-    #                                       relpath_pdblst=None,
-    #                                       # flatfile_format_to_write=FileExt.ssv.value,
-    #                                       flatfile_format_to_write='ssv',
-    #                                       # pdb_ids=['3C9P'],
-    #                                       write_lst_file=True)
+    parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_data/mmCIF',
+                                          # relpath_toknsd_ssv_dir=Path.rp_diffdata_tokenised_dir.value,
+                                          relpath_toknsd_ssv_dir='../diffusion/diff_data/tokenised',
+                                          relpath_pdblst=None,
+                                          # flatfile_format_to_write=FileExt.ssv.value,
+                                          flatfile_format_to_write='ssv',
+                                          # pdb_ids=['3C9P'],
+                                          write_lst_file=True)
 
     # # _targetfile_lst_path = Path.rp_diffdata_9_PDBids_lst.value
     # lst_file = 'pdbchains_9.lst'
-    lst_file = '3C9P.lst'
+    # lst_file = '3C9P.lst'  # 3C9P has short HETATM stretch near N-term, hence useful for checking `aaindices`.
     # lst_file = 'globin_1.lst'
+    lst_file = 'pdbchains_565.lst'
     _targetfile_lst_path = f'../diffusion/diff_data/PDBid_list/{lst_file}'
     assert os.path.exists(_targetfile_lst_path), f'{_targetfile_lst_path} cannot be found. Btw, cwd={os.getcwd()}'
 
-    _train_list, _validation_list = load_dataset(_targetfile_lst_path)
-    pass
-
-
-
+    # _train_list, _validation_list = load_dataset(_targetfile_lst_path)
+    seconds = time() - start_time
+    from pathlib import Path
+    path = Path('../diffusion/diff_data/mmCIF')
+    cif_count = sum(1 for file in path.rglob("*.cif"))
+    path = Path('../diffusion/diff_data/tokenised')
+    ssv_count = sum(1 for file in path.rglob("*.ssv"))
+    print(f'Parsed and tokenised {cif_count} CIFs to SSVs. You have {ssv_count} SSVs. '
+          f'This took {seconds:.2f} seconds in total.')
     # dh.clear_diffdatacif_dir()
