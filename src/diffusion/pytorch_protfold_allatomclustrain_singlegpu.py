@@ -167,43 +167,38 @@ class DMPDataset(Dataset):
         embed = embed.detach()
 
         # length = ntseq.shape[0]
-        number_of_residues = aacodes.shape[0]
+        prot_length = aacodes.shape[0]
 
         if FINETUNE_FLAG:  # False
             # croplen = 20
-            rand_window_10_20 = 20
+            peptide_window = 20
         else:
-            # croplen = random.randint(10, min(20, number_of_residues))
-            rand_window_10_20 = random.randint(10, min(20, number_of_residues))
+            # croplen = random.randint(10, min(20, length))
+            peptide_window = random.randint(10, min(20, prot_length))
 
         # print(f'croplen={croplen}')
+        # print(f'peptide_window={peptide_window}')
 
-        if self.augment and number_of_residues > rand_window_10_20:
-            # lcut = random.randint(0, length - croplen)  # PERHAPS, UNLIKE PROTEINS, RNA PDBs ALWAYS START FROM 0 ??
-            # SO, TO AVOID MAKING MASK OF ALL FALSE, EMPTY AAINDICES & ATOMCODES, I START FROM MINIMUM NUMBER:
-            min_aaindex = int(np.min(aaindices))
-            start = random.randint(min_aaindex, number_of_residues - rand_window_10_20)
-            end = start + rand_window_10_20
-            mask = np.logical_and(aaindices >= start, aaindices < end)  # ATOM-LEVEL MASK
-            aacodes = aacodes[start: end]  # aacodes HAS SIZE = NUMBER OF RESIDUES
-            bbindices = bbindices[start: end]  # bbindices HAS SIZE = NUMBER OF RESIDUES
+        if self.augment and prot_length > peptide_window:
+            # lcut = random.randint(0, length - croplen)
+            start = random.randint(0, prot_length - peptide_window)
+            end = start + peptide_window
+            aacodes = aacodes[start: end]
+            bbindices = bbindices[start: end]
             bb_coords = target_coords[bbindices]  #
             embed = embed[:, start: end]
-
-            if np.sum(mask) == 0:
-                print(f'mask all False: target={target};start={start}; croplen={rand_window_10_20}; end={end}; '
-                      f'length={number_of_residues}; aacodes.size={aacodes.size}; aaindices={aaindices} - line 206')
-            aaindices = aaindices[mask] - start  # Why are you subtracting the start from the aaindices, but not others?
+            mask = np.logical_and(aaindices >= start, aaindices < end)
+            atomcodes = atomcodes[mask]
+            aaindices = aaindices[mask] - start  # Why subtract from aaindices, but not others?
             target_coords = target_coords[mask]
-            # length = croplen
+            prot_length = peptide_window
 
         else:
             bb_coords = target_coords[bbindices]
 
         if target_coords.shape[0] < 10:
             # print(target, length, ntindices)
-            # print(f' target={target}, croplen={length}, aaindices={aaindices}')
-            print(f'target={target}, rand_window_10_20={rand_window_10_20}, aaindices={aaindices}')
+            print(f'target={target}, length={prot_length}, aaindices={aaindices}')
 
         noised_coords = target_coords - target_coords.mean(axis=0)
 
@@ -507,7 +502,7 @@ if __name__ == "__main__":
         print(f'sys.version = {sys.version}')
 
     _abs_path = os.path.dirname(os.path.abspath(__file__))
-    path_lpe_txt = '../losses/losses_per_epoch_10Dec.txt'  # CHANGE THIS TO AVOID OVERWRITING PREVIOUS ONES!
+    path_lpe_txt = '../losses/losses_per_epoch_16Dec.txt'  # note this was 10Dec, I did not change in time for 16
     path_lpe_txt = os.path.join(_abs_path, path_lpe_txt)
     path_lpe_txt = os.path.normpath(path_lpe_txt)
     path_lpe_dir = '../losses'
