@@ -889,5 +889,6 @@ if __name__ == '__main__':
     print(f'Parsed and tokenised {cif_count} CIFs to SSVs. You have {ssv_count} SSVs. '
           f'This took {seconds:.2f} seconds in total.')
 
-    # Parsed and tokenised 573 CIFs to SSVs. You have 565 SSVs. This took 502.31 seconds in total.
+    # Parsed and tokenised 573 CIFs to SSVs. You have 565 SSVs. This took 502.31 seconds in total (MAcBook).
+    # (It took 283 secs on joe-desktop).
     # dh.clear_diffdatacif_dir()
