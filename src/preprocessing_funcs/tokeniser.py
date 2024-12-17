@@ -790,7 +790,7 @@ def load_dataset(targetfile_lst_path: str) -> Tuple[List, List]:
         # READ PRE-COMPUTED EMBEDDING OF THIS PROTEIN:
         # path_pdb_embed = f'{Path.rp_diffdata_emb_dir.value}/{target_pdbid}{FileExt.dot_pt.value}'
         path_pdb_embed = f'../diffusion/diff_data/emb/{target_pdbid}.pt'
-        pdb_embed = torch.load(path_pdb_embed)
+        pdb_embed = torch.load(path_pdb_embed, weights_only=True)
 
         # AND MAKE SURE IT HAS SAME NUMBER OF RESIDUES AS THE PARSED-TOKENISED SEQUENCE FROM MMCIF:
         assert pdb_embed.size(1) == len(aacodes)
