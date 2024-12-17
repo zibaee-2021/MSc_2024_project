@@ -161,7 +161,7 @@ class DMPDataset(Dataset):
         embed_pt = f'diff_data/emb/{target}.pt'
         embed_pt = os.path.normpath(os.path.join(abs_path, embed_pt))
         assert os.path.exists(embed_pt), f'{embed_pt} is missing!'
-        embed = torch.load(embed_pt)
+        embed = torch.load(embed_pt, weights_only=True)
         linear_layer = nn.Linear(768, 1024, bias=False)
         embed = linear_layer(embed)
         embed = embed.detach()
@@ -307,7 +307,7 @@ def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float1
     if RESTART_FLAG:
         try:
             # pretrained_dict = torch.load(Filename.prot_e2e_model_train_pt.value, map_location='cuda')
-            pretrained_dict = torch.load('prot_e2e_model_train.pt', map_location='cuda')
+            pretrained_dict = torch.load('prot_e2e_model_train.pt', map_location='cuda', weights_only=True)
             model_dict = network.state_dict()
             pretrained_dict = {k: v for k, v in pretrained_dict.items() if (k in model_dict) and (model_dict[k].shape == pretrained_dict[k].shape)}
             network.load_state_dict(pretrained_dict, strict=False)
@@ -317,7 +317,7 @@ def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float1
 
         try:
             # checkpoint = torch.load(Filename.checkpoint_pt.value)
-            checkpoint = torch.load('checkpoint.pt')
+            checkpoint = torch.load('checkpoint.pt', weights_only=True)
             start_iteration = checkpoint['iteration']
             val_err_min = checkpoint['val_err_min']
             print("Checkpoint file loaded.")
@@ -501,8 +501,9 @@ if __name__ == "__main__":
         print(f'torch.__version__={torch.__version__}')
         print(f'sys.version = {sys.version}')
 
+    # SET UP LOSSES PATH AND CHECK OK *BEFORE* STARTING TRAINING:
     _abs_path = os.path.dirname(os.path.abspath(__file__))
-    path_lpe_txt = '../losses/losses_per_epoch_16Dec.txt'  # note this was 10Dec, I did not change in time for 16
+    path_lpe_txt = '../losses/losses_per_epoch_16Dec.txt'
     path_lpe_txt = os.path.join(_abs_path, path_lpe_txt)
     path_lpe_txt = os.path.normpath(path_lpe_txt)
     path_lpe_dir = '../losses'
