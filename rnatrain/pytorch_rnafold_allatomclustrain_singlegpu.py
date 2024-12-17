@@ -218,7 +218,7 @@ class DMPDataset(Dataset):
 
         if self.augment and length > croplen:
             lcut = random.randint(0, length-croplen)
-            ntseq = ntseq[lcut:lcut+croplen]
+            ntseq = ntseq[lcut:lcut+croplen]  # `ntseq` is same as `aacodes`
             bbindices = bbindices[lcut:lcut+croplen]
             bb_coords = target_coords[bbindices]
             embed = embed[:,lcut:lcut+croplen]
