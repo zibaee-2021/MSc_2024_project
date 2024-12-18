@@ -58,14 +58,46 @@ FINETUNE_FLAG = False
 
 
 def _atomic_torch_save(data: dict, pt_fname: str) -> None:
+    assert data is not None, 'The model dict or checkpoint dict passed in to _atomic_torch_save() is None'
+    assert bool(data), 'The model dict or checkpoint dict passed in to _atomic_torch_save() is empty'
     abs_path = os.path.dirname(os.path.abspath(__file__))
     path_temp = f"pt_files/{pt_fname.removesuffix('.pt') + '.tmp'}"
     abspath_temp = os.path.normpath(os.path.join(abs_path, path_temp))
+    os.makedirs(os.path.dirname(abspath_temp), exist_ok=True)
     torch.save(data, abspath_temp)
-    path_pt = f"pt_files/{pt_fname}"
+    assert os.path.exists(abspath_temp), f"{pt_fname.removesuffix('.pt') + '.tmp'} was not created at '{abspath_temp}'."
+    path_pt = f'pt_files/{pt_fname}'
     abspath_pt = os.path.normpath(os.path.join(abs_path, path_pt))
     os.replace(abspath_temp, abspath_pt)
-    print(f"Saved model '{pt_fname}'", flush=True)
+    assert os.path.exists(abspath_pt), f"'{abspath_temp}' was not renamed to '{abspath_pt}'."
+    print(f"Model '{pt_fname}' saved.", flush=True)
+
+
+def torch_load(pt_fname: str) -> torch.Tensor:
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    pt_fname = pt_fname.removesuffix('.pt')
+    path_pt_fname = f'pt_files/{pt_fname}.pt'
+    abspath_pt_fname = os.path.normpath(os.path.join(abs_path, path_pt_fname))
+    assert os.path.exists(abspath_pt_fname), f"'{pt_fname}.pt' does not exist at '{abspath_pt_fname}'"
+    pt = None
+    try:
+        pt = torch.load(abspath_pt_fname, weights_only=True)
+    except FileNotFoundError as e:
+        raise FileNotFoundError(f"File not found: '{abspath_pt_fname}'.") from e
+    except torch.serialization.pickle.UnpicklingError as e:
+        raise ValueError(f"Failed to unpickle file: '{abspath_pt_fname}'. "
+                         f"May be corrupted or not valid PyTorch file.") from e
+    except EOFError as e:
+        raise EOFError(f"Unexpected end of file while loading file: '{abspath_pt_fname}'. "
+                       f"It might be incomplete or corrupted.") from e
+    except RuntimeError as e:
+        raise RuntimeError(f"PyTorch encountered an issue while loading file: '{abspath_pt_fname}'. "
+                           f"Details: {str(e)}") from e
+    except Exception as e:
+        raise Exception(f"An unexpected error occurred while loading file: '{abspath_pt_fname}'. "
+                        f"Error: {str(e)}") from e
+
+    return pt
 
 
 def load_dataset(targetfile_lst_path: str) -> Tuple[List, List]:
