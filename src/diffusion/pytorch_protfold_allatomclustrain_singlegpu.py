@@ -73,15 +73,25 @@ def _atomic_torch_save(data: dict, pt_fname: str) -> None:
     print(f"Model '{pt_fname}' saved.", flush=True)
 
 
-def torch_load(pt_fname: str) -> torch.Tensor:
+def _torch_load_pt(pt_fname: str, is_embedding_file=False):
+    """
+    Load torch data that is in the form of a `.pt` file.
+    :param pt_fname: Filename of `.pt` file to be loaded.
+    :param is_embedding_file: True if loading an embedding, which will therefore be in `diff_data/emb` directory.
+    Otherwise, load from `pt_files` dir.
+    :return: A Tensor or a dict.
+    """
     abs_path = os.path.dirname(os.path.abspath(__file__))
     pt_fname = pt_fname.removesuffix('.pt')
-    path_pt_fname = f'pt_files/{pt_fname}.pt'
+    if is_embedding_file:
+        path_pt_fname = f'diff_data/emb/{pt_fname}.pt'
+    else:
+        path_pt_fname = f'pt_files/{pt_fname}.pt'
     abspath_pt_fname = os.path.normpath(os.path.join(abs_path, path_pt_fname))
     assert os.path.exists(abspath_pt_fname), f"'{pt_fname}.pt' does not exist at '{abspath_pt_fname}'"
     pt = None
     try:
-        pt = torch.load(abspath_pt_fname, weights_only=True)
+        pt = torch.load(abspath_pt_fname, map_location='cuda', weights_only=True)
     except FileNotFoundError as e:
         raise FileNotFoundError(f"File not found: '{abspath_pt_fname}'.") from e
     except torch.serialization.pickle.UnpicklingError as e:
@@ -97,6 +107,14 @@ def torch_load(pt_fname: str) -> torch.Tensor:
         raise Exception(f"An unexpected error occurred while loading file: '{abspath_pt_fname}'. "
                         f"Error: {str(e)}") from e
 
+    assert pt is not None, f"'{pt_fname}' seems to have loaded successfully but is null..."
+
+    if isinstance(pt, dict):
+        assert bool(pt), f"The dict of '{pt_fname}' was read in successfully but seems to be empty..."
+    else:
+        if isinstance(pt, torch.Tensor):
+            assert pt.numel() > 0, f"The tensor of '{pt_fname}' was read in successfully but seems to be empty..."
+    # Note: I do not check other types than dict and Tensor.
     return pt
 
 
@@ -200,11 +218,8 @@ class DMPDataset(Dataset):
         target_coords = sample[5]
 
         # embed = torch.load(f'{Path.rp_diffdata_emb_dir.value}/{target}{FileExt.dot_pt.value}')
-        abs_path = os.path.dirname(os.path.abspath(__file__))
-        embed_pt = f'diff_data/emb/{target}.pt'
-        abspath_embed_pt = os.path.normpath(os.path.join(abs_path, embed_pt))
-        assert os.path.exists(abspath_embed_pt), f'{embed_pt} is missing!'
-        embed = torch.load(abspath_embed_pt, weights_only=True)
+        embed = _torch_load_pt(pt_fname=target, is_embedding_file=True)
+
         linear_layer = nn.Linear(768, 1024, bias=False)
         embed = linear_layer(embed)
         embed = embed.detach()
@@ -351,23 +366,27 @@ def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float1
         try:
             # pretrained_dict = torch.load(Filename.prot_e2e_model_train_pt.value, map_location='cuda')
             pt_fname = 'prot_e2e_model_train.pt'
-
-            pretrained_dict = torch.load(pt_fname, map_location='cuda', weights_only=True)
+            # pretrained_dict = torch.load(pt_fname, map_location='cuda', weights_only=True)
+            pretrained_dict = _torch_load_pt(pt_fname=pt_fname)
             model_dict = network.state_dict()
-            pretrained_dict = {k: v for k, v in pretrained_dict.items() if (k in model_dict) and (model_dict[k].shape == pretrained_dict[k].shape)}
+            pretrained_dict = {k: v for k, v in pretrained_dict.items()
+                               if (k in model_dict)
+                               and (model_dict[k].shape == pretrained_dict[k].shape)}
             network.load_state_dict(pretrained_dict, strict=False)
         except:
-            print("Could not read in a pretrained 'prot_e2e_model_train.pt' model.)")
+            print("torch.load() of pretrained 'prot_e2e_model_train.pt' model went ok, but subsequent "
+                  "network.state_dict() or network.load_state_dict() seems to have a problem.")
             pass
 
         try:
             # checkpoint = torch.load(Filename.checkpoint_pt.value)
-            checkpoint = torch.load('checkpoint.pt', weights_only=True)
+            # checkpoint = torch.load('checkpoint.pt', weights_only=True)
+            checkpoint = _torch_load_pt(pt_fname='checkpoint.pt')
             start_epoch = checkpoint['epoch']
             val_err_min = checkpoint['val_err_min']
-            print("checkpoint.pt file loaded.")
         except:
-            print("Could not read in a pretrained 'checkpoint.pt' model ")
+            print("torch.load() of pretrained 'checkpoint.pt' went ok, but subsequent access to the dict's key-values"
+                  "seems to have a problem.")
             pass
 
     optimizer = torch.optim.RAdam(network.parameters(), lr=max_lr)
