@@ -103,6 +103,45 @@ MIN_RATIO_MISSING_BACKBONE_ATOMS = 0.0
 #     sc = 'sc'  # side-chain
 
 
+def _torch_load_embed_pt(pt_fname: str):
+    """
+    Load torch embedding `.pt` file.
+    :param pt_fname: Filename of `.pt` file to be loaded.
+    :return: A Tensor or a dict.
+    """
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    pt_fname = pt_fname.removesuffix('.pt')
+    path_pt_fname = f'../diffusion/diff_data/emb/{pt_fname}.pt'
+    abspath_pt_fname = os.path.normpath(os.path.join(abs_path, path_pt_fname))
+    assert os.path.exists(abspath_pt_fname), f"'{pt_fname}.pt' does not exist at '{abspath_pt_fname}'"
+    pt = None
+    try:
+        pt = torch.load(abspath_pt_fname, map_location='cuda', weights_only=True)
+    except FileNotFoundError as e:
+        raise FileNotFoundError(f"File not found: '{abspath_pt_fname}'.") from e
+    except torch.serialization.pickle.UnpicklingError as e:
+        raise ValueError(f"Failed to unpickle file: '{abspath_pt_fname}'. "
+                         f"May be corrupted or not valid PyTorch file.") from e
+    except EOFError as e:
+        raise EOFError(f"Unexpected end of file while loading file: '{abspath_pt_fname}'. "
+                       f"It might be incomplete or corrupted.") from e
+    except RuntimeError as e:
+        raise RuntimeError(f"PyTorch encountered an issue while loading file: '{abspath_pt_fname}'. "
+                           f"Details: {str(e)}") from e
+    except Exception as e:
+        raise Exception(f"An unexpected error occurred while loading file: '{abspath_pt_fname}'. "
+                        f"Error: {str(e)}") from e
+
+    assert pt is not None, f"'{pt_fname}' seems to have loaded successfully but is null..."
+
+    if isinstance(pt, dict):
+        assert bool(pt), f"The dict of '{pt_fname}' was read in successfully but seems to be empty..."
+    else:
+        if isinstance(pt, torch.Tensor):
+            assert pt.numel() > 0, f"The tensor of '{pt_fname}' was read in successfully but seems to be empty..."
+    return pt
+
+
 def nums_of_missing_data(pdf):
     pd_isna = int((pdf.map(lambda x: isinstance(x, float) and pd.isna(x))).sum().sum())
     pd_na = int((pdf.map(lambda x: x is pd.NA)).sum().sum())
@@ -788,12 +827,7 @@ def load_dataset(targetfile_lst_path: str) -> Tuple[List, List]:
             continue
 
         # READ PRE-COMPUTED EMBEDDING OF THIS PROTEIN:
-        _abs_path = os.path.dirname(os.path.abspath(__file__))
-        path_pdb_embed = f'../diffusion/diff_data/emb/{target_pdbid}.pt'
-        abspath_pdb_embed = os.path.normpath(os.path.join(_abs_path, path_pdb_embed))
-        # path_pdb_embed = f'{Path.rp_diffdata_emb_dir.value}/{target_pdbid}{FileExt.dot_pt.value}'
-        assert os.path.exists(abspath_pdb_embed), f'{target_pdbid}.pt not found at {abspath_pdb_embed}!'
-        pdb_embed = torch.load(abspath_pdb_embed, weights_only=True)
+        pdb_embed = _torch_load_embed_pt(pt_fname=target_pdbid)
 
         # AND MAKE SURE IT HAS SAME NUMBER OF RESIDUES AS THE PARSED-TOKENISED SEQUENCE FROM MMCIF:
         assert pdb_embed.size(1) == len(aacodes)
