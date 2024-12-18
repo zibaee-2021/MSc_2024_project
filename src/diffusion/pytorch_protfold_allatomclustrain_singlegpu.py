@@ -57,6 +57,19 @@ RESTART_FLAG = False  # False to build first train model
 FINETUNE_FLAG = False
 
 
+def _atomic_torch_save(model_to_save: dict, pt_fname: str) -> None:
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    path_temp = f"pt_files/{pt_fname.removesuffix('.pt') + '.tmp'}"
+    abspath_temp = os.path.normpath(os.path.join(abs_path, path_temp))
+    torch.save(model_to_save, abspath_temp)
+
+    path_pt = f"pt_files/{pt_fname}"
+    abspath_pt = os.path.normpath(os.path.join(abs_path, path_pt))
+    os.replace(abspath_temp, abspath_pt)
+
+    print(f"Saved model '{pt_fname}'", flush=True)
+
+
 def load_dataset(targetfile_lst_path: str) -> Tuple[List, List]:
     train_list, validation_list = tk.load_dataset(targetfile_lst_path)
     return train_list, validation_list
@@ -439,19 +452,21 @@ def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float1
             if val_err < val_err_min:
                 val_err_min = val_err
                 # torch.save(network.state_dict(), Filename.prot_e2e_model_pt.value)
-                torch.save(network.state_dict(), 'prot_e2e_model.pt')
-                print(f"Saving model 'prot_e2e_model.pt'", flush=True)
-                    
+                # torch.save(network.state_dict(), 'prot_e2e_model.pt')
+                _atomic_torch_save(model_to_save=network.state_dict(), pt_fname='prot_e2e_model.pt')
+
             # torch.save(network.state_dict(), Filename.prot_e2e_model_train_pt.value)
-            torch.save(network.state_dict(), 'prot_e2e_model_train.pt')
+            # torch.save(network.state_dict(), 'prot_e2e_model_train.pt')
             print(f"Saving model 'prot_e2e_model_train.pt'", flush=True)
+            _atomic_torch_save(model_to_save=network.state_dict(), pt_fname='prot_e2e_model_train.pt')
 
             torch.save({
                 'epoch': epoch,
                 'val_err_min': val_err_min,
             }, 'checkpoint.pt')
             # }, Filename.checkpoint_pt.value)
-            print(f"Saving 'checkpoint.pt'", flush=True)
+            print(f"Saving 'checkpoint.pt' at epoch={epoch}", flush=True)
+
 
         epochs[epoch] = epoch
 
