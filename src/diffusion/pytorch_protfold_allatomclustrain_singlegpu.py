@@ -320,12 +320,14 @@ def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float1
     if RESTART_FLAG:
         try:
             # pretrained_dict = torch.load(Filename.prot_e2e_model_train_pt.value, map_location='cuda')
-            pretrained_dict = torch.load('prot_e2e_model_train.pt', map_location='cuda', weights_only=True)
+            pt_fname = 'prot_e2e_model_train.pt'
+
+            pretrained_dict = torch.load(pt_fname, map_location='cuda', weights_only=True)
             model_dict = network.state_dict()
             pretrained_dict = {k: v for k, v in pretrained_dict.items() if (k in model_dict) and (model_dict[k].shape == pretrained_dict[k].shape)}
             network.load_state_dict(pretrained_dict, strict=False)
         except:
-            print("Could not read in a pretrained 'prot_e2e_model_train.pt' model (as it likely doesn't exist yet.)")
+            print("Could not read in a pretrained 'prot_e2e_model_train.pt' model.)")
             pass
 
         try:
