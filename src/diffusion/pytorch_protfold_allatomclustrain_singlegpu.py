@@ -57,7 +57,7 @@ RESTART_FLAG = False  # False to build first train model
 FINETUNE_FLAG = False
 
 
-def _atomic_torch_save(data: dict, pt_fname: str) -> None:
+def _atomic_torch_save_pt(data: dict, pt_fname: str) -> None:
     assert data is not None, 'The model dict or checkpoint dict passed in to _atomic_torch_save() is None'
     assert bool(data), 'The model dict or checkpoint dict passed in to _atomic_torch_save() is empty'
     abs_path = os.path.dirname(os.path.abspath(__file__))
@@ -504,13 +504,13 @@ def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float1
                 val_err_min = val_err
                 # torch.save(network.state_dict(), Filename.prot_e2e_model_pt.value)
                 # torch.save(network.state_dict(), 'prot_e2e_model.pt')
-                _atomic_torch_save(data=network.state_dict(), pt_fname='prot_e2e_model.pt')
+                _atomic_torch_save_pt(data=network.state_dict(), pt_fname='prot_e2e_model.pt')
 
             # torch.save(network.state_dict(), Filename.prot_e2e_model_train_pt.value)
             # torch.save(network.state_dict(), 'prot_e2e_model_train.pt')
-            _atomic_torch_save(data=network.state_dict(), pt_fname='prot_e2e_model_train.pt')
+            _atomic_torch_save_pt(data=network.state_dict(), pt_fname='prot_e2e_model_train.pt')
 
-            _atomic_torch_save(data={'epoch': epoch, 'val_err_min': val_err_min}, pt_fname='checkpoint.pt')
+            _atomic_torch_save_pt(data={'epoch': epoch, 'val_err_min': val_err_min}, pt_fname='checkpoint.pt')
 
         epochs[epoch] = epoch
 
