@@ -333,7 +333,7 @@ def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float1
         try:
             # checkpoint = torch.load(Filename.checkpoint_pt.value)
             checkpoint = torch.load('checkpoint.pt', weights_only=True)
-            start_iteration = checkpoint['iteration']
+            start_iteration = checkpoint['epoch']
             val_err_min = checkpoint['val_err_min']
             print("Checkpoint file loaded.")
         except:
