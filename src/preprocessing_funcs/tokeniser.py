@@ -116,7 +116,7 @@ def _torch_load_embed_pt(pt_fname: str):
     assert os.path.exists(abspath_pt_fname), f"'{pt_fname}.pt' does not exist at '{abspath_pt_fname}'"
     pt = None
     try:
-        pt = torch.load(abspath_pt_fname, map_location='cuda', weights_only=True)
+        pt = torch.load(abspath_pt_fname, weights_only=True)
     except FileNotFoundError as e:
         raise FileNotFoundError(f"File not found: '{abspath_pt_fname}'.") from e
     except torch.serialization.pickle.UnpicklingError as e:
