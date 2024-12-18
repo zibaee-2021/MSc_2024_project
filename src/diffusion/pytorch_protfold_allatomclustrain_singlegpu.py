@@ -57,16 +57,14 @@ RESTART_FLAG = False  # False to build first train model
 FINETUNE_FLAG = False
 
 
-def _atomic_torch_save(model_to_save: dict, pt_fname: str) -> None:
+def _atomic_torch_save(data: dict, pt_fname: str) -> None:
     abs_path = os.path.dirname(os.path.abspath(__file__))
     path_temp = f"pt_files/{pt_fname.removesuffix('.pt') + '.tmp'}"
     abspath_temp = os.path.normpath(os.path.join(abs_path, path_temp))
-    torch.save(model_to_save, abspath_temp)
-
+    torch.save(data, abspath_temp)
     path_pt = f"pt_files/{pt_fname}"
     abspath_pt = os.path.normpath(os.path.join(abs_path, path_pt))
     os.replace(abspath_temp, abspath_pt)
-
     print(f"Saved model '{pt_fname}'", flush=True)
 
 
@@ -333,11 +331,11 @@ def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float1
         try:
             # checkpoint = torch.load(Filename.checkpoint_pt.value)
             checkpoint = torch.load('checkpoint.pt', weights_only=True)
-            start_iteration = checkpoint['epoch']
+            start_epoch = checkpoint['epoch']
             val_err_min = checkpoint['val_err_min']
-            print("Checkpoint file loaded.")
+            print("checkpoint.pt file loaded.")
         except:
-            print("Could not read in a pretrained 'checkpoint.pt' model (as it likely doesn't exist yet.)")
+            print("Could not read in a pretrained 'checkpoint.pt' model ")
             pass
 
     optimizer = torch.optim.RAdam(network.parameters(), lr=max_lr)
