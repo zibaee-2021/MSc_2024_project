@@ -453,20 +453,13 @@ def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float1
                 val_err_min = val_err
                 # torch.save(network.state_dict(), Filename.prot_e2e_model_pt.value)
                 # torch.save(network.state_dict(), 'prot_e2e_model.pt')
-                _atomic_torch_save(model_to_save=network.state_dict(), pt_fname='prot_e2e_model.pt')
+                _atomic_torch_save(data=network.state_dict(), pt_fname='prot_e2e_model.pt')
 
             # torch.save(network.state_dict(), Filename.prot_e2e_model_train_pt.value)
             # torch.save(network.state_dict(), 'prot_e2e_model_train.pt')
-            print(f"Saving model 'prot_e2e_model_train.pt'", flush=True)
-            _atomic_torch_save(model_to_save=network.state_dict(), pt_fname='prot_e2e_model_train.pt')
+            _atomic_torch_save(data=network.state_dict(), pt_fname='prot_e2e_model_train.pt')
 
-            torch.save({
-                'epoch': epoch,
-                'val_err_min': val_err_min,
-            }, 'checkpoint.pt')
-            # }, Filename.checkpoint_pt.value)
-            print(f"Saving 'checkpoint.pt' at epoch={epoch}", flush=True)
-
+            _atomic_torch_save(data={'epoch': epoch, 'val_err_min': val_err_min}, pt_fname='checkpoint.pt')
 
         epochs[epoch] = epoch
 
