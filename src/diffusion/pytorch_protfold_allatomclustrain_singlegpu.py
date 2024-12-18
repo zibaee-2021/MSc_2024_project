@@ -511,7 +511,7 @@ if __name__ == "__main__":
 
     # SET UP LOSSES PATH AND CHECK OK *BEFORE* STARTING TRAINING:
     _abs_path = os.path.dirname(os.path.abspath(__file__))
-    path_lpe_txt = '../losses/losses_per_epoch_16Dec.txt'
+    path_lpe_txt = '../losses/losses_per_epoch_18Dec.txt'
     path_lpe_txt = os.path.join(_abs_path, path_lpe_txt)
     path_lpe_txt = os.path.normpath(path_lpe_txt)
     path_lpe_dir = '../losses'
