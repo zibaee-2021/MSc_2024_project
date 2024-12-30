@@ -8,3 +8,5 @@ rnatrain/data
 rnatrain_DJ_code/data
 *__pycache__*
 *output*
+*.cif
+*.ssv
