@@ -142,7 +142,7 @@ def _torch_load_embed_pt(pt_fname: str):
     return pt
 
 
-def nums_of_missing_data(pdf):
+def get_nums_of_missing_data(pdf):
     pd_isna = int((pdf.map(lambda x: isinstance(x, float) and pd.isna(x))).sum().sum())
     pd_na = int((pdf.map(lambda x: x is pd.NA)).sum().sum())
     pd_nat = int((pdf.map(lambda x: x is pd.NaT)).sum().sum())
@@ -725,7 +725,7 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
                                              flatfiles=flatfile_format_to_write, pdb_id=pdbid)
         # ADD CHAIN TO NAME OF PDB ID:
         for pdf_chain in cif_pdfs_per_chain:
-            nums_of_missing_data(pdf_chain)
+            get_nums_of_missing_data(pdf_chain)
             _each_column_has_expected_values(pdf_chain)
             # chain = pdf_chain[CIF.S_asym_id.value].iloc[0]
             chain = pdf_chain['S_asym_id'].iloc[0]
