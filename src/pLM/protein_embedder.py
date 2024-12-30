@@ -27,7 +27,7 @@ def _get_aa_sequence_from_ssv(pdbid_chain: str) -> str:
     path_tokenised_ssv = f'../diffusion/diff_data/tokenised/{pdbid_chain}.ssv' 
     abspath_tokenised_ssv = os.path.normpath(os.path.join(abs_path, path_tokenised_ssv))
     pdf = dh.read_tokenised_cif_chain_ssv_to_pdf(abspath_tokenised_ssv)
-    tk.nums_of_missing_data(pdf)
+    tk.get_nums_of_missing_data(pdf)
     # aa_pos_seq_pdf = pdf[[CIF.S_seq_id.value, CIF.S_mon_id.value]]
     aa_pos_seq_pdf = pdf[['S_seq_id', 'S_mon_id']]
     # aa_pos_seq_pdf = aa_pos_seq_pdf.drop_duplicates(subset=CIF.S_seq_id.value, keep='first')
