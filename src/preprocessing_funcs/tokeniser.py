@@ -613,7 +613,7 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
                                           # flatfile_format_to_write: str = FileExt.ssv.value,
                                           flatfile_format_to_write: str = 'ssv',
                                           pdb_ids=None,
-                                          write_lst_file=False) -> List[pd.DataFrame]:
+                                          write_lst_file=True) -> List[pd.DataFrame]:
     """
     Parse and tokenise sequence and structure fields from mmCIFs of proteins, returning a list of Pandas dataframes,
     with one dataframe per chain. Write each dataframe to one flat file (ssv by default), in `tokenised` directory,
@@ -633,6 +633,9 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
     :param pdb_ids: <OPTIONAL> PDB id(s) to parse & tokenised. Expect either string of PDB id or list of PDB ids.
     Otherwise, just read from `src/diffusion/diff_data/mmCIF` subdir by default.
     Use `src/diffusion/diff_data/tokenised` by default, (hence expecting cwd to be `src/diffusion`).
+    :param write_lst_file: True to write out a new PDBids_chain `.lst` file of all those that have been parsed and
+    tokenised. It is subsequently passed (via its path & file name) to `main()` function in
+    `pytorch_protfold_allatomclustrain_singlegpu.py` script.
     :return: List of dataframes, one per chain. Each dataframe has the parsed and tokenised data of one CIF file
      and each is also written to a flatfile (ssv by default) at `src/diffusion/diff_data/tokenised`.
     Dataframe currently has these 17 Columns: ['A_label_asym_id', 'S_seq_id', 'A_id', 'A_label_atom_id', 'A_Cartn_x',
