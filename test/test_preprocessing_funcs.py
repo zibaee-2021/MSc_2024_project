@@ -72,15 +72,11 @@ class TestPreprocessingFuncs(TestCase):
         dh.write_tokenised_cif_to_ssv(pdf=pdf_target,
                                       path_dst_dir=self.test_tokenised_dir, pdb_id=pdbid)
 
-    def test_parse_cif(self):
-        parsed_pdfs = cif_parser.parse_cif(pdb_id=self.test_1OJ6_4chains_cif, relpath_cifs_dir=self.test_cif_dir)
-        pass
-
     def test_parse_tokenise_and_write_cif_to_flatfile(self):
         pdf = tk.parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=self.test_cif_dir,
                                                        relpath_toknsd_ssv_dir=self.test_tokenised_dir,
                                                        relpath_pdblst=None,
-                                                       pdb_ids=self.test_1V5H_ssv[:-4], all_pretokenised_ssvs=None)
+                                                       pdb_ids=self.test_1V5H_ssv[:-4])
         # pdf.to_csv(path_or_buf='test_data/tokenised/test_1V5H.ssv', sep=' ', index=False)
         self.assertEqual(18, len(pdf.columns))
 
@@ -88,7 +84,7 @@ class TestPreprocessingFuncs(TestCase):
         list_of_pdfs = tk.parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=self.test_cif_dir,
                                                                 relpath_toknsd_ssv_dir=self.test_tokenised_dir,
                                                                 relpath_pdblst=None,
-                                                                pdb_id=self.test_1OJ6_4chains_cif)
+                                                                pdb_ids=self.test_1OJ6_4chains_cif)
         for pdf in list_of_pdfs:
             self.assertEqual(18, len(pdf.columns))
 
