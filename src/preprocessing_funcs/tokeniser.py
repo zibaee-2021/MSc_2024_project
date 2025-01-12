@@ -685,7 +685,8 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
         pdb_id = pdb_id.removesuffix('.cif')
         print(f'Starting PDBid={pdb_id} ---------------------------------------------------------')
         if pdb_id == '5TJ5':
-            print(f'{pdb_id} has 2500 missing entries in the aa sequence field, so excluding this one!')
+            print(f'{pdb_id} is known to have 2500 missing entries in the aa sequence field! So {pdb_id} will be '
+                  f'excluded.')
             continue
 
         # THE LOGIC EXPECTS THAT IF IT HAS BEEN TOKENISED AND SAVED AS ssv, THEN IT WILL BE BY THE CHAIN AND SO
@@ -929,6 +930,6 @@ if __name__ == '__main__':
     print(f'Parsed and tokenised {cif_count} CIFs to SSVs. You have {ssv_count} SSVs. '
           f'This took {seconds:.2f} seconds in total.')
 
-    # Parsed and tokenised 573 CIFs to SSVs. You have 565 SSVs. This took 502.31 seconds in total (MAcBook).
-    # (It took 283 secs on joe-desktop).
+    # Parsed and tokenised 573 CIFs to SSVs, of which 565 were usable, thereby saving 565 SSVs.
+    # (It took 502.31 seconds in total on my MacBook. It took 283 secs on joe-desktop).
     # dh.clear_diffdatacif_dir()
