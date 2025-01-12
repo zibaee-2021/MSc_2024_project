@@ -90,6 +90,20 @@ class Cols(Enum):
     PDB_ID = 'PDB_Id'
 
 
+def _assert_cif_count_equals_pdb_id_count(pdb_ids_len: int):
+    """
+    Assert number of `.cif` files in
+    `diffSock/data/dataset/big_files_to_git_ignore/SD_573_CIFs/` is as number of PDB ids used to make
+    the API calls that were used to fetch the mmCIFs.
+    :param pdb_ids_len: Number of PDB ids for single-domain proteins extracted from CATH data resource.
+    """
+    print(f'There were {pdb_ids_len} PDB ids used to fetch mmCIF files.')
+    cifs = glob.glob(os.path.join(f'{Path.SD_573_CIFs_dir.value}/', '*.cif'))
+    cifs = [cif for cif in cifs if os.path.isfile(cif)]
+    print(f'There are {len(cifs)} `.cif` files in {Path.SD_573_CIFs_dir.value}.')
+    assert len(cifs) == pdb_ids_len
+
+
 def parse_single_dom_prots_and_write_csv(path_cath_list: str, path_single_dom_prot_csv: str) -> list:
     regex_one_or_more_whitespace_chars = r'\s+'
     pdf = pd.read_csv(path_cath_list,
@@ -162,20 +176,6 @@ def parse_single_dom_prots_and_write_csv(path_cath_list: str, path_single_dom_pr
     if pdf_573prots:
         print(f'Number of domain ids = {pdf_573prots.shape[0]}')
     return pdf_573prots[Cols.PDB_ID.value].tolist()
-
-
-def _assert_cif_count_equals_pdb_id_count(pdb_ids_len: int):
-    """
-    Assert number of `.cif` files in
-    `diffSock/data/dataset/big_files_to_git_ignore/SD_573_CIFs/` is as number of PDB ids used to make
-    the API calls that were used to fetch the mmCIFs.
-    :param pdb_ids_len: Number of PDB ids for single-domain proteins extracted from CATH data resource.
-    """
-    print(f'There were {pdb_ids_len} PDB ids used to fetch mmCIF files.')
-    cifs = glob.glob(os.path.join(f'{Path.SD_573_CIFs_dir.value}/', '*.cif'))
-    cifs = [cif for cif in cifs if os.path.isfile(cif)]
-    print(f'There are {len(cifs)} `.cif` files in {Path.SD_573_CIFs_dir.value}.')
-    assert len(cifs) == pdb_ids_len
 
 
 # NOTE - THIS ONLY NEEDS TO BE CALLED ONCE:
