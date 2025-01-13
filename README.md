@@ -28,7 +28,7 @@ if __name__ == '__main__':
     value1 = public_func1()
     public_func2(value1)
 ```
-
+----
 #### 1. GENERATE DATA SET OF SINGLE-DOMAIN PROTEINS VIA CATH WEBSITE:
 
 Performed by `single_dom_builder.py`
@@ -48,11 +48,11 @@ Starting then from 500238 proteins (and 12 columns of data fields), the dataset 
    well as a 'dummy' data set. 
 - The `PDB_Id`, `DomainID`, `Architecture` , `Topology`, `HomologousSF`, `Domain_len`, `Angstroms` fields of this 573 
 single-domain diverse set of proteins PDB ids is saved to  `data/dataset/big_files_to_git_ignore/CATH/SD_573_CIFs.csv`
-
+----
 #### 2. GENERATE PROTEIN LANGUAGE MODEL EMBEDDINGS FOR EACH PROTEIN:
 
 
-
+----
 #### 3. READ, PARSE AND TOKENISE mmCIF FILES:
 
 Performed by `tokeniser.py` (which imports and uses `cif_parser.py`, `api_caller.py`, `data_layer/data_handler.py`).
@@ -100,4 +100,6 @@ makes them self-explanatory. Nonetheless, a summary of their main operations is 
 - save this dataframe to ssv files in `src/diffusion/diff_data/tokenised`
 - write out list of PDB_chain ids to `.lst` file in `diff_data/PDBid_list/`
 
+----
 #### TRAIN NEURAL NETWORK:
+
