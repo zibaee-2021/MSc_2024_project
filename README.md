@@ -1,5 +1,4 @@
-MSc project 
-student no. 23092186
+MSc student project
 
 ----
 #### PYTHON SCRIPTS FOR PREPARATION OF DATA SET: 
