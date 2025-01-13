@@ -68,7 +68,7 @@ from data_layer import data_handler as dh
 
 
 class Path(Enum):
-    data_big_cath_domain_list_txt = '../data/dataset/big_files_to_git_ignore/CATH/cath-domain-list.txt'
+    data_big_cath_domain_list_txt = '../../data/dataset/big_files_to_git_ignore/CATH/cath-domain-list.txt'
     SD_573_CIFs_csv = '../../data/dataset/big_files_to_git_ignore/CATH/SD_573_CIFs.csv'
     SD_573_CIFs_dir = '../data/dataset/big_files_to_git_ignore/SD_573_CIFs'
 
