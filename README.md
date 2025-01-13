@@ -1,7 +1,7 @@
 MSc student project
 
 ----
-#### PYTHON SCRIPTS FOR PREPARATION OF DATA SET: 
+#### PYTHON SCRIPTS FOR PREPARATION OF TRAINING DATASET: 
 Location of scripts: `src/preprocessing_funcs` and `data_layer`.
 
 The typical format of these scripts is for there to be 1 to 3 public functions in one script. 
