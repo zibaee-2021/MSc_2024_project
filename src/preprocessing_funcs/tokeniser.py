@@ -393,13 +393,13 @@ def _assign_backbone_index_to_all_residue_rows(pdfs: List[pd.DataFrame], pdb_id:
 def _select_chains_to_use(pdfs: List[pd.DataFrame], chains: list=None, pdb_id: str=None) -> List[pd.DataFrame]:
     """
     Select which chains to keep for further parsing and tokenisation and to be written to flatfile. If no chains
-    specified, all protein chains will be kept. If no PDBid is given, don't print anything out.
+    specified, all protein chains will be kept. (If no PDBid is given, just don't print anything).
+    NOTE: Currently this function is only performing a simple chain selection, just the first in the given list.
     :param pdfs: Dataframes, one per chain, for given protein CIF.
-    :param chains: One of more chain(s) to keep. e.g. [A, C].
-    :param pdb_id: Just for printing out as part of tracking the function calls.
+    :param chains: One of more chain(s) to keep. e.g. [A, C]. Currently not used.
+    :param pdb_id: Only for printing out as part of tracking function calls.
     :return: A list of one or more dataframes, according to which chains to keep (This is also temporary to avoid
-    breaking subsequent
-    operations).
+    breaking subsequent operations).
     """
     if pdb_id:
         print(f'PDBid={pdb_id}: select which chains to keep.')
@@ -555,9 +555,12 @@ def __fetch_mmcif_from_pdb_api_and_write(pdb_id: str, relpath_dst_cif: str) -> N
 
 def _get_mmcif_data(pdb_id: str, relpath_cif_dir: str) -> dict:
     """
-    :param pdb_id:
-    :param relpath_cif_dir:
-    :return:
+    Read in mmCIF file of specified PDB id, to Python dict. mmCIF file of specified PDB id will be read
+    from the specified relative path, if it has previously been downloaded to there, otherwise it will be downloaded
+    directly from the rcsb server.
+    :param pdb_id: PDB id of mmCIF file to read in.
+    :param relpath_cif_dir: Relative path to mmCIF files directory.
+    :return: Python dict of the specified mmCIF file.
     """
     # relpath_cif_dir = relpath_cif_dir.removesuffix(FileExt.dot_CIF.value).removeprefix('/').removesuffix('/')
     relpath_cif_dir = relpath_cif_dir.removesuffix('.cif').removeprefix('/').removesuffix('/')
