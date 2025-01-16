@@ -3,13 +3,7 @@ This module serves as a client for any API calls that are needed.
 E.g. GET requests to 'https://files.rcsb.org/download/' and 'https://www.uniprot.org/uniprot/'.
 
 """
-# from enum import Enum
 import requests
-
-
-# class Urls(Enum):
-#     PDB = 'https://files.rcsb.org/download/'
-#     UNIPROT = 'https://www.uniprot.org/uniprot/'
 
 
 def call_for_cif_with_pdb_id(pdb_id: str) -> requests.Response:
@@ -21,7 +15,6 @@ def call_for_cif_with_pdb_id(pdb_id: str) -> requests.Response:
     response = None
     pdb_id = pdb_id.upper()  # MUST BE UPPER-CASE
     pdb_id = pdb_id.removesuffix('.cif')
-    # url = f'{Urls.PDB.value}{pdb_id}.cif'
     url = f'https://files.rcsb.org/download/{pdb_id}.cif'
 
     try:
@@ -43,9 +36,8 @@ def call_for_fasta_with_fasta_id(accession_id: str) -> requests.Response:
     :return: Response code 200 and text data for given id, or error code such as 404.
     """
     response = None
-    accession_id = accession_id.upper()  # MUST BE UPPER-CASE
+    accession_id = accession_id.upper()  # SHOULD BE UPPER-CASE
     accession_id = accession_id.removesuffix('.fasta')
-    # url = f'{Urls.UNIPROT.value}{accession_id}.fasta'
     url = f'https://www.uniprot.org/uniprot/{accession_id}.fasta'
 
     try:
