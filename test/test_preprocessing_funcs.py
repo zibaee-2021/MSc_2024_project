@@ -5,7 +5,6 @@ from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 from src.preprocessing_funcs import tokeniser as tk
 from src.preprocessing_funcs import cif_parser
 from data_layer import data_handler as dh
-# from src.enums import CIF
 
 """
 Expected 17 columns of output dataframe of `parse_tokenise_cif_write_flatfile()`:
@@ -62,7 +61,7 @@ class TestPreprocessingFuncs(TestCase):
         cif_pdfs_per_chain = tk._remove_all_hydrogen_atoms(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
         cif_pdfs_per_chain = tk._make_new_bckbone_or_sdchain_col(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
         cif_pdfs_per_chain = tk._only_keep_chains_of_polypeptide(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
-        cif_pdfs_per_chain = tk._only_keep_chains_with_enuf_bckbone_atoms(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
+        cif_pdfs_per_chain = tk._only_keep_chains_with_enough_bb_atoms(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
         cif_pdfs_per_chain = tk._select_chains_to_use(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
 
         cif_pdfs_per_chain = tk._assign_backbone_index_to_all_residue_rows(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
@@ -73,7 +72,7 @@ class TestPreprocessingFuncs(TestCase):
                                       path_dst_dir=self.test_tokenised_dir, pdb_id=pdbid)
 
     def test_parse_tokenise_and_write_cif_to_flatfile(self):
-        pdf = tk.parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=self.test_cif_dir,
+        pdf, _ = tk.parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=self.test_cif_dir,
                                                        relpath_toknsd_ssv_dir=self.test_tokenised_dir,
                                                        relpath_pdblst=None,
                                                        pdb_ids=self.test_1V5H_ssv[:-4])
@@ -81,7 +80,7 @@ class TestPreprocessingFuncs(TestCase):
         self.assertEqual(18, len(pdf.columns))
 
     def test_parse_tokenise_and_write_cif_to_flatfile__4_chains(self):
-        list_of_pdfs = tk.parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=self.test_cif_dir,
+        list_of_pdfs, _ = tk.parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=self.test_cif_dir,
                                                                 relpath_toknsd_ssv_dir=self.test_tokenised_dir,
                                                                 relpath_pdblst=None,
                                                                 pdb_ids=self.test_1OJ6_4chains_cif)
@@ -118,7 +117,6 @@ class TestPreprocessingFuncs(TestCase):
     def test_some_pd_func(self):
         pdf_target = pd.read_csv(f'{self.test_tokenised_dir}/{self.test_1V5H_ssv_small}', sep=' ')
         pdf_target_deduped = (pdf_target
-                              # .drop_duplicates(subset=CIF.S_seq_id.value, keep='first')
                               .drop_duplicates(subset='S_seq_id', keep='first')
                               .reset_index(drop=True))
         pass
