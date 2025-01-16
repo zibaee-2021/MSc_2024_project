@@ -21,7 +21,7 @@ def translate_aa_to_atoms(uniprot_ids=None, pdbid_chains=None) -> dict:
     """
     Translate the given amino acid sequence to its corresponding atomic sequence using the PDB atom naming convention.
     :param uniprot_ids: Single uniprot id, list of uniprot_ids, or None by default. Most likely is a list of ids.
-    :param pdbid_chains: One or more PDB ids to read from tokenised folder. Can include chain suffix or not.
+    :param pdbid_chains: One or more PDBids to read from tokenised folder. Can include chain suffix or not.
     :return: The atomic sequence, of amino acid sequence, mapped to its Uniprot id.
     """
     aa_to_atoms_map = _get_aa_to_atom_map()
