@@ -43,10 +43,10 @@ class TestDataHandler(TestCase):
 
     def test_check_protein_and_atom_numbering_of_parsed_cif(self):
         print(os.getcwd())
-        pdf_to_profile = pd.read_csv('test_data/1OJ6_test.ssv', sep=' ')
-        pdb = dict()
-        pdb['1OJ6_test'] = pdf_to_profile
-        dv.check_protein_and_atom_numbering_of_parsed_tokenised_cif_ssv(pdb)
+        tokenised_cif = pd.read_csv('test_data/1OJ6_test.ssv', sep=' ')
+        tokenised_cifs = dict()
+        tokenised_cifs['1OJ6_test'] = tokenised_cif
+        dv.check_protein_and_atom_numbering_of_parsed_tokenised_cif_ssv(tokenised_cifs)
         expected = ''
         actual = ''
         self.assertEqual(expected, actual)
