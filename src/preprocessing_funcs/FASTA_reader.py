@@ -3,14 +3,9 @@ Read local FASTA sequence files of proteins of interest, downloaded from UniProt
 """
 import os
 import glob
-# from enum import Enum
 from Bio import SeqIO
 from io import StringIO
 import api_caller as api
-
-
-# class Paths(Enum):
-#     fasta_dir = '../../data/FASTA'
 
 
 def read_fasta_sequences(uniprot_ids=None) -> dict:
@@ -32,9 +27,7 @@ def read_fasta_sequences(uniprot_ids=None) -> dict:
     if not uniprot_ids:
         uniprot_ids = []
         print(f"No FASTA files were specified, "
-              # f"so all FASTA files found at '{Paths.fasta_dir.value}' will be read in.")
               f"so all FASTA files found at '../../data/FASTA' will be read in.")
-        # fasta_files = glob.glob(os.path.join(Paths.fasta_dir.value, '*'))
         fasta_files = glob.glob(os.path.join('../../data/FASTA', '*'))
         for fasta_file in fasta_files:
             fasta_id_faa = os.path.basename(fasta_file)
@@ -42,7 +35,6 @@ def read_fasta_sequences(uniprot_ids=None) -> dict:
             uniprot_ids.append(fasta_id)
 
     for fasta_id in uniprot_ids:
-        # fasta_path = os.path.join(Paths.fasta_dir.value, fasta_id)
         fasta_path = os.path.join('../../data/FASTA', fasta_id)
         fasta_path_faa = f'{fasta_path}.faa'
 
@@ -66,7 +58,7 @@ def read_fasta_sequences(uniprot_ids=None) -> dict:
 
 
 if __name__ == '__main__':
-    Serine_Protease_Human = 'Q6UWY2'
-    fasta_id_seqs_ = read_fasta_sequences(uniprot_ids=Serine_Protease_Human)
+    Serine_Protease_Human_acc_id = 'Q6UWY2'
+    fasta_id_seqs_ = read_fasta_sequences(uniprot_ids=Serine_Protease_Human_acc_id)
     print(fasta_id_seqs_)
 
