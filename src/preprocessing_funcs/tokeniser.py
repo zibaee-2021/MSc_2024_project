@@ -523,26 +523,26 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
     Parse and tokenise sequence and structure fields from mmCIFs of proteins, returning a list of Pandas dataframes,
     with one dataframe per chain. Write each dataframe to one flat file (ssv by default), in `tokenised` directory,
     The mmCIFs to parse, tokenise and write to flat flats is specified by one or more of the following 3:
-      - Relative path of directory containing pre-downloaded mmCIF files, e.g. `diff_data/mmCIF`, reading all cif files.
-      - Relative path of a list file of PDBids e.g. `diff_data/SD_573.lst`.
+      - Relative path of directory containing pre-downloaded mmCIF files, e.g. 'diff_data/mmCIF', reading all cif files.
+      - Relative path of a list file of PDBids e.g. 'diff_data/SD_573.lst'.
       - One PDBid or a Python list of PDBids.
-    "Parsing" involves extracting required fields from mmCIF files to dataframes.
+    "Parsing" involves extracting and casting types of required fields from mmCIF files to dataframes.
     "Tokenising" involves enumerating atoms and residues, and calculating mean-adjusted x, y, z coordinates.
     Where an mmCIF has > 1 chain, parse & tokenise all polypeptide-only chains & only those with sufficient backbone
     coordinates, according to some pre-decided threshold constant (i.e. `MIN_RATIO_MISSING_BACKBONE_ATOMS`).
-    :param relpath_cif_dir: Relative path of directory containing pre-downloaded raw mmCIF files.
-    :param relpath_toknsd_ssv_dir: Relative path of directory for tokenised mmCIFs as flat files.
-    :param relpath_pdblst: <OPTIONAL> Relative path to list file of one or more PDBids or PDBid_chains names. e.g.
-    `globins_10.lst`.
+    :param relpath_cif_dir: Relative path of directory containing pre-downloaded raw mmCIF files. Has default.
+    :param relpath_toknsd_ssv_dir: Relative path of directory for tokenised mmCIFs as flat files. Has default.
+    :param relpath_pdblst: <OPTIONAL> Relative path of list file, that lists one or more PDBids or PDBid_chains names.
+    e.g. '../diffusion/diff_data/PDBid_list/pdbchains_9.lst'.
     :param flatfile_format_to_write: Write to ssv, csv or tsv. Use ssv by default.
     :param pdb_ids: <OPTIONAL> PDBid(s) or PDBid_chain to parse & tokenised. Expect either string of PDBid or list
     of PDBids strings.
-    Use `src/diffusion/diff_data/tokenised` by default, (hence expecting cwd to be `src/diffusion`).
+    Use 'src/diffusion/diff_data/tokenised' by default, (hence expecting cwd to be 'src/diffusion').
     :param write_lst_file: True to write out a new PDBids_chain `.lst` file of all those that have been parsed and
     tokenised. It is subsequently passed (via its path & file name) to `main()` function in
     `pytorch_protfold_allatomclustrain_singlegpu.py` script.
     :return: List of dataframes, one per chain. Each dataframe has the parsed and tokenised data of one cif file
-     and each is also written to a flatfile (ssv by default) at `src/diffusion/diff_data/tokenised`.
+     and each is also written to a flatfile (ssv by default) at 'src/diffusion/diff_data/tokenised'.
     Dataframe currently has these 17 Columns: ['A_label_asym_id', 'S_seq_id', 'A_id', 'A_label_atom_id', 'A_Cartn_x',
     'A_Cartn_y', 'A_Cartn_z', 'aa_label_num', 'bb_or_sc', 'bb_atom_pos', 'atom_label_num', 'aa_atom_tuple',
     'aa_atom_label_num', 'mean_xyz', 'mean_corrected_x', 'mean_corrected_y', 'mean_corrected_z'].
@@ -587,8 +587,8 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
         flatfile_format_to_write = flatfile_format_to_write.removeprefix('.').lower()
         pdb_id = pdb_id.removesuffix('.cif')
         print(f'Starting PDBid={pdb_id} ---------------------------------------------------------')
-        if pdb_id == '5TJ5':
-            print(f'{pdb_id} is known to have 2500 missing entries in the aa sequence field! So {pdb_id} will be '
+        if pdb_id == '5TJ5':  # '5TJ5' is one of the 573 single-domain proteins dataset. Its data found to be unusable.
+            print(f'{pdb_id} is known to have 2500 missing entries in the aa sequence field. So {pdb_id} will be '
                   f'excluded.')
             continue
 
@@ -828,7 +828,7 @@ if __name__ == '__main__':
     path = Path('../diffusion/diff_data/tokenised')
     ssv_count = sum(1 for file in path.rglob("*.ssv"))
 
-    print(f'Parsed and tokenised {cif_count} MMCIFs to SSVs. You have {ssv_count} SSVs. '
+    print(f'Parsed and tokenised {cif_count} mmCIFs to ssv files. You have {ssv_count} ssv files. '
           f'This took {time_taken:.2f} seconds in total.')
 
     # Parsed and tokenised 573 cif files to ssv files. Tokenisation logic, removed 8 of these for not being suitable
