@@ -32,10 +32,10 @@ Installed packages on HPC ...
 
 Summary of Python scripts and other files:
 - `src/preprocessing_funcs` contains 6 Python scripts and 2 text files that are purely documentation.
-  - The following 4 scripts are needed for generating a suitable list of proteins and tokenising their mmCIF data.
-    - `single_dom_builder.py` builds a dataset of single domain protein using CATH, and downloads their mmCIF files.
+  - The following 4 scripts are needed for generating a suitable list of proteins and tokenising their `mmCIF` data.
+    - `single_dom_builder.py` builds a dataset of single domain protein using CATH, and downloads their `mmCIF` files.
     - `tokeniser.py` tokenises residues of protein sequence & structural data of corresponding atoms of 1 protein chain, per PDB id from given list of ids. 
-    - `cif_parser.py` parses mmCIF files in preparation for tokenisation by `tokeniser.py`.
+    - `cif_parser.py` parses `mmCIF` files in preparation for tokenisation by `tokeniser.py`.
     - `api_caller.py` HTTP client to download cif files from `files.rcsb.org` or FASTA sequences from `www.uniprot.org`.
   
   - The following 2 scripts are "helper functions", but not currently used:
@@ -46,7 +46,7 @@ To run `single_domain_builder.py`, the `if __name__ == '__main__':` is currently
 `parse_single_dom_prots_and_write_csv()` which reads the locally downloaded `cath-domain-list.txt` 
 (which is excluded from git tracking due to size, but should be found on local machine in 
 `data/dataset/big_files_to_git_ignore/CATH`.) This function saves the parsed data for a selection of the 
-single domain proteins in which a unique structural and functional category is represented only once and which satisfy
+single-domain proteins in which a unique structural and functional category is represented only once and which satisfy
 certain constraints on the structural data - resulting in a list of only 573 single domain proteins.   
 Hence if you want to see this run, simply use `python3 single_dom_builder.py`.
 
@@ -79,25 +79,23 @@ if __name__ == '__main__':
     public_func2(value1)
 ```
 ----
-#### 1. GENERATE DATASET OF SINGLE-DOMAIN PROTEINS VIA CATH WEBSITE:
+#### 1. COMPILE LIST OF SINGLE-DOMAIN PROTEINS VIA `CATH` WEBSERVER:
 
 Performed by `single_dom_builder.py`
 
-The entire list of domain ids from the latest official version from the file:
-
-`cath-domain-list.txt` is manually downloaded from CATH webserver at:
+The entire list of domain ids from the latest official version from the file `cath-domain-list.txt` was manually downloaded from CATH webserver at:
 `http://download.cathdb.info/cath/releases/all-releases/latest_release/cath-classification-data/cath-domain-list.txt` 
-and downloaded to `data/dataset/big_files_to_git_ignore/CATH/cath-domain-list.txt` (which I don't add to git).
-Starting then from 500238 proteins (and 12 columns of data fields), the dataset is filter by:
+and saved to `data/dataset/big_files_to_git_ignore/CATH/cath-domain-list.txt` (which I haven't added to git but is on `joe-desktop`).
+Starting then from 500,238 proteins (and 12 columns of data fields), the dataset is filter by process of elimination:
 - removing records for NMR structures, obsolete structures & low resolution X-ray structures
 - keep only proteins of classes 1, 2 or 3
 - remove data fields that are related to sequence identity 
-- store PDB ids in new column, which helps filter in those with only one domain
+- store PDBids in new column, which helps filter in those with only one domain
 - filter in PDBs with unique 'Architecture', 'Topology' and 'HomologousSF' values.
-  - results in reducing number of PDBs from 28496 proteins to only 573, but this provides a diverse dataset and serves 
+  - results in reducing number of PDBs from 28,496 proteins to only 573, but this provides a diverse dataset and serves 
    well as a 'dummy' dataset. 
 - The `PDB_Id`, `DomainID`, `Architecture` , `Topology`, `HomologousSF`, `Domain_len`, `Angstroms` fields of this 573 
-single-domain diverse set of proteins PDB ids is saved to  `data/dataset/big_files_to_git_ignore/CATH/SD_573_CIFs.csv`
+single-domain diverse set of proteins PDBids is saved to  `data/dataset/big_files_to_git_ignore/CATH/SD_573_CIFs.csv`
 ----
 #### 2. GENERATE PROTEIN LANGUAGE MODEL EMBEDDINGS FOR EACH PROTEIN:
 
@@ -105,51 +103,94 @@ single-domain diverse set of proteins PDB ids is saved to  `data/dataset/big_fil
 ----
 #### 3. READ, PARSE AND TOKENISE mmCIF FILES:
 
-Performed by `tokeniser.py` (which imports and uses `cif_parser.py`, `api_caller.py`, `data_layer/data_handler.py`).
+Performed by: 
+- `src/preprocessing_funcs/tokeniser.py` which imports and uses: 
+  - `src/preprocessing_funcs/cif_parser.py`
+  - `src/preprocessing_funcs/api_caller.py`
+  - `data_layer/data_handler.py`
 
-This can be run as part of the training protocol, or separately (i.e. via its own `if __name__ == '__main__':`). 
-Running it separately beforehand, whereby each PDB's raw mmCIF data is saved to `src/diffusion/diff_data/mmCIF` and 
-the tokenised mmCIF data is saved in ssv files to `src/diffusion/diff_data/tokenised` was deemed preferable as, 
-although it requires more disk memory, it reduces risk of unnecessary repetition, particularly during development as 
-the quality and potential problems with mmCIF data were being discovered and code updated to handle these accordingly. 
+How to run tokeniser:  
+`python3 tokeniser.py` runs the main function `tokeniser.parse_tokenise_write_cifs_to_flatfile()`.  
+- First, manually inspect the `if __name__ == '__main__':` in `tokeniser.py` to select, by commenting in/out, any clearing of 
+directories and file transfer operations wanted. 
+  - For example, the tokeniser will not repeat tokenisation for any specific `mmCIF` if it finds the corresponding 
+  tokenised `ssv` file in `src/diffusion/diff_data/tokenised`.  
+  So, to avoid this and instead generate all tokenised data afresh, uncomment line 796 (or just manually empty the folder yourself):
+```    
+if __name__ == '__main__':
+...
+# 2. CLEAR TOKENISED DIR:
+# data_handler.clear_diffdata_tokenised_dir()  <- line 796 in `tokeniser.py`
+...
+```
+(The other commented out operations in the `if __name__ == '__main__':` serve as much as visual queues on what other things you might want to do.)
 
-The process of reading in, parsing and tokenising protein structure data of choice is initiated by passing the 
-PDB ids of those proteins to `tokeniser.parse_tokenise_write_cifs_to_flatfile()`.
+`tokeniser.parse_tokenise_write_cifs_to_flatfile()`
+The outcome of `tokeniser.parse_tokenise_write_cifs_to_flatfile()` is to write tokenised data to flatfiles (specifically `ssv` files)
+in `src/diffusion/diff_data/tokenised`. However, for purposes of 
 
-`mmCIF` files are searched for first in `src/diffusion/diff_data/mmCIF` in case already downloaded.
-If not, they will be automatically downloaded directly from `https://files.rcsb.org/download/{pdb_id}.cif` via 
-`api_caller.py` and saved to `src/diffusion/diff_data/mmCIF`.
+  
+Each `mmCIF` file is parsed, tokenised and saved to flat file (ssv) in `src/diffusion/diff_data/tokenised`.
 
-Once read in and converted to a Python dict via Biopython library, `cif_parser.parse_cif()` extracts the required 
+The process of reading in, parsing and tokenising protein structures is handled mainly from two functions 
+in two different scripts:
+- `tokeniser.parse_tokenise_write_cifs_to_flatfile()`
+- `cif_parser.parse_cif()`.
+
+Tokenisation is initiated by indicating which `mmCIF` files to parse and tokenise. 
+This is done in 1 to 3 ways, via the following possible arguments passed to `tokeniser.parse_tokenise_write_cifs_to_flatfile()`:
+- Relative path of directory containing pre-downloaded cif files, e.g. `../diffusion/diff_data/mmCIF`, reading in all the `mmCIF` located there.
+- Relative path of a list file of PDBids or PDBids_chain e.g. `../diffusion/diff_data/PDBid_list/pdbchains_565.lst`.
+- Python string of PDBid or PDBid_chain, or a Python list of PDBids or PDBid_chains, e.g. `['1ECA', '2DN1']`, `['1ECA_A', '2DN1_A']`.
+
+(The default is to use `mmCIF` files already downloaded to `../diffusion/diff_data/mmCIF`)
+
+What a tokeniser run does:    
+- `mmCIF` files corresponding to combined list of PDBids are downloaded to `src/diffusion/diff_data/mmCIF`, (unless already there).
+- 
+Once read in and converted to a Python dict via `Biopython` library, `cif_parser.parse_cif()` extracts the required 
 atom-related subfields from `_atom_site` field and the required protein sequence-related subfields from 
 `_pdbx_poly_seq_scheme` and stores these in a Pandas dataframe for improved readability and to make available the 
 powerful data wrangling API of Pandas dataframes. 
 
 The descriptive names of the private functions called by `cif_parser.parse_cif()` make them self-explanatory. 
-Furthermore the mmmCIF fields are heavily documented in the docstring at the top of the script, 
-as well as throughout the code. Nonetheless, a summary of the main operations of this script is given:
-- extract required data 
-- handle low occupancy data 
-- cast to numeric data types 
-- separate cif data out by chain into a list of dataframes with one PDB-chain combination per dataframe, 
-- remove missing data (the option to impute missing data with some value is not used but remains in the code)
-- clean and tidy up. 
+Furthermore the `mmCIF` fields are heavily documented in the docstring at the top of the script, 
+as well as throughout the code. 
+Summary:
+- Extract required data. 
+- Handle low occupancy data. 
+- Cast to numeric data types.
+- Remove missing data.
+- Separate mmCIF data out by chain into a list of dataframes with one PDBid-chain combination per dataframe.
 
-This list of PDB-chain dataframes are returned to `tokeniser.parse_tokenise_write_cifs_to_flatfile()`
-Once again, the descriptive names of the private functions called by `tokeniser.parse_tokenise_write_cifs_to_flatfile()` 
-makes them self-explanatory. Nonetheless, a summary of their main operations is given:
-- removes hydrogen atoms 
-- identifies all backbone atoms
-- removes any non-protein chains
-- removes chains that lack sufficient backbone atoms
-- keep only one chain per protein
-- generate numerical representation of residues and atoms (mappings stored in json files in `data/enumeration`)
-- store index positions of all "anchor" backbone atoms (i.e. the alpha carbon or other backbone atom)
-- calculate mean-corrected atomic coordinate values
-- search for any missing data values (should not be any at this stage)
-- save this dataframe to ssv files in `src/diffusion/diff_data/tokenised`
-- write out list of PDB_chain ids to `.lst` file in `diff_data/PDBid_list/`
+Once again, the descriptive names of the private functions called by `tokeniser.parse_tokenise_write_cifs_to_flatfile()` makes them self-explanatory.
+`tokeniser.parse_tokenise_write_cifs_to_flatfile()`.  
+Summary:
+- Remove hydrogen atoms.
+- Identify all backbone atoms.
+- Remove any non-protein chains.
+- Remove chains that lack sufficient backbone atoms.
+- Keep only one chain per protein.
+- Generate numerical representation of residues and atoms (mappings stored in json files in `data/enumeration`).
+- Store index positions of all "anchor" backbone atoms (i.e. the alpha carbon or other backbone atom).
+- Calculate mean-corrected atomic coordinate values.
+- Search for any missing data values.
+- Save this PDBid-chain dataframe to ssv files in `src/diffusion/diff_data/tokenised`.
+- Write out list of PDB_chain ids to `.lst` file in `diff_data/PDBid_list/`.
 
 ----
+#### Helper functions
+
+(If not, they will be automatically downloaded directly from `https://files.rcsb.org/download/{pdb_id}.cif` via 
+`api_caller.py` and saved to `src/diffusion/diff_data/mmCIF`.
+
+----
+
 #### TRAIN NEURAL NETWORK:
 
+
+
+
+----
+#### REFERENCES
+1. Orengo et al. 1997 'CATH — a hierarchic classification of protein domain structures' Structure 1997, Vol 5 No 8, pp1093-1108
