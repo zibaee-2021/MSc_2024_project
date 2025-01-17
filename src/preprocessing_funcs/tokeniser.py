@@ -168,23 +168,6 @@ def _each_column_has_expected_values(pdf_chain):
     pass
 
 
-def _assign_mean_corrected_coordinates(pdfs: List[pd.DataFrame], pdb_id: str) -> List[pd.DataFrame]:
-    if pdb_id:
-        print(f'PDBid={pdb_id}: calc mean-corrected coords')
-    result_pdfs = list()
-    for pdf in pdfs:
-        # SUBTRACT EACH COORDINATE BY THE MEAN OF ALL 3 PER ATOM:
-        pdf.loc[:, 'mean_xyz'] = pdf[['A_Cartn_x', 'A_Cartn_y', 'A_Cartn_z']].mean(axis=1)
-        pdf.loc[:, 'mean_corrected_x'] = pdf['A_Cartn_x'] - pdf['mean_xyz']
-        pdf.loc[:, 'mean_corrected_y'] = pdf['A_Cartn_y'] - pdf['mean_xyz']
-        pdf.loc[:, 'mean_corrected_z'] = pdf['A_Cartn_z'] - pdf['mean_xyz']
-        expected_num_of_cols = 18
-        assert len(pdf.columns) == expected_num_of_cols, \
-            f'Dataframe should have {expected_num_of_cols} columns. But this has {len(pdf.columns)}'
-        result_pdfs.append(pdf)
-    return result_pdfs
-
-
 def _enumerate_residues_atoms(pdf: pd.DataFrame) -> pd.DataFrame:
     """
     Enumerate residue-atom pairs of mmCIF for one protein, by mapping via pre-written json at `data/enumeration`. Add
@@ -323,7 +306,8 @@ def _select_chains_to_use(pdfs: List[pd.DataFrame], chains: list = None, pdb_id:
     """
     Select which chains to keep for further parsing and tokenisation and to be written to flatfile. If no chains
     specified, all protein chains will be kept. (If no PDBid is given, just don't print anything).
-    NOTE: Currently this function is only performing a simple chain selection, just the first in the given list.
+    NOTE: CURRENTLY, THIS FUNCTION IS ONLY PERFORMING A SIMPLE CHAIN SELECTION LOGIC, NAMELY TO KEEP THE FIRST IN THE
+    GIVEN LIST. FUTURE IMPLEMENTATION MAY LOOK AT KEEPING CHAINS THAT HAVE LESS THAN SOME GIVEN (E.G. 30 %) IDENTITY.
     :param pdfs: Dataframes, one per chain, for given protein mmCIF.
     :param chains: One of more chain(s) to keep. e.g. [A, C]. <Currently not used>
     :param pdb_id: Only for printing out as part of tracking function calls.
@@ -613,6 +597,7 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
         # (THIS RETURNS A LIST OF DATAFRAMES, ONE PER POLYPEPTIDE CHAIN).
         cif_pdfs_per_chain = parser.parse_cif(mmcif_dict=mmcif_dict, pdb_id=pdbid)
         if chain:
+            # IF A SPECIFIC CHAIN HAS BEEN SPECIFIED, THEN USE ONLY THAT ONE:
             cif_pdfs_per_chain = _keep_only_the_given_chain(pdfs=cif_pdfs_per_chain, chain=chain, pdb_id=pdbid)
         cif_pdfs_per_chain = _remove_all_hydrogen_atoms(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
         cif_pdfs_per_chain = _make_new_bckbone_or_sdchain_col(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
@@ -626,7 +611,6 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
 
         cif_pdfs_per_chain = _assign_backbone_index_to_all_residue_rows(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
         cif_pdfs_per_chain = _enumerate_atoms_and_residues(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
-        cif_pdfs_per_chain = _assign_mean_corrected_coordinates(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
         dh.write_tokenised_cifs_to_flatfiles(pdfs=cif_pdfs_per_chain,
                                              dst_data_dir=relpath_toknsd_ssv_dir,
                                              flatfiles=flatfile_format_to_write, pdb_id=pdbid)
@@ -686,8 +670,8 @@ def load_dataset(targetfile_lst_path: str) -> Tuple[List, List]:
         print(f'Read in {target_pdbid}.ssv')
         pdf_target = pd.read_csv(f'{'../diffusion/diff_data/tokenised'}/{target_pdbid}.ssv', sep=' ')
 
-        # GET MEAN-CORRECTED COORDINATES VIA 'mean_corrected_x', '_y', '_z' TO 3-ELEMENT LIST:
-        coords = pdf_target[['mean_corrected_x', 'mean_corrected_y', 'mean_corrected_z']].values
+        # GET COORDINATES VIA 'A_Cartn_x', 'A_Cartn_y', 'A_Cartn_z' TO 2D ARRAY OF (NUM_OF_ATOMS, 3):
+        coords = pdf_target[['A_Cartn_x', 'A_Cartn_y', 'A_Cartn_z']].values
         len_coords = len(coords)  # should be same as..? TODO
 
         # GET `atomcodes` VIA 'atom_label_num' COLUMN, WHICH HOLDS ENUMERATED ATOMS VALUES:
@@ -744,7 +728,7 @@ def load_dataset(targetfile_lst_path: str) -> Tuple[List, List]:
         bbindices = np.asarray(bbindices, dtype=np.int16)
         aaindices = np.asarray(aaindices, dtype=np.int16)
         target_coords = np.asarray(coords, dtype=np.float32)
-        # target_coords -= target_coords.mean(0)  # ALREADY DONE IN `parse_tokenise_write_cifs_to_flatfile()`
+        target_coords -= target_coords.mean(0)
 
         assert len(aacodes) == target_coords[bbindices].shape[0]
 
