@@ -7,7 +7,7 @@ from src.preprocessing_funcs import cif_parser
 from data_layer import data_handler as dh
 
 """
-Expected 17 columns of output dataframe of `parse_tokenise_cif_write_flatfile()`:
+Expected 13 columns of output dataframe of `parse_tokenise_cif_write_flatfile()`:
 
 A_label_asym_id       # CHAIN                 - JOIN ON THIS, SORT ON THIS, KEEP IN DF.
 S_seq_id              # RESIDUE POSITION      - SORT ON THIS, KEEP IN DATAFRAME.
@@ -22,11 +22,6 @@ bb_atom_pos           # ATOM POSITION CA OR MOST C-TERM OTHER BB ATOM, PER RESID
 bbindices             # INDEX POSITION OF THE ATOM POSITION (`A_id`) OF ALLOCATED BACKBONE ATOM.
 atom_label_num        # ENUMERATED ATOMS      - EQUIVALENT TO `atomcodes` IN ORIGINAL RNA CODE. KEEP IN DF.
 aa_atom_tuple         # RESIDUE-ATOM PAIR     - ONE TUPLE PER ROW. KEEP IN DF.
-aa_atom_label_num     # ENUMERATED RESIDUE-ATOM PAIRS. (ALTERNATIVE WAY TO GENERATE `atomcodes`).
-mean_xyz              # MEAN OF COORDS        - MEAN OF X, Y, Z COORDINATES FOR EACH ATOM. KEEP IN DF TEMPORARILY.
-mean_corrected_x      # X-COORDINATES FOR EACH ATOM SUBTRACTED BY THE MEAN OF XYZ COORDINATES, ROW-WISE. KEEP IN DF.
-mean_corrected_y      # Y-COORDINATES FOR EACH ATOM SUBTRACTED BY THE MEAN OF XYZ COORDINATES, ROW-WISE. KEEP IN DF.
-mean_corrected_z      # Z-COORDINATES FOR EACH ATOM SUBTRACTED BY THE MEAN OF XYZ COORDINATES, ROW-WISE. KEEP IN DF.
 """
 
 
@@ -64,9 +59,8 @@ class TestPreprocessingFuncs(TestCase):
         cif_pdfs_per_chain = tk._only_keep_chains_with_enough_bb_atoms(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
         cif_pdfs_per_chain = tk._select_chains_to_use(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
 
-        cif_pdfs_per_chain = tk._assign_backbone_index_to_all_residue_rows(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
+        cif_pdfs_per_chain = tk._assign_backbone_position_to_all_residue_rows(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
         cif_pdfs_per_chain = tk._enumerate_atoms_and_residues(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
-        cif_pdfs_per_chain = tk._assign_mean_corrected_coordinates(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
         pdf_target = cif_pdfs_per_chain[0]
         dh.write_tokenised_cif_to_ssv(pdf=pdf_target,
                                       path_dst_dir=self.test_tokenised_dir, pdb_id=pdbid)
