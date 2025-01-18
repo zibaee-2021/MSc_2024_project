@@ -667,8 +667,8 @@ def load_dataset(targetfile_lst_path: str) -> Tuple[List, List]:
         pdf_target = pd.read_csv(f'{'../diffusion/diff_data/tokenised'}/{target_pdbid}.ssv', sep=' ')
 
         # GET COORDINATES TO 2D ARRAY OF (NUM_OF_ATOMS, 3):
-        coords = pdf_target[['mean_corrected_x', 'mean_corrected_y', 'mean_corrected_z']].values
-        # coords = pdf_target[['A_Cartn_x', 'A_Cartn_y', 'A_Cartn_z']].values
+        # coords = pdf_target[['mean_corrected_x', 'mean_corrected_y', 'mean_corrected_z']].values
+        coords = pdf_target[['A_Cartn_x', 'A_Cartn_y', 'A_Cartn_z']].values
 
         # GET `atomcodes` VIA 'atom_label_num' COLUMN, WHICH HOLDS ENUMERATED ATOMS VALUES:
         atomcodes = pdf_target['atom_label_num'].tolist()
