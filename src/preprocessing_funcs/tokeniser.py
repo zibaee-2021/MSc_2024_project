@@ -1,9 +1,9 @@
 """
 TOKENISER.PY
-    - CALL `cif_parser.py` TO READ IN AND PARSE MMCIF FILE(S) TO EXTRACT THE 14 FIELDS.
+    - READ IN MMCIF FILE(S).
+    - CALL `cif_parser.py` TO  PARSE MMCIF FILE(S), EXTRACTING 14 ATTRIBUTES.
     - WRITE TO .SSV FLATFILE.
     - ENUMERATE ATOMS AND AMINO ACID RESIDUES.
-    - SUBTRACT COORDINATES BY THEIR MEAN COORDINATE VALUES PER ATOM.
 ----------------------------------------------------------------------------------------------------------------------
 The following 14 mmCIF fields are extracted from the raw mmCIF files, parsed and tokenised into a dataframe.
 The 14 fields are:
@@ -15,9 +15,9 @@ _atom_site:
     id                  # ATOM POSITION         - SORT ON THIS, KEEP IN DATAFRAME.
     label_atom_id       # ATOM                  - KEEP IN DATAFRAME.
     label_asym_id       # CHAIN                 - JOIN TO S_asym_id, KEEP IN DATAFRAME.
-    Cartn_x             # COORDINATES           - ATOM X-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN)
-    Cartn_y             # COORDINATES           - ATOM Y-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN)
-    Cartn_z             # COORDINATES           - ATOM Z-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN)
+    Cartn_x             # COORDINATES           - ATOM X-COORDINATES
+    Cartn_y             # COORDINATES           - ATOM Y-COORDINATES
+    Cartn_z             # COORDINATES           - ATOM Z-COORDINATES
     occupancy           # OCCUPANCY             - FILTER ON THIS, THEN REMOVE IT.
 
 _pdbx_poly_seq_scheme:
@@ -27,30 +27,23 @@ _pdbx_poly_seq_scheme:
     asym_id             # CHAIN                 - JOIN TO A_label_asym_id, SORT ON THIS, THEN REMOVE IT.
 
 ----------------------------------------------------------------------------------------------------------------------
-The output of the current `parse_tokenise_cif_write_flatfile()` function is a 17-column dataframe.
+The output of the current `parse_tokenise_cif_write_flatfile()` function is a 12-column dataframe.
 '_atom_site' is abbreviated to 'A_' prefix.
 '_pdbx_poly_seq_scheme' is abbreviated to 'S_' prefix.
-These 17 columns are:
+These 13 columns are:
 
 A_label_asym_id       # CHAIN                 - JOIN ON THIS, SORT ON THIS, KEEP IN DF.
 S_seq_id              # RESIDUE POSITION      - SORT ON THIS, KEEP IN DATAFRAME.
 A_id                  # ATOM POSITION         - SORT ON THIS, KEEP IN DF.
 A_label_atom_id       # ATOM                  - KEEP IN DF.
-A_Cartn_x             # COORDINATES           - ATOM X-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN), CAN BE REMOVED.
-A_Cartn_y             # COORDINATES           - ATOM Y-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN), CAN BE REMOVED.
-A_Cartn_z             # COORDINATES           - ATOM Z-COORDINATES (SUBSEQUENTLY CORRECTED BY MEAN), CAN BE REMOVED.
+A_Cartn_x             # COORDINATES           - ATOM X-COORDINATES.
+A_Cartn_y             # COORDINATES           - ATOM Y-COORDINATES.
+A_Cartn_z             # COORDINATES           - ATOM Z-COORDINATES.
 aa_label_num          # ENUMERATED RESIDUES   - EQUIVALENT TO `ntcodes` IN ORIGINAL RNA CODE. KEEP IN DF.
 bb_or_sc              # BACKBONE OR SIDE-CHAIN ATOM ('bb' or 'sc'), KEEP FOR POSSIBLE SUBSEQUENT OPERATIONS.
 bb_atom_pos           # ATOM POSITION CA OR MOST C-TERM OTHER BB ATOM, PER RESIDUE. KEEP IN DF.
 bbindices             # INDEX POSITION OF THE ATOM POSITION (`A_id`) OF ALLOCATED BACKBONE ATOM.
 atom_label_num        # ENUMERATED ATOMS      - EQUIVALENT TO `atomcodes` IN ORIGINAL RNA CODE. KEEP IN DF.
-aa_atom_tuple         # RESIDUE-ATOM PAIR     - ONE TUPLE PER ROW. KEEP IN DF.
-aa_atom_label_num     # ENUMERATED RESIDUE-ATOM PAIRS. (ALTERNATIVE WAY TO GENERATE `atomcodes`, will be `aaatomcodes`).
-mean_xyz              # MEAN OF COORDINATES   - MEAN OF X, Y, Z COORDINATES FOR EACH ATOM. KEEP IN DF TEMPORARILY.
-mean_corrected_x      # X COORDINATES FOR EACH ATOM SUBTRACTED BY THE MEAN OF XYZ COORDINATES, ROW-WISE. KEEP IN DF.
-mean_corrected_y      # Y COORDINATES FOR EACH ATOM SUBTRACTED BY THE MEAN OF XYZ COORDINATES, ROW-WISE. KEEP IN DF.
-mean_corrected_z      # Z COORDINATES FOR EACH ATOM SUBTRACTED BY THE MEAN OF XYZ COORDINATES, ROW-WISE. KEEP IN DF.
-
 """
 
 
@@ -66,9 +59,6 @@ from src.preprocessing_funcs import cif_parser as parser
 from data_layer import data_handler as dh
 from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 from src.preprocessing_funcs import api_caller as api
-
-# If more than this proportion of residues have no backbone atoms, remove the chain.
-MIN_RATIO_MISSING_BACKBONE_ATOMS = 0.0
 
 
 def _torch_load_embed_pt(pt_fname: str):
@@ -163,13 +153,14 @@ def get_nums_of_missing_data(pdf):
 
 
 def _each_column_has_expected_values(pdf_chain):
-    pdf_chain.head()
-    # TODO checks that each column has values of the expected type and range.
+    # THIS IS AN EXTRA VALIDATION STEP THAT IS NOT NEEDED FOR THE 565 PROTEINS, BUT WOULD BE USEFUL FOR FUTURE
+    # WILL CHECK THAT EACH NUMERIC COLUMN HAS VALUES IN THE EXPECTED RANGE.
     pass
 
 
 def _enumerate_residues_atoms(pdf: pd.DataFrame) -> pd.DataFrame:
     """
+    NOTE: THIS IS CURRENTLY NOT BEING USED.
     Enumerate residue-atom pairs of mmCIF for one protein, by mapping via pre-written json at `data/enumeration`. Add
     this enumeration to a new column `aa_atom_label_num`. It serves as the tokenised form of polypeptide residue-atom
     pairs for this protein, to be read later to `aaatomcodes` array.
@@ -237,12 +228,12 @@ def _enumerate_atoms_and_residues(pdfs: List[pd.DataFrame], pdb_id: str) -> List
     for pdf in pdfs:
         pdf = _enumerate_residues(pdf)
         pdf = _enumerate_atoms(pdf)
-        pdf = _enumerate_residues_atoms(pdf)
+        # pdf = _enumerate_residues_atoms(pdf)  # CURRENTLY NOT BEING USED.
         result_pdfs.append(pdf)
     return result_pdfs
 
 
-def _assign_backbone_index_to_all_residue_rows(pdfs: List[pd.DataFrame], pdb_id: str) -> List[pd.DataFrame]:
+def _assign_backbone_position_to_all_residue_rows(pdfs: List[pd.DataFrame], pdb_id: str) -> List[pd.DataFrame]:
     if pdb_id:
         print(f'PDBid={pdb_id}: assign bb indices')
 
@@ -323,12 +314,16 @@ def _select_chains_to_use(pdfs: List[pd.DataFrame], chains: list = None, pdb_id:
 
 def _only_keep_chains_with_enough_bb_atoms(pdfs: List[pd.DataFrame], pdb_id: str = None) -> List[pd.DataFrame]:
     """
-    Remove chain(s) from list of chains for this mmCIF if not more than a specific number of backbone polypeptides.
+    Remove chain(s) from list of chains for this mmCIF if does not have more than a specified number of backbone
+    polypeptides.
     :param pdfs: List of dataframes, one per chain, for one mmCIF.
     :param pdb_id: The PDBid of the corresponding mmCIF data.
     :return: List of dataframes, one per chain of protein, with any chains removed if they have less than the minimum
     permitted ratio of missing atoms (arbitrarily chosen for now).
     """
+    # If more than this proportion of residues have no backbone atoms, remove the chain.
+    MIN_RATIO_MISSING_BACKBONE_ATOMS = 0.0
+
     if pdb_id:
         print(f'PDBid={pdb_id}: remove chains without enough backbone atoms')
     result_pdfs = []
@@ -364,13 +359,13 @@ def _only_keep_chains_of_polypeptide(pdfs: List[pd.DataFrame], pdb_id: str) -> L
     for pdf in pdfs:
         try:
             chain = pdf['S_asym_id'].iloc[0]
-            atleast_one_row_isna = pdf['bb_or_sc' ].isna().any()
-            all_rows_isna = pdf['bb_or_sc' ].isna().all()
+            atleast_one_row_isna = pdf['bb_or_sc'].isna().any()
+            all_rows_isna = pdf['bb_or_sc'].isna().all()
             if atleast_one_row_isna:
-                nat_indices = pdf[pd.isna(pdf['bb_or_sc' ])].index
+                nat_indices = pdf[pd.isna(pdf['bb_or_sc'])].index
                 print(f'nat_indices={nat_indices}')
-                print(f'There are atoms in chain={chain} of PDBid={pdb_id} which are not polypeptide atoms, so this chain '
-                      f'will be excluded.')
+                print(f'There are atoms in chain={chain} of PDBid={pdb_id} which are not polypeptide atoms, so '
+                      f'this chain will be excluded.')
                 if not all_rows_isna:
                     print(f"It seems that while at least one row in column 'bb_or_sc' has null, "
                           f'not all rows are null. This is unexpected and should be investigated further. '
@@ -511,7 +506,8 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
       - Relative path of a list file of PDBids e.g. 'diff_data/SD_573.lst'.
       - One PDBid or a Python list of PDBids.
     "Parsing" involves extracting and casting types of required fields from mmCIF files to dataframes.
-    "Tokenising" involves enumerating atoms and residues, and calculating mean-adjusted x, y, z coordinates.
+    "Tokenising" involves Removing hydrogens, assigning backbone atoms, selecting a suitable chain and enumerating
+    atoms and residues.
     Where an mmCIF has > 1 chain, parse & tokenise all polypeptide-only chains & only those with sufficient backbone
     coordinates, according to some pre-decided threshold constant (i.e. `MIN_RATIO_MISSING_BACKBONE_ATOMS`).
     :param relpath_cif_dir: Relative path of directory containing pre-downloaded raw mmCIF files. Has default.
@@ -527,9 +523,9 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
     `pytorch_protfold_allatomclustrain_singlegpu.py` script.
     :return: List of dataframes, one per chain. Each dataframe has the parsed and tokenised data of one cif file
      and each is also written to a flatfile (ssv by default) at 'src/diffusion/diff_data/tokenised'.
-    Dataframe currently has these 17 Columns: ['A_label_asym_id', 'S_seq_id', 'A_id', 'A_label_atom_id', 'A_Cartn_x',
+    Dataframe currently has these 13 Columns: ['A_label_asym_id', 'S_seq_id', 'A_id', 'A_label_atom_id', 'A_Cartn_x',
     'A_Cartn_y', 'A_Cartn_z', 'aa_label_num', 'bb_or_sc', 'bb_atom_pos', 'atom_label_num', 'aa_atom_tuple',
-    'aa_atom_label_num', 'mean_xyz', 'mean_corrected_x', 'mean_corrected_y', 'mean_corrected_z'].
+    'aa_atom_label_num'].
     """
     # INIT LIST OF PARSED PDB DATA IN DATAFRAMES (ONE DATAFRAME PER PDB AND PER CHAIN):
     cif_pdfs_per_chain = []  # THIS IS RETURNED.
@@ -554,9 +550,9 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
         pdb_ids.extend(_pdb_ids)
 
     pdb_ids = list(set(pdb_ids))
-    assert pdb_ids is not None, 'This is a bug! `pdb_ids` is None ?! It must be a list of at least one PDBid.'
-    assert len(pdb_ids) > 0, 'This is a bug! `pdb_ids` is an empty list ?! It must be a list of at least one PDBid.'
-    assert len(pdb_ids) > 0, 'This is a bug! `pdb_ids` is an empty list ?! It must be a list of at least one PDBid.'
+    assert pdb_ids is not None, 'This is a bug! `pdb_ids` is None, but it should be a list of at least one PDBid.'
+    assert len(pdb_ids) > 0, 'This is a bug! `pdb_ids` is an empty list, but it should be a list of at least one PDBid.'
+    assert len(pdb_ids) > 0, 'This is a bug! `pdb_ids` is an empty list, but it should be a list of at least one PDBid.'
 
     # MAKE A LIST OF PDBIDS THAT ARE SSVS IN TOKENISED DIR (I.E. HAVE ALREADY BEEN TOKENISED):
     cif_tokenised_ssv_dir = '../diffusion/diff_data/tokenised'
@@ -609,7 +605,7 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
             print(f'No chains left for this mmCIF: PDBid={pdbid}, so it cannot be used.')
             continue
 
-        cif_pdfs_per_chain = _assign_backbone_index_to_all_residue_rows(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
+        cif_pdfs_per_chain = _assign_backbone_position_to_all_residue_rows(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
         cif_pdfs_per_chain = _enumerate_atoms_and_residues(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
         dh.write_tokenised_cifs_to_flatfiles(pdfs=cif_pdfs_per_chain,
                                              dst_data_dir=relpath_toknsd_ssv_dir,
@@ -670,9 +666,9 @@ def load_dataset(targetfile_lst_path: str) -> Tuple[List, List]:
         print(f'Read in {target_pdbid}.ssv')
         pdf_target = pd.read_csv(f'{'../diffusion/diff_data/tokenised'}/{target_pdbid}.ssv', sep=' ')
 
-        # GET COORDINATES VIA 'A_Cartn_x', 'A_Cartn_y', 'A_Cartn_z' TO 2D ARRAY OF (NUM_OF_ATOMS, 3):
-        coords = pdf_target[['A_Cartn_x', 'A_Cartn_y', 'A_Cartn_z']].values
-        len_coords = len(coords)  # should be same as..? TODO
+        # GET COORDINATES TO 2D ARRAY OF (NUM_OF_ATOMS, 3):
+        coords = pdf_target[['mean_corrected_x', 'mean_corrected_y', 'mean_corrected_z']].values
+        # coords = pdf_target[['A_Cartn_x', 'A_Cartn_y', 'A_Cartn_z']].values
 
         # GET `atomcodes` VIA 'atom_label_num' COLUMN, WHICH HOLDS ENUMERATED ATOMS VALUES:
         atomcodes = pdf_target['atom_label_num'].tolist()
@@ -707,15 +703,15 @@ def load_dataset(targetfile_lst_path: str) -> Tuple[List, List]:
         pdb_embed = _torch_load_embed_pt(pt_fname=target_pdbid)
 
         # AND MAKE SURE IT HAS SAME NUMBER OF RESIDUES AS THE PARSED-TOKENISED SEQUENCE FROM MMCIF:
-        assert pdb_embed.size(1) == len(aacodes)
+        assert pdb_embed.size(1) == len(aacodes), 'Size of embedding does not match length of aacodes.'
 
         # ONE BACKBONE ATOM (ALPHA-CARBON) PER RESIDUE. SO `len(bbindices)` SHOULD EQUAL NUMBER OF RESIDUES:
-        assert len(aacodes) == len(bbindices)
+        assert len(aacodes) == len(bbindices), 'Length of aacodes does not match length of bbindices.'
 
         # MAKE SURE YOU HAVE AT LEAST THE MINIMUM NUMBER OF EXPECTED ATOMS IN MMCIF DATA:
         min_num_atoms_expected_per_residue = 4  # GLYCINE HAS 4 NON-H ATOMS: 1xO, 2xC, 1xN, 5xH.
         min_num_expected_atoms = len(bbindices) * min_num_atoms_expected_per_residue
-        # THIS IS THE NUMBER OF ATOMS (AS ONE ROW PER ATOM DUE TO OUTER-JOIN):
+        # THIS IS THE NUMBER OF ATOMS (AS ONE ROW PER ATOM IN 'aaindices' DUE TO OUTER-JOIN):
         num_of_atoms_in_cif = len(aaindices)
 
         # ASSUME PROTEIN WILL NEVER BE 100 % GLYCINES (OTHERWISE I'D USE `<=` INSTEAD OF `<`):
@@ -777,7 +773,7 @@ if __name__ == '__main__':
     # dh.copy_cifs_from_bigfilefolder_to_diff_data()
 
     # # 2. CLEAR TOKENISED DIR:
-    # dh.clear_diffdata_tokenised_dir()
+    dh.clear_diffdata_tokenised_dir()
 
     from time import time
     start_time = time()
