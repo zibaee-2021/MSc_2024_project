@@ -12,7 +12,7 @@ from data_layer import data_handler as dh
 from src.preprocessing_funcs import tokeniser as tk
 
 
-def _generate_embeddings_from_aminoacid_sequence(hf_tokeniser, hf_eval_model, pdbid_chain: str, aa_seq: str) -> dict:
+def _generate_embeddings_from_aminoacid_sequence(hf_tokeniser, hf_eval_model, pdbid_chain: str, aa_seq: str):
     """
     Generate protein language embeddings for given amino acid sequence, using the given HuggingFace tokeniser and
     pretrained sequence-to-sequence protein language model, in eval mode. Write embedding to file, (`.pt`).
@@ -33,8 +33,12 @@ def _generate_embeddings_from_aminoacid_sequence(hf_tokeniser, hf_eval_model, pd
     # aa_sequence_embedding = embedding[0]
     aa_seq_embedding = embedding.encoder_last_hidden_state
     aa_seq_embedding = aa_seq_embedding.detach()
+
+    # WRITE PT TO EMB DIR:
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    abspath_diffdata_emb = os.path.normpath(os.path.join(abs_path, '../diffusion/diff_data/emb'))
     dh.save_torch_tensor_to_pt(pt_tensor_to_save=aa_seq_embedding,
-                               dst_dir='../diffusion/diff_data/emb',
+                               dst_dir=abspath_diffdata_emb,
                                pdbid_chain=pdbid_chain)
 
 
@@ -61,7 +65,6 @@ def _get_aa_sequence_from_ssv(pdbid_chain: str) -> str:
     path_tokenised_ssv = f'../diffusion/diff_data/tokenised/{pdbid_chain}.ssv'
     abspath_tokenised_ssv = os.path.normpath(os.path.join(abs_path, path_tokenised_ssv))
     pdf = dh.read_tokenised_cif_chain_ssv_to_pdf(abspath_tokenised_ssv)
-    tk.get_nums_of_missing_data(pdf)
     aa_pos_seq_pdf = pdf[['S_seq_id', 'S_mon_id']]
     aa_pos_seq_pdf = aa_pos_seq_pdf.drop_duplicates(subset='S_seq_id', keep='first')
     aa_seq = aa_pos_seq_pdf['S_mon_id']
@@ -83,6 +86,12 @@ def generate_ankh_base_embeddings_from_tokenised_cifs(pdbid_chain: str):
 
 if __name__ == '__main__':
 
+    # # (OPTIONAL) CLEAR EMB DIR:
+    dh.clear_diffdata_emb_dir()
+
+    from time import time
+    start_time = time()
+
     _abs_path = os.path.dirname(os.path.abspath(__file__))
     # lst_file = 'pdbchains_9.lst'
     lst_file = 'pdbchains_565.lst'
@@ -96,4 +105,11 @@ if __name__ == '__main__':
     for _pdbid_chain in _pdbid_chains:
         generate_ankh_base_embeddings_from_tokenised_cifs(_pdbid_chain)
 
+    time_taken = time() - start_time
 
+    from pathlib import Path
+    abspath_emb = os.path.normpath(os.path.join(_abs_path, '../diffusion/diff_data/emb'))
+    path = Path(abspath_emb)
+    pt_count = sum(1 for file in path.rglob("*.pt"))
+
+    print(f'Created {pt_count}.pt plm embeddings. This took {time_taken:.2f} seconds in total.')

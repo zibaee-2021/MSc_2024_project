@@ -91,6 +91,23 @@ def copy_cifs_from_bigfilefolder_to_diff_data() -> None:
     _restore_original_working_dir(cwd)
 
 
+def clear_diffdata_emb_dir() -> None:
+    """
+    Helper function.
+    Remove all cif files from '../src/diffusion/diff_data/emb'.
+    Typically in preparation for making fresh copies of all pt embedding files prior to running plm_embedder.py.
+    (Note: As we're likely dealing with less than 10,000 files, I opted not to use a Linux command (i.e. `subprocess`
+    which is apparently the better choice for much larger numbers of files.
+    E.g. ```subprocess.run(['rm', '-rf', f'{directory_path}/*'], Fcheck=True, shell=True)```)
+    """
+    cwd = _chdir_to_data_layer()
+    print(f'os.getcwd()={os.getcwd()}')
+    for pt_file in os.listdir('../src/diffusion/diff_data/emb'):
+        pt_path = os.path.join('../src/diffusion/diff_data/emb', pt_file)
+        os.unlink(pt_path)
+    _restore_original_working_dir(cwd)
+
+
 def clear_diffdata_mmcif_dir() -> None:
     """
     Helper function.
@@ -319,6 +336,7 @@ def save_torch_tensor_to_pt(pt_tensor_to_save: torch.Tensor, dst_dir: str, pdbid
     os.makedirs(dst_dir, exist_ok=True)
     dst_pt_filepath = f'{dst_dir}/{pdbid_chain}.pt'
     torch.save(pt_tensor_to_save, dst_pt_filepath)
+    print(f'{pdbid_chain}.pt saved in {dst_dir}.')
 
 
 def write_tokenised_cif_to_ssv(pdb_id: str, pdf: pd.DataFrame, path_dst_dir=None):
