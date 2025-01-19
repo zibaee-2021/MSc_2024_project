@@ -60,7 +60,7 @@ def _chdir_to_dataset_loader() -> str:
 
 
 def load_dataset(targetfile_lst_path: str) -> Tuple[List, List]:
-    assert os.path.exists(targetfile_lst_path), f'{targetfile_lst_path} cannot be found. (Btw, your cwd={os.getcwd()})'
+    assert os.path.exists(targetfile_lst_path), f'{targetfile_lst_path} cannot be found.)'
 
     print('Starting `load_dataset()`...')
     cwd = _chdir_to_dataset_loader()  # Change current dir. (Store cwd to return to at end).
@@ -203,14 +203,14 @@ if __name__ == '__main__':
     _lst_file = 'pdbchains_565.lst'
 
     _abs_path = os.path.dirname(os.path.abspath(__file__))
-    targetfile_lst_path = f'../diffusion/diff_data/PDBid_list/{_lst_file}'
-    abspath_lst_file = os.path.normpath(os.path.join(_abs_path, targetfile_lst_path))
-    assert os.path.isfile(targetfile_lst_path), f'File {targetfile_lst_path} does not exist.'
+    _targetfile_lst_path = f'../diffusion/diff_data/PDBid_list/{_lst_file}'
+    abspath_lst_file = os.path.normpath(os.path.join(_abs_path, _targetfile_lst_path))
+    assert os.path.isfile(abspath_lst_file), f'File {abspath_lst_file} does not exist.'
 
     from time import time
     start_time = time()
 
-    _train_list, _validation_list = load_dataset(f'../diffusion/diff_data/PDBid_list/{_lst_file}')
+    _train_list, _validation_list = load_dataset(abspath_lst_file)
 
     time_taken = time() - start_time
     print(f'Dataset loaded into train and validation DataLoader in {time_taken:.2f} seconds.')
