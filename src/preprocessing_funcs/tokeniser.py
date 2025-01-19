@@ -452,6 +452,15 @@ def _generate_list_of_pdbids_in_cif_dir(path_cif_dir: str) -> list:
     return pdb_id_list
 
 
+def _chdir_to_preprocessing_funcs_dir() -> None:
+    """
+    Change current working dir to `preprocessing_funcs`. .
+    """
+    cwd = os.getcwd()
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    print(f'Changed working dir to {os.getcwd()} from {cwd}')
+
+
 def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_data/mmCIF',
                                           relpath_toknsd_ssv_dir='../diffusion/diff_data/tokenised',
                                           relpath_pdblst: str = None,
@@ -487,6 +496,9 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
     'A_Cartn_y', 'A_Cartn_z', 'aa_label_num', 'bb_or_sc', 'bb_atom_pos', 'atom_label_num', 'aa_atom_tuple',
     'aa_atom_label_num'].
     """
+    # CHANGE CWD TO DIR THIS SCRIPT IS IN, SO RELATIVE PATHS WORK REGARDLESS OF LOCATION OF CALLER/LAUNCHER:
+    _chdir_to_preprocessing_funcs_dir()
+
     # INIT LIST OF PARSED PDB DATA IN DATAFRAMES (ONE DATAFRAME PER PDB AND PER CHAIN):
     cif_pdfs_per_chain = []  # THIS IS RETURNED.
 
@@ -505,7 +517,7 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
         if pdb_ids is None:
             pdb_ids = []
         relpath_cif_dir = relpath_cif_dir.removesuffix('/').removeprefix('/')
-        assert os.path.exists(relpath_cif_dir), 'Not found `relpath_cif_dir`.'
+        assert os.path.exists(relpath_cif_dir), f"Not found `relpath_cif_dir`={relpath_cif_dir}."
         _pdb_ids = _generate_list_of_pdbids_in_cif_dir(path_cif_dir=relpath_cif_dir)
         pdb_ids.extend(_pdb_ids)
 
