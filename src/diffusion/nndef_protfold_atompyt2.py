@@ -40,7 +40,7 @@ class AlibiPositionalBias(nn.Module):
         return bias * -self.slopes
 
 
-# Implementation for tied multihead attention with ALiBi relative pos encoding
+# Implementation for tied multi-head attention with ALiBi relative pos encoding
 class MultiheadAttention(nn.Module):
     def __init__(self, d_model, heads, k_dim=None, v_dim=None):
         super().__init__()
@@ -74,8 +74,8 @@ class MultiheadAttention(nn.Module):
             attention = attention + posbias
         attention = F.softmax(attention, dim=-1)  # (B, h, L, L)
         #
-        out = torch.matmul(attention, v) # (B, h, L, d_k)
-        #print(out)
+        out = torch.matmul(attention, v)  # (B, h, L, d_k)
+        # print(out)
         out = out.permute(0, 2, 1, 3).contiguous().view(B, L, -1)
         return self.to_out(out)
     
@@ -130,10 +130,10 @@ class AtomEncoderLayer(nn.Module):
     def __init__(self, d_model, heads, p_drop=0.1):
         super().__init__()
 
-        # Multihead attention projections
-        self.to_query = nn.Linear(d_model, d_model, bias=None)
-        self.to_key = nn.Linear(d_model, d_model, bias=None)
-        self.to_value = nn.Linear(d_model, d_model, bias=None)
+        # Multi-head attention projections
+        self.to_query = nn.Linear(d_model, d_model, bias=False)
+        self.to_key = nn.Linear(d_model, d_model, bias=False)
+        self.to_value = nn.Linear(d_model, d_model, bias=False)
 
         self.d_k = d_model // heads
         # Scale both Q & K to help float16 training
@@ -160,13 +160,13 @@ class AtomEncoderLayer(nn.Module):
         self.dropout = nn.Dropout(p_drop)
 
     def forward(self, x):
-        # Input shape for multihead attention: (BATCH, NRES, EMB)
+        # Input shape for multi-head attention: (BATCH, NRES, EMB)
         x2 = x
         x = self.norm1(x)
         q = self.to_query(x) * self.scaling
         k = self.to_key(x) * self.scaling
         v = self.to_value(x)
-        attn = F.scaled_dot_product_attention(q, k, v, scale = 1)
+        attn = F.scaled_dot_product_attention(q, k, v, scale=1)
         x = torch.sigmoid(self.gate(x)) * attn
 
         x = x2 + self.dropout(x)
@@ -183,7 +183,7 @@ class PositionalEncoding(torch.nn.Module):
         super().__init__()
         self.d_model = d_model
         div_term = torch.exp(torch.arange(0, self.d_model, 2).float() * (-log(10000.0) / self.d_model))
-        self.register_buffer('div_term', div_term, persistent = False)
+        self.register_buffer('div_term', div_term, persistent=False)
 
     def forward(self, positions):
         positions = positions.unsqueeze(1).float()
@@ -206,7 +206,7 @@ class FourierEncodingLayer(nn.Module):
     def forward(self, x):
         x = x.unsqueeze(-1)
         device, dtype, orig_x = x.device, x.dtype, x
-        scales = 2 ** torch.arange(self.in_dim, device = device, dtype = dtype)
+        scales = 2 ** torch.arange(self.in_dim, device=device, dtype=dtype)
         x = x / scales
         x = torch.cat([x.sin(), x.cos()], dim=-1)
         x = self.norm(self.out_emb(x))
@@ -263,7 +263,7 @@ class DiffusionNet(nn.Module):
             nn.Linear(atomwidth, 3, bias=False)
         )
 
-    #      network(inputs, aacodes, atomcodes, aaindices, noised_coords, noise_levels) # from line 371 in main()
+    #       network(inputs, aacodes, atomcodes, aaindices, noised_coords, noise_levels) # from line 371 in main()
     # def forward(self, x, ntcodes, atcodes, ntindices, noised_coords_in, nlev_in):
     def forward(self, x, aacodes, atcodes, aaindices, noised_coords_in, nlev_in):
 
