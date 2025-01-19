@@ -6,4 +6,4 @@ export PYTHONPATH=$PYTHONPATH:$HOME/diffSock
 export PYTHONPATH=$PYTHONPATH:$HOME/diffSock/data_layer
 
 #!/usr/bin/env python3
-python3 ~/PycharmProjects/MSc_project/diffSock/src/pLM/protein_embedder.py
+python3 ~/PycharmProjects/MSc_project/diffSock/src/pLM/plm_embedder.py
