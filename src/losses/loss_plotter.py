@@ -3,7 +3,8 @@ import os.path
 import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib
-matplotlib.use("TkAgg")
+# matplotlib.use("TkAgg")
+matplotlib.use("Agg")
 from matplotlib.ticker import MaxNLocator, MultipleLocator
 
 
