@@ -2,9 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.checkpoint import checkpoint_sequential
-from torch.cuda.amp import autocast, GradScaler
-from math import floor, log, log2, sqrt
-import sys
+from math import floor, log, log2
 
 
 from einops import rearrange
