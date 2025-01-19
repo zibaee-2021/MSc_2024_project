@@ -309,10 +309,16 @@ def make_api_calls_to_fetch_mmcif_and_write_locally(pdb_id: str, cif_dst_dir: st
     _restore_original_working_dir(cwd)
 
 
-def save_torch_tensor(pt: torch.Tensor, dst_dir: str, pdbid_chain: str):
+def save_torch_tensor_to_pt(pt_tensor_to_save: torch.Tensor, dst_dir: str, pdbid_chain: str) -> None:
+    """
+    Save given torch.Tensor to `pt` file at given destination directory, with given identifier for name.
+    :param pt_tensor_to_save: Torch tensor to write to file.
+    :param dst_dir: Destination directory for torch tensor to be written to.
+    :param pdbid_chain: Identifier of tensor to be written, (corresponds to protein PDBid_chain).
+    """
     os.makedirs(dst_dir, exist_ok=True)
-    pt_file = f'{dst_dir}/{pdbid_chain}.pt'
-    torch.save(pt, pt_file)
+    dst_pt_filepath = f'{dst_dir}/{pdbid_chain}.pt'
+    torch.save(pt_tensor_to_save, dst_pt_filepath)
 
 
 def write_tokenised_cif_to_ssv(pdb_id: str, pdf: pd.DataFrame, path_dst_dir=None):
