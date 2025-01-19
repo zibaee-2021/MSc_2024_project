@@ -46,9 +46,9 @@ class AlibiPositionalBias(nn.Module):
 class MultiheadAttention(nn.Module):
     def __init__(self, d_model, heads, k_dim=None, v_dim=None):
         super().__init__()
-        if k_dim == None:
+        if k_dim is None:
             k_dim = d_model
-        if v_dim == None:
+        if v_dim is None:
             v_dim = d_model
 
         self.heads = heads
