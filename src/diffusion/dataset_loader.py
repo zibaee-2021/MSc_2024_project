@@ -214,4 +214,3 @@ if __name__ == '__main__':
 
     time_taken = time() - start_time
     print(f'Dataset loaded into train and validation DataLoader in {time_taken:.2f} seconds.')
-    print('END')
