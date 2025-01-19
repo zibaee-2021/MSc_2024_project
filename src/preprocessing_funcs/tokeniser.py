@@ -1,9 +1,10 @@
+#!~/miniconda3/bin/python
 """
 TOKENISER.PY
     - READ IN MMCIF FILE(S).
-    - CALL `cif_parser.py` TO  PARSE MMCIF FILE(S), EXTRACTING 14 ATTRIBUTES.
+    - CALL `cif_parser.py` TO  PARSE MMCIF FILE(S)
+    - TOKENISE MMCIF
     - WRITE TO .SSV FLATFILE.
-    - ENUMERATE ATOMS AND AMINO ACID RESIDUES.
 ----------------------------------------------------------------------------------------------------------------------
 The following 14 mmCIF fields are extracted from the raw mmCIF files, parsed and tokenised into a dataframe.
 The 14 fields are:
@@ -53,51 +54,10 @@ import glob
 from typing import List, Tuple
 import numpy as np
 import pandas as pd
-import torch
-from math import sqrt
 from src.preprocessing_funcs import cif_parser as parser
 from data_layer import data_handler as dh
 from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 from src.preprocessing_funcs import api_caller as api
-
-
-def _torch_load_embed_pt(pt_fname: str):
-    """
-    Load torch embedding `.pt` file.
-    :param pt_fname: Filename of `.pt` file to be loaded.
-    :return: A Tensor or a dict.
-    """
-    abs_path = os.path.dirname(os.path.abspath(__file__))
-    pt_fname = pt_fname.removesuffix('.pt')
-    path_pt_fname = f'../diffusion/diff_data/emb/{pt_fname}.pt'
-    abspath_pt_fname = os.path.normpath(os.path.join(abs_path, path_pt_fname))
-    assert os.path.exists(abspath_pt_fname), f"'{pt_fname}.pt' does not exist at '{abspath_pt_fname}'"
-    pt = None
-    try:
-        pt = torch.load(abspath_pt_fname, weights_only=True)
-    except FileNotFoundError as e:
-        raise FileNotFoundError(f"File not found: '{abspath_pt_fname}'.") from e
-    except torch.serialization.pickle.UnpicklingError as e:
-        raise ValueError(f"Failed to unpickle file: '{abspath_pt_fname}'. "
-                         f"May be corrupted or not valid PyTorch file.") from e
-    except EOFError as e:
-        raise EOFError(f"Unexpected end of file while loading file: '{abspath_pt_fname}'. "
-                       f"It might be incomplete or corrupted.") from e
-    except RuntimeError as e:
-        raise RuntimeError(f"PyTorch encountered an issue while loading file: '{abspath_pt_fname}'. "
-                           f"Details: {str(e)}") from e
-    except Exception as e:
-        raise Exception(f"An unexpected error occurred while loading file: '{abspath_pt_fname}'. "
-                        f"Error: {str(e)}") from e
-
-    assert pt is not None, f"'{pt_fname}' seems to have loaded successfully but is null..."
-
-    if isinstance(pt, dict):
-        assert bool(pt), f"The dict of '{pt_fname}' was read in successfully but seems to be empty..."
-    else:
-        if isinstance(pt, torch.Tensor):
-            assert pt.numel() > 0, f"The tensor of '{pt_fname}' was read in successfully but seems to be empty..."
-    return pt
 
 
 def get_nums_of_missing_data(pdf):
@@ -625,147 +585,6 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
     return cif_pdfs_per_chain, lst_file
 
 
-def _chdir_to_tokeniser() -> str:
-    """
-    Using relative paths and the possibility of calling this script from two different locations necessitates
-    temporarily changing current working directory before changing back at the end.
-    :return: Current working directory before changing to this one with absolute path.
-    """
-    cwd = os.getcwd()
-    os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    print(f'Path changed from {cwd} to = {os.getcwd()}. (This is intended to be temporary).')
-    return cwd
-
-
-def load_dataset(targetfile_lst_path: str) -> Tuple[List, List]:
-    assert os.path.exists(targetfile_lst_path), f'{targetfile_lst_path} cannot be found. (Btw, your cwd={os.getcwd()})'
-
-    print('Starting `load_dataset()`...')
-    cwd = _chdir_to_tokeniser()  # Change current dir. (Store cwd to return to at end).
-    tnum = 0
-    sum_d2 = 0
-    sum_d = 0
-    nn = 0
-
-    # GET THE LIST OF PDB NAMES FOR PROTEINS TO TOKENISE:
-    targetfile = ''
-    try:
-        with open(targetfile_lst_path, 'r') as lst_f:
-            targetfile = [line.strip() for line in lst_f]
-    except FileNotFoundError:
-        print(f'{lst_f} does not exist.')
-    except Exception as e:
-        print(f"An error occurred: {e}")
-
-    train_list, validation_list = [], []
-    abnormal_structures = []  # list any structures with invalid inter-atomic distances of consecutive residues
-
-    for line in targetfile:  # Expecting only one PDBid per line.
-        sp = []
-        target_pdbid = line.rstrip().split()[0]
-        print(f'Read in {target_pdbid}.ssv')
-        pdf_target = pd.read_csv(f'{'../diffusion/diff_data/tokenised'}/{target_pdbid}.ssv', sep=' ')
-
-        # GET COORDINATES TO 2D ARRAY OF (NUM_OF_ATOMS, 3):
-        # coords = pdf_target[['mean_corrected_x', 'mean_corrected_y', 'mean_corrected_z']].values
-        coords = pdf_target[['A_Cartn_x', 'A_Cartn_y', 'A_Cartn_z']].values
-
-        # GET `atomcodes` VIA 'atom_label_num' COLUMN, WHICH HOLDS ENUMERATED ATOMS VALUES:
-        atomcodes = pdf_target['atom_label_num'].tolist()
-
-        # THE FOLLOWING LINE INCREMENTS BY 1 FOR EVERY SUBSEQUENT RESIDUE, SUCH THAT FOR A PDB OF 100 RESIDUES,
-        # REGARDLESS OF WHAT RESIDUE THE STRUCTURAL DATA STARTS FROM AND REGARDLESS OF ANY GAPS IN THE SEQUENCE,
-        # `aaindices` STARTS FROM 0, INCREMENTS BY 1 AND ENDS AT 99:
-        pdf_target['aaindices'] = pd.factorize(pdf_target['S_seq_id'])[0]
-        aaindices = pdf_target['aaindices'].tolist()
-
-        # ASSIGN DATAFRAME INDEX OF BACKBONE ATOM POSITION PER RESIDUE IN NEW COLUMN `BBINDICES` FOR REF TO ATOMS:
-        atom_positions_rowindex_map = {value: index for index, value in pdf_target['A_id'].items()}
-        pdf_target['bbindices'] = pdf_target['bb_atom_pos'].map(atom_positions_rowindex_map)
-
-        # DE-DUPLICATE ROWS ON RESIDUE POSITION (`S_seq_id`) TO GET CORRECT DIMENSION OF `aacodes` and `bbindices`:
-        pdf_target_deduped = (pdf_target
-                              .drop_duplicates(subset='S_seq_id', keep='first')
-                              .reset_index(drop=True))
-
-        # GET `aacodes`, VIA 'aa_label_num' COLUMN, WHICH HOLDS ENUMERATED RESIDUES VALUES:
-        aacodes = pdf_target_deduped['aa_label_num'].tolist()
-
-        bbindices = pdf_target_deduped['bbindices'].tolist()
-
-        # ONLY INCLUDE PROTEINS WITHIN A CERTAIN SIZE RANGE:
-        if len(aacodes) < 10 or len(aacodes) > 500:
-            print(f'{target_pdbid} mmCIF is {len(aacodes)} residues long. It is not within the chosen range 10-500 '
-                  f'residues, so will be excluded.')
-            continue
-
-        # READ PRE-COMPUTED EMBEDDING OF THIS PROTEIN:
-        pdb_embed = _torch_load_embed_pt(pt_fname=target_pdbid)
-
-        # AND MAKE SURE IT HAS SAME NUMBER OF RESIDUES AS THE PARSED-TOKENISED SEQUENCE FROM MMCIF:
-        assert pdb_embed.size(1) == len(aacodes), 'Size of embedding does not match length of aacodes.'
-
-        # ONE BACKBONE ATOM (ALPHA-CARBON) PER RESIDUE. SO `len(bbindices)` SHOULD EQUAL NUMBER OF RESIDUES:
-        assert len(aacodes) == len(bbindices), 'Length of aacodes does not match length of bbindices.'
-
-        # MAKE SURE YOU HAVE AT LEAST THE MINIMUM NUMBER OF EXPECTED ATOMS IN MMCIF DATA:
-        min_num_atoms_expected_per_residue = 4  # GLYCINE HAS 4 NON-H ATOMS: 1xO, 2xC, 1xN, 5xH.
-        min_num_expected_atoms = len(bbindices) * min_num_atoms_expected_per_residue
-        # THIS IS THE NUMBER OF ATOMS (AS ONE ROW PER ATOM IN 'aaindices' DUE TO OUTER-JOIN):
-        num_of_atoms_in_cif = len(aaindices)
-
-        # ASSUME PROTEIN WILL NEVER BE 100 % GLYCINES (OTHERWISE I'D USE `<=` INSTEAD OF `<`):
-        if num_of_atoms_in_cif < min_num_expected_atoms:
-            print("WARNING: Too many missing atoms in ", target_pdbid, len(aacodes), len(aaindices))
-            continue
-
-        aacodes = np.asarray(aacodes, dtype=np.uint8)
-        atomcodes = np.asarray(atomcodes, dtype=np.uint8)
-        bbindices = np.asarray(bbindices, dtype=np.int16)
-        aaindices = np.asarray(aaindices, dtype=np.int16)
-        target_coords = np.asarray(coords, dtype=np.float32)
-        target_coords -= target_coords.mean(0)
-
-        assert len(aacodes) == target_coords[bbindices].shape[0]
-
-        # SANITY-CHECKING INTER-ATOMIC DISTANCES FOR CONSECUTIVE RESIDUES:
-        diff = target_coords[1:] - target_coords[:-1]
-        distances = np.linalg.norm(diff, axis=1)
-        # assert distances.min() >= 0.5, f'Error: Overlapping atoms detected in {target_pdbid}'
-        # assert distances.max() <= 3.5, f'Error: Abnormally large gaps in {target_pdbid}'
-
-        print(target_coords.shape, target_pdbid, len(aacodes), distances.min(), distances.max())
-
-        if distances.min() < 1.0 or distances.max() > 2.0:
-            abnormal_structures.append((target_pdbid, distances.min(), distances.max()))
-
-        sp.append((aacodes, atomcodes, aaindices, bbindices, target_pdbid, target_coords))
-
-        # Choose every 10th sample for validation
-        if tnum % 10 == 0:
-            validation_list.append(sp)
-        else:
-            train_list.append(sp)
-        tnum += 1
-
-        # CALCULATE THE STANDARD DEVIATION:
-        sum_d2 += (target_coords ** 2).sum()
-        sum_d += np.sqrt((target_coords ** 2).sum(axis=-1)).sum()
-        nn += target_coords.shape[0]
-        sigma_data = sqrt((sum_d2 / nn) - (sum_d / nn) ** 2)
-        print(f'Data s.d. = {sigma_data:.2f}')
-        print(f'Data unit var scaling = {(1 / sigma_data):.2f}')
-
-    if abnormal_structures:
-        print('Abnormal structures detected:')
-        for pdbid, min_dist, max_dist in abnormal_structures:
-            print(f'{pdbid}: Min {min_dist:.2f}, Max {max_dist:.2f}')
-
-    os.chdir(cwd)  # restore original working directory
-    print('Finished `load_dataset()`...')
-    return train_list, validation_list
-
-
 if __name__ == '__main__':
 
     # # 1. COPY MMCIFS OVER FROM BIG DATA FOLDER (IF NOT ALREADY DONE FROM DATA_HANDLER.PY):
@@ -774,7 +593,6 @@ if __name__ == '__main__':
 
     # # 2. CLEAR TOKENISED DIR:
     dh.clear_diffdata_tokenised_dir()
-
     from time import time
     start_time = time()
 
@@ -786,20 +604,6 @@ if __name__ == '__main__':
                                                          # pdb_ids=['3C9P'],
                                                          write_lst_file=True)
 
-    # # 4. NOW THAT YOU HAVE A TOKENISED DATASET, YOU CAN PROCEED TO LOAD DATASET AND TRAIN THE MODEL IN TRAINING
-    # # SCRIPT `pytorch_protfold_allatomclustrain_singlegpu.py`.
-    # # BUT YOU CAN TEST `load_dataset()` FROM HERE IF YOU WANT.
-    # # USE A VALID `.lst` FILE THAT ALREADY EXISTS.
-    # # EXAMPLE OF SOME TEST FILES:
-    # _lst_file = 'pdbchains_9.lst'
-    # _lst_file = '3C9P.lst'  # 3C9P has short HETATM stretch near N-term, hence useful for checking `aaindices`.
-    # _lst_file = 'globin_1.lst'
-    # _lst_file = 'pdbchains_565.lst'
-    # # NOTE: AFTER TOKENISING THE 573 SINGLE DOMAIN PROTEINS, `parse_tokenise_write_cifs_to_flatfile()` WRITES A
-    # # `.lst` FILE TO `src/diffusion/diff_data/PDBid_list` WITH NAME `pdbchains_<number of tokenised ssv files>.lst`,
-    # # HENCE --> 'pdbchains_565.lst').
-
-    # _train_list, _validation_list = load_dataset(f'../diffusion/diff_data/PDBid_list/{_lst_file}')
     time_taken = time() - start_time
 
     from pathlib import Path
