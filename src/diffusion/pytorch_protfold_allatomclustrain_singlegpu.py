@@ -1,6 +1,9 @@
 #!~/miniconda3/bin/python
 """
-Minimally adapted from RNA script
+Training script for protein structure diffusion model
+(deliberately made as few changes as possible from original RNA script).
+
+
 """
 
 import os
@@ -15,7 +18,7 @@ import torch.nn.functional as F
 from torch.cuda.amp import GradScaler
 from torch.utils.data import Dataset, DataLoader
 from nndef_protfold_atompyt2 import DiffusionNet
-from src.preprocessing_funcs import tokeniser as tk
+import dataset_loader as dsl
 from src.losses import loss_plotter
 
 
@@ -90,7 +93,7 @@ def _torch_load_pt(pt_fname: str, is_embedding_file=False):
 
 
 def load_dataset(targetfile_lst_path: str) -> Tuple[List, List]:
-    train_list, validation_list = tk.load_dataset(targetfile_lst_path)
+    train_list, validation_list = dsl.load_dataset(targetfile_lst_path)
     return train_list, validation_list
 
 
@@ -357,14 +360,15 @@ def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float1
         """
         # I'M NOT 100% CLEAR ON THIS NON_BLOCKING ARGUMENT. DOES IT REDUCE COMPUTATION TIME, IN ASYNCHRONOUS CONTEXT ?
         # (embed, noised_coords, noise_levels, noise, aacodes, atomcodes, aaindices, bb_coords, target_coords, target)
-        inputs = _sample[0].cuda(non_blocking=True)  # `embed` is pLM embedding tensor
-        noised_coords = _sample[1].cuda(non_blocking=True)  # prediction after noise added ?
-        noise_levels = _sample[2].cuda(non_blocking=True)  # how much noise to add ??
+        inputs = _sample[0].cuda(non_blocking=True)  # pLM embedding tensor, `embed`.
+        noised_coords = _sample[1].cuda(non_blocking=True)  # prediction after noise added (tbc)
+        noise_levels = _sample[2].cuda(non_blocking=True)  # how much noise to add (tbc)
         aacodes = _sample[4].cuda(non_blocking=True)  # Enumeration of amino acids (0-19)
         atomcodes = _sample[5].cuda(non_blocking=True)  # Enumeration of atoms (0-37 or 0-186)
-        aaindices = _sample[6].cuda(non_blocking=True)  # 0-indexed position of amino acid in protein (as seqres).
-        bb_coords = _sample[7].cuda(non_blocking=True)  # X,Y,Z coordinates of the chosen backbone atoms (`CA`).
-        target_coords = _sample[8].cuda(non_blocking=True)  # X,Y,Z coordinates of all the other atoms ? Or
+        aaindices = _sample[6].cuda(non_blocking=True)  # zero-indexed position of amino acid in protein.
+        bb_coords = _sample[7].cuda(non_blocking=True)  # mean-corrected  X,Y,Z coords of anchor backbone atoms.
+        target_coords = _sample[8].cuda(non_blocking=True)  # mean-corrected X,Y,Z coords of atoms.
+        # ? Or
         print(f'Calc loss PDBid={_sample[9]}')
 
         pred_denoised, pred_coords, pred_confs = network(inputs, aacodes, atomcodes, aaindices, noised_coords, noise_levels)
