@@ -201,7 +201,10 @@ if __name__ == '__main__':
     # _lst_file = '3C9P.lst'  # 3C9P has short HETATM stretch near N-term, hence useful for checking `aaindices`.
     # _lst_file = 'globin_1.lst'
     _lst_file = 'pdbchains_565.lst'
+
+    _abs_path = os.path.dirname(os.path.abspath(__file__))
     targetfile_lst_path = f'../diffusion/diff_data/PDBid_list/{_lst_file}'
+    abspath_lst_file = os.path.normpath(os.path.join(_abs_path, targetfile_lst_path))
     assert os.path.isfile(targetfile_lst_path), f'File {targetfile_lst_path} does not exist.'
 
     from time import time
