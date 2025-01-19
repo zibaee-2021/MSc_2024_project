@@ -599,12 +599,13 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
 
 if __name__ == '__main__':
 
-    # # 1. COPY MMCIFS OVER FROM BIG DATA FOLDER (IF NOT ALREADY DONE FROM DATA_HANDLER.PY):
+    # # 1. (OPTIONAL) COPY MMCIFS OVER FROM BIG DATA FOLDER (IF NOT ALREADY DONE FROM DATA_HANDLER.PY):
     # dh.clear_diffdata_mmcif_dir()
     # dh.copy_cifs_from_bigfilefolder_to_diff_data()
 
-    # # 2. CLEAR TOKENISED DIR:
+    # # 2. (OPTIONAL) CLEAR TOKENISED DIR:
     dh.clear_diffdata_tokenised_dir()
+
     from time import time
     start_time = time()
 
