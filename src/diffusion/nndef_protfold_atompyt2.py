@@ -90,7 +90,7 @@ class SeqEncoderLayer(nn.Module):
     def __init__(self, d_model, heads, p_drop=0.1):
         super().__init__()
 
-        # Multihead attention
+        # Multi-head attention
         self.attn = MultiheadAttention(d_model, heads)
 
         self.gate = nn.Linear(d_model, d_model)
@@ -113,7 +113,7 @@ class SeqEncoderLayer(nn.Module):
         self.dropout = nn.Dropout(p_drop)
 
     def forward(self, x, bias):
-        # Input shape for multihead attention: (BATCH, NRES, EMB)
+        # Input shape for multi-head attention: (BATCH, NRES, EMB)
         x2 = x
         x = self.norm1(x)
         x = torch.sigmoid(self.gate(x)) * self.attn(x, x, x, bias) # Tied attention over L (requires 4D input)
@@ -216,6 +216,7 @@ class FourierEncodingLayer(nn.Module):
 # DiffusionNet Module
 class DiffusionNet(nn.Module):
     def __init__(self, seqwidth=1024, atomwidth=256, seqheads=16, atomheads=8, seqdepth=8, atomdepth=10, cycles=3):
+        # Might want to look at increasing atomwidth because protein has more atom types (38) than RNA
         super().__init__()
 
         self.cycles = cycles
