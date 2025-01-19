@@ -56,10 +56,10 @@ class MultiheadAttention(nn.Module):
         self.d_k = d_model // heads
         self.scaling = self.d_k ** -0.25
 
-        self.to_query = nn.Linear(d_model, d_model, bias=None)
-        self.to_key = nn.Linear(k_dim, d_model, bias=None)
-        self.to_value = nn.Linear(v_dim, d_model, bias=None)
-        self.to_out = nn.Linear(d_model, d_model, bias=None)
+        self.to_query = nn.Linear(d_model, d_model, bias=False)
+        self.to_key = nn.Linear(k_dim, d_model, bias=False)
+        self.to_value = nn.Linear(v_dim, d_model, bias=False)
+        self.to_out = nn.Linear(d_model, d_model, bias=False)
 
     def forward(self, query, key, value, posbias=None, return_att=False):
         B, L = query.shape[:2]
@@ -101,10 +101,10 @@ class SeqEncoderLayer(nn.Module):
 
         # Feedforward
         self.ff = nn.Sequential(
-            nn.Linear(d_model, d_model * 8, bias=None),
+            nn.Linear(d_model, d_model * 8, bias=False),
             SwiGLU(),
             nn.Dropout(p_drop),
-            nn.Linear(d_model * 4, d_model, bias=None)
+            nn.Linear(d_model * 4, d_model, bias=False)
         )
 
         nn.init.zeros_(self.ff[3].weight)
@@ -232,10 +232,10 @@ class DiffusionNet(nn.Module):
             layers.append(layer)
         self.seqencoder = nn.ModuleList(layers)
 
-        self.to_coords = nn.Linear(seqwidth, 3, bias=None)
-        self.to_confs = nn.Linear(seqwidth, 1, bias=None)
+        self.to_coords = nn.Linear(seqwidth, 3, bias=False)
+        self.to_confs = nn.Linear(seqwidth, 1, bias=False)
 
-        self.to_atom = nn.Linear(seqwidth, atomwidth, bias=None)
+        self.to_atom = nn.Linear(seqwidth, atomwidth, bias=False)
         self.norm2 = nn.LayerNorm(atomwidth)
         self.norm3 = nn.LayerNorm(atomwidth)
         
@@ -250,7 +250,7 @@ class DiffusionNet(nn.Module):
         # self.ntidx_embed = PositionalEncoding(atomwidth)
         self.aaidx_embed = PositionalEncoding(atomwidth)
 
-        self.coord_embed = nn.Linear(3, atomwidth, bias=None)
+        self.coord_embed = nn.Linear(3, atomwidth, bias=False)
 
         self.nlev_embed = FourierEncodingLayer(atomwidth)
         
@@ -262,7 +262,7 @@ class DiffusionNet(nn.Module):
 
         self.out_denoise_vecs = nn.Sequential(
             nn.LayerNorm(atomwidth),
-            nn.Linear(atomwidth, 3, bias=None)
+            nn.Linear(atomwidth, 3, bias=False)
         )
 
     #      network(inputs, aacodes, atomcodes, aaindices, noised_coords, noise_levels) # from line 371 in main()
