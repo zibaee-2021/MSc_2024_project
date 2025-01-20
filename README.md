@@ -1,56 +1,75 @@
 MSc student project 
+-
+---
+#### SHELL SCRIPT LAUNCHERS:
 
-To run the main functions, it is possible to just use the bash shell scripts in `launchers` directory 
-which is inside the project folder `MSc_2024_project`.
+You can run the Python scripts via shell scripts in `launchers` directory in the top level of the project folder:
+`sh launchers/tokenise_embed_train.sh` to run all scripts
+Alternatively, for demonstration, each part can be run separately:  
+- `sh launchers/_1_run_tokeniser.sh`  
+- `sh launchers/_2_build_embeddings.sh`
+- `sh launchers/load_datasets`
+- `sh launchers/_3_train_model.sh`
 
-The scripts assume the user is running the code on `joe-desktop`, 
-as it activates the specific `conda env` which is already installed on `joe-desktop`. 
+> Note: running a launcher shell script will automatically activate the conda env (`diffSock` on `joe-desktop`).
+> If you try to manually activate the conda env in the terminal before running a shell script, it seems to cause 
+> some form of conflict and fails to execute the scripts, throwing error messages about being unable to find required 
+> libraries (like NumPy and Pandas).
 
-#### *1. Specifying the `PDBids`/`PDBid_chains` to use for training the model*
-Before doing anything, you must select a list of `PDBids` and/or `PDBid_chains` to be used for training the model. 
-This list will first be used by `tokeniser.py` and `plm_embedder.py` to know which `mmCIF` files to parse, tokenise 
-and create embeddings for. The selection is currently specified via passing the path to a `.lst` file that contains the
-`PDBids`/`PDBid_chains`. The `.lst` file(s) should be stored in `src/diffusion/diff_data/PDBid_list` directory.
+---
+#### TOKENISER
 
-#### *2. Running `src/preprocessing_funcs/tokeniser.py`*
-It is necessary to run `tokeniser.py` separately, before model training can begin. 
+`src/preprocessing_funcs/tokeniser.py`
 
-- Decide first if you want to empty out the destination directory `/diffSock/src/diffusion/diff_data/tokenised` to
-remove previously tokenised data (`ssv` files). It can be emptied manually or programmatically by uncommenting 
-`dh.clear_diffdata_tokenised_dir()` (line 607 of `tokeniser.py`).
+Specifying the `PDBids`/`PDBid_chains` to use for training the model, via `tokeniser.py`.  
+Before doing anything, you must decide which proteins will be used for training the model. 
+`tokeniser.py` builds a list of `PDBids` and/or `PDBid_chains` according to paths passed to it, all of these are 
+optional. Without them, defaults will be used.
+1. User-specified directory path from where pre-downloaded `mmCIF` files will be read.  
+The default is `mmCIF` directory at `src/diffusion/diff_data`. Whichever `.cif` files are found there will be parsed and 
+tokenised (unless it finds corresponding `.ssv` files already in `tokenised` directory at `src/diffusion/diff_data`, 
+indicating which, if any, have already been tokenised). 
+2. User-specified file path to any existing `.lst` file of `PDBids` and/or `PDBid_chains`.   
+A number of these `.lst` files is located in `PDBid_list` at `src/diffusion/diff_data`.   
+The default is `None`.
+3. User-specified string of `PDBid` and/or `PDBid_chain`; or a Python list of `PDBid` and/or `PDBid_chain` strings.    
+(Either a single string or Python list of strings can be passed to `pdb_ids` argument.)
+The default is `None`.  
 
-To run from terminal: `sh ~/PycharmProjects/MSc_project/diffSock/launchers/run_tokeniser.sh`.
+If by the end of this, the list of `PDBids` is still empty, this will be reported (in print statement) and is hard-coded 
+to use `src/diffusion/diff_data/PDBid_list/pdbchains_565.lst` (for simpler testing/demo experience).
 
-#### *3. Running `src/pLM/plm_embedder.py`*
-It is also necessary to run `plm_embedder.py` separately, before model training can begi. 
+---
+#### PROTEIN LANGUAGE MODEL EMBEDDER
 
-- Decide first if you want to empty out the destination directory `/diffSock/src/diffusion/diff_data/emb` to
-remove previously tokenised data (`pt` files). It can be emptied manually or programmatically by uncommenting 
-`dh.clear_diffdata_emb_dir()` (line 90 of `plm_embedder.py`).
+`src/pLM/plm_embedder.py`  
 
-To run from terminal: `sh ~/PycharmProjects/MSc_project/diffSock/launchers/build_embeddings.sh`.
+The choice of which `PDBid_chains` to build protein language model (PLM) embeddings for is implicitly indicated by the tokeniser.  
+`tokeniser.py` (which must be run *before* the `plm_embedder.py`) writes tokenised data to `.ssv` files in `src/diffusion/diff_data/tokenised`.  
+`plm_embedder.py` reads these `.ssv` files in and extracts the `PDBid_chain` and amino acid sequence directly from each one.  
+(In this way, it is guaranteed that in the subsequent section, the neural networks which train on atomic-level data 
+are aligned with those that train on amino acid sequence-level data.)  
 
-#### *4. Running `src/diffusion/pytorch_protfold_allatomclustrain_singlegpu.py`*
-To train the model for a selection of `PDBid_chains`, it is expected that the `mmCIF` files are already in 
-`/diffSock/src/diffusion/diff_data/mmCIF`) because they will have been downloaded by `tokeniser.py` in order to 
-tokenise them. Therefore, no `PDBids` nor `PDBid_list` need be specified to this script, though they can be. 
-The script combines all of the `PDBids` passed to it with all that are in the `mmCIF` directory.
+---
+#### MODEL TRAINING
 
-`pytorch_protfold_allatomclustrain_singlegpu.py` calls `src/diffusion/dataset_loader.py` which expects to find all of 
-the corresponding tokenised data (`.ssv` files) in `/diffSock/src/diffusion/diff_data/tokenised` and all of the 
-corresponding language model embeddings (`.pt` files) in `/diffSock/src/diffusion/diff_data/emb`.   
+`src/diffusion/pytorch_protfold_allatomclustrain_singlegpu.py` 
+`src/diffusion/nndef_protfold_atompyt2.py`
 
-To run from terminal: `sh ~/PycharmProjects/MSc_project/diffSock/launchers/train_model.sh`.
+As with the pLM embedder, the choice of which `PDBid_chains` to train on is implicitly indicated by the tokeniser.  
+`tokeniser.py` (which must be run *before* the training script) writes tokenised data to `.ssv` files in 
+`src/diffusion/diff_data/tokenised`.  
+`pytorch_protfold_allatomclustrain_singlegpu.py` reads these `.ssv` files in and prepares two datasets via 
+`src/diffusion/dataset_loader.py`. 
+It is also necessary that pLM embeddings, generated by `plm_embedder.py`, will already have been run *before* starting
+the training script.  
+Without these embeddings, saved to `.pt` files in `src/diffusion/diff_data/emb`, the training script will fail.
 
-#### *(Optional) Running `src/diffusion/dataset_loader.load_datasets()` separately for testing/demonstration purposes:* 
-As mentioned above, `load_datasets()` expects to find both the tokenised data (`.ssv` files) and all of the 
-embeddings (`.pt` files), though the latter is only used for asserting correct dimensions in this function.
-This function requires a PDBid_chains list file path to be manually supplied (~ line 200).
-It does not write any files out.
-
-
+---
 #### ENVIRONMENT, DEPENDENCIES & HARDWARE:
-All code was run in a conda environment.
+
+All code was run in miniconda3 environment.
+
 My installed packages on MacOS 14.7.2 Intel (CPU is suitable for tokenisation):
 - Conda 24.11.2 (miniconda3)
 - Python 3.12.3
@@ -74,12 +93,10 @@ Installed packages on Rocky Linux ...
 - PyTorch 2.3... 
 - torchvision 0.18.1
 - transformers 4.46.2 (HuggingFace package)
-- 
-Installed packages on HPC ... 
 
+---
+##### Summary of Python scripts and other files:
 
-
-Summary of Python scripts and other files:
 - `src/preprocessing_funcs` contains 6 Python scripts and 2 text files that are purely documentation.
   - The following 4 scripts are needed for generating a suitable list of proteins and tokenising their `mmCIF` data.
     - `single_dom_builder.py` builds a dataset of single domain protein using CATH, and downloads their `mmCIF` files.
@@ -100,16 +117,15 @@ certain constraints on the structural data - resulting in a list of only 573 sin
 Hence if you want to see this run, simply use `python3 single_dom_builder.py`.
 
 ----
-#### LAYOUT OF PYTHON SCRIPTS FOR PREPARATION OF TRAINING DATASET: 
-Location of scripts: `src/preprocessing_funcs` and `data_layer`.
+##### Layout of functions in src/preprocessing_funcs, src/pLM & data_layer:
 
-The typical format of these scripts is for there to be 1 to 3 public functions in one script. 
+The format these scripts follows is for there to be 1 to 3 public functions in one script. 
 The public functions are positioned from the bottom up of the script and in the order in which they are called. 
-Each public function may call private functions and these are positioned from bottom up in the order in which they 
-are called.
+Each public function may call private functions (indicated by underscore prefix) and these are also positioned from 
+bottom up in the order in which they are called.
 
 For example: 
-```
+```python
 def public_func2(val1):
     return some_operation / val1
 
@@ -127,8 +143,9 @@ if __name__ == '__main__':
     value1 = public_func1()
     public_func2(value1)
 ```
+
 ----
-#### 1. COMPILE LIST OF SINGLE-DOMAIN PROTEINS VIA `CATH` WEBSERVER:
+#### COMPILING LIST OF SINGLE-DOMAIN PROTEINS VIA `CATH` WEBSERVER:
 
 Performed by `single_dom_builder.py`
 
@@ -145,101 +162,12 @@ Starting then from 500,238 proteins (and 12 columns of data fields), the dataset
    well as a 'dummy' dataset. 
 - The `PDB_Id`, `DomainID`, `Architecture` , `Topology`, `HomologousSF`, `Domain_len`, `Angstroms` fields of this 573 
 single-domain diverse set of proteins PDBids is saved to  `data/dataset/big_files_to_git_ignore/CATH/SD_573_CIFs.csv`
-----
-#### 2. GENERATE PROTEIN LANGUAGE MODEL EMBEDDINGS FOR EACH PROTEIN:
-
+  (Ref: Orengo et al. 1997 'CATH — a hierarchic classification of protein domain structures' Structure 1997, Vol 5 No 8, pp1093-1108)
 
 ----
-#### 3. READ, PARSE AND TOKENISE mmCIF FILES:
+#### Data handling 'helper' functions:
 
-Performed by: 
-- `src/preprocessing_funcs/tokeniser.py` which imports and uses: 
-  - `src/preprocessing_funcs/cif_parser.py`
-  - `src/preprocessing_funcs/api_caller.py`
-  - `data_layer/data_handler.py`
-
-How to run tokeniser:  
-`python3 tokeniser.py` runs the main function `tokeniser.parse_tokenise_write_cifs_to_flatfile()`.  
-- First, manually inspect the `if __name__ == '__main__':` in `tokeniser.py` to select, by commenting in/out, any clearing of 
-directories and file transfer operations wanted. 
-  - For example, the tokeniser will not repeat tokenisation for any specific `mmCIF` if it finds the corresponding 
-  tokenised `ssv` file in `src/diffusion/diff_data/tokenised`.  
-  So, to avoid this and instead generate all tokenised data afresh, uncomment line 796 (or just manually empty the folder yourself):
-```    
-if __name__ == '__main__':
-...
-# 2. CLEAR TOKENISED DIR:
-# data_handler.clear_diffdata_tokenised_dir()  <- line 796 in `tokeniser.py`
-...
-```
-(The other commented out operations in the `if __name__ == '__main__':` serve as much as visual queues on what other things you might want to do.)
-
-`tokeniser.parse_tokenise_write_cifs_to_flatfile()`
-The outcome of `tokeniser.parse_tokenise_write_cifs_to_flatfile()` is to write tokenised data to flatfiles (specifically `ssv` files)
-in `src/diffusion/diff_data/tokenised`. However, for purposes of 
-
-  
-Each `mmCIF` file is parsed, tokenised and saved to flat file (ssv) in `src/diffusion/diff_data/tokenised`.
-
-The process of reading in, parsing and tokenising protein structures is handled mainly from two functions 
-in two different scripts:
-- `tokeniser.parse_tokenise_write_cifs_to_flatfile()`
-- `cif_parser.parse_cif()`.
-
-Tokenisation is initiated by indicating which `mmCIF` files to parse and tokenise. 
-This is done in 1 to 3 ways, via the following possible arguments passed to `tokeniser.parse_tokenise_write_cifs_to_flatfile()`:
-- Relative path of directory containing pre-downloaded cif files, e.g. `../diffusion/diff_data/mmCIF`, reading in all the `mmCIF` located there.
-- Relative path of a list file of PDBids or PDBids_chain e.g. `../diffusion/diff_data/PDBid_list/pdbchains_565.lst`.
-- Python string of PDBid or PDBid_chain, or a Python list of PDBids or PDBid_chains, e.g. `['1ECA', '2DN1']`, `['1ECA_A', '2DN1_A']`.
-
-(The default is to use `mmCIF` files already downloaded to `../diffusion/diff_data/mmCIF`)
-
-What a tokeniser run does:    
-- `mmCIF` files corresponding to combined list of PDBids are downloaded to `src/diffusion/diff_data/mmCIF`, (unless already there).
-- 
-Once read in and converted to a Python dict via `Biopython` library, `cif_parser.parse_cif()` extracts the required 
-atom-related subfields from `_atom_site` field and the required protein sequence-related subfields from 
-`_pdbx_poly_seq_scheme` and stores these in a Pandas dataframe for improved readability and to make available the 
-powerful data wrangling API of Pandas dataframes. 
-
-The descriptive names of the private functions called by `cif_parser.parse_cif()` make them self-explanatory. 
-Furthermore the `mmCIF` fields are heavily documented in the docstring at the top of the script, 
-as well as throughout the code. 
-Summary:
-- Extract required data. 
-- Handle low occupancy data. 
-- Cast to numeric data types.
-- Remove missing data.
-- Separate mmCIF data out by chain into a list of dataframes with one PDBid-chain combination per dataframe.
-
-Once again, the descriptive names of the private functions called by `tokeniser.parse_tokenise_write_cifs_to_flatfile()` makes them self-explanatory.
-`tokeniser.parse_tokenise_write_cifs_to_flatfile()`.  
-Summary:
-- Remove hydrogen atoms.
-- Identify all backbone atoms.
-- Remove any non-protein chains.
-- Remove chains that lack sufficient backbone atoms.
-- Keep only one chain per protein.
-- Generate numerical representation of residues and atoms (mappings stored in json files in `data/enumeration`).
-- Store index positions of all "anchor" backbone atoms (i.e. the alpha carbon or other backbone atom).
-- Calculate mean-corrected atomic coordinate values.
-- Search for any missing data values.
-- Save this PDBid-chain dataframe to ssv files in `src/diffusion/diff_data/tokenised`.
-- Write out list of PDB_chain ids to `.lst` file in `diff_data/PDBid_list/`.
-
-----
-#### Helper functions
-
-(If not, they will be automatically downloaded directly from `https://files.rcsb.org/download/{pdb_id}.cif` via 
-`api_caller.py` and saved to `src/diffusion/diff_data/mmCIF`.
-
-----
-
-#### TRAIN NEURAL NETWORK:
-
-
-
-
-----
-#### REFERENCES
-1. Orengo et al. 1997 'CATH — a hierarchic classification of protein domain structures' Structure 1997, Vol 5 No 8, pp1093-1108
+`data_layer/data_handler.py` contains about 30 functions that focus on reading, writing and moving data.
+(The original directory structure design was to store all data in the top-level `data` folder. However in the current
+format I have most of the data like `mmCIF` files, tokenisation, pLM embeddings in `src/diffusion/diff_data`, which was
+done for temporary reasons, but has remained there for now. (I will move them out to the top-level data directory in future).)
