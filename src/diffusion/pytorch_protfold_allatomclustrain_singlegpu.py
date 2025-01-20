@@ -92,8 +92,8 @@ def _torch_load_pt(pt_fname: str, is_embedding_file=False):
     return pt
 
 
-def load_dataset(targetfile_lst_path: str) -> Tuple[List, List]:
-    train_list, validation_list = dsl.load_dataset(targetfile_lst_path)
+def load_dataset() -> Tuple[List, List]:
+    train_list, validation_list = dsl.load_dataset()
     return train_list, validation_list
 
 
@@ -261,7 +261,7 @@ class DMPDataset(Dataset):
         return sample
 
 
-def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float16], NDArray[np.float16]]:
+def main() -> Tuple[NDArray[np.int16], NDArray[np.float16], NDArray[np.float16]]:
 
     if not RESTART_FLAG:
         print(f"`RESTART_FLAG` is False, hence don't try to use the pre-built models: 'prot_e2e_model_train.pt' and "
@@ -282,7 +282,7 @@ def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float1
                            cycles=2).cuda()
 
     print("Loading data...")
-    train_list, validation_list = load_dataset(targetfile_lst_path)
+    train_list, validation_list = load_dataset()
 
     ntrain = len(train_list)
     nvalidation = len(validation_list)
@@ -462,6 +462,8 @@ def main(targetfile_lst_path: str) -> Tuple[NDArray[np.int16], NDArray[np.float1
 
 
 if __name__ == "__main__":
+
+    # CHECK FOR CUDA:
     if torch.cuda.is_available():
         device = torch.device('cuda')
         print("Debugging: CUDA is available. Running on:", device)
@@ -470,18 +472,26 @@ if __name__ == "__main__":
 
     # ASSERT PATH TO DESTINATION OF LOSSES FILES *BEFORE* START OF TRAINING:
     _abs_path = os.path.dirname(os.path.abspath(__file__))
-    path_lpe_txt = os.path.normpath(os.path.join(_abs_path, '../losses/losses_per_epoch_18Dec.txt'))
+
+    import datetime
+    dateMonth = datetime.datetime.now().strftime("%d%b")  # e.g. '20Jan'
+    path_lpe_txt = os.path.normpath(os.path.join(_abs_path, f'../losses/losses_per_epoch_{dateMonth}.txt'))
     path_lpe_dir = os.path.normpath(os.path.join(_abs_path, '../losses'))
     assert os.path.exists(path_lpe_dir), ("Missing `losses` directory. Needed for saving loss per epoch data. "
                                           "It should be present in `src` directory at same level as `diffusion` dir.")
 
-    _targetfile_lst_path = 'diff_data/PDBid_list/pdbchains_565.lst'
-    _targetfile_lst_path = os.path.normpath(os.path.join(_abs_path, _targetfile_lst_path))
-    assert os.path.exists(_targetfile_lst_path), f'{_targetfile_lst_path} cannot be found.'
-
+    # TRAIN MODEL:
     start_time = time.time()
-    _epochs, _train_losses, _val_losses = main(_targetfile_lst_path)
-    print(f"`main()` for 565 PDBs completed in {(time.time() - start_time) / 3600:.2f} hours", flush=True)
+
+    _epochs, _train_losses, _val_losses = main()
+
+    time_taken = time.time() - start_time
+
+    from pathlib import Path
+    abspath_emb = os.path.normpath(os.path.join(_abs_path, '../diffusion/diff_data/tokenised'))
+    path = Path(abspath_emb)
+    ssv_count = sum(1 for file in path.rglob("*.ssv"))
+    print(f"Training on {ssv_count} PDBs completed in {time_taken / 3600:.2f} hours", flush=True)
 
     losses_per_epoch = np.column_stack((_epochs, _train_losses, _val_losses))
     np.savetxt(path_lpe_txt, losses_per_epoch, fmt=('%d', '%.2f', '%.2f'), delimiter=',')
