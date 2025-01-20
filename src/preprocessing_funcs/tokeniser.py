@@ -463,8 +463,8 @@ def _chdir_to_preprocessing_funcs_dir() -> None:
 
 def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_data/mmCIF',
                                           relpath_toknsd_ssv_dir='../diffusion/diff_data/tokenised',
-                                          relpath_pdblst: str = None,
-                                          flatfile_format_to_write: str = 'ssv',
+                                          relpath_pdblst=None,
+                                          flatfile_format_to_write='ssv',
                                           pdb_ids=None,
                                           write_lst_file=True) -> Tuple[List[pd.DataFrame], str]:
     """
@@ -521,16 +521,20 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
         _pdb_ids = _generate_list_of_pdbids_in_cif_dir(path_cif_dir=relpath_cif_dir)
         pdb_ids.extend(_pdb_ids)
 
-    pdb_ids = list(set(pdb_ids))
     if pdb_ids is None or len(pdb_ids) == 0:
+        pdb_ids = []
         print("No PDBids have been specified. "
               "If `src/diffusion/diff_data/mmCIF` dir contains no pre-downloaded mmCIF files, you would need to "
               "have either passed the file path string of an existing PDBid `.lst` in "
               "src/diffusion/diff_data/PDBid_list dir and/or pass PDBids to this function "
               "(`parse_tokenise_write_cifs_to_flatfile()` as a string or Python list of strings)."
               "As a result, I don't know which mmCIFs you want to tokenise, embed and train on. "
-              "So, I will just use a random selection of 10 PDBid_chains taken from the pdbchains_565.lst")
-        pdb_ids = ['4DNY_A', '1U9P_A', '3TTG_A', '2ATZ_A', '2W0G_A', '4L3U_A', '4L9H_A', '4E6S_A', '1OW1_A', '3SGG_A']
+              "So, I will just use `pdbchains_565.lst` (for smoother testing/demo experience)")
+
+        relpath_pdblst = '../diffusion/diff_data/PDBid_list/pdbchains_565.lst'
+        pdb_ids.extend(dh.read_pdb_lst_file(relpath_pdblst=relpath_pdblst))
+
+    pdb_ids = list(set(pdb_ids))
 
     # MAKE A LIST OF PDBIDS THAT ARE SSVS IN TOKENISED DIR (I.E. HAVE ALREADY BEEN TOKENISED):
     cif_tokenised_ssv_dir = '../diffusion/diff_data/tokenised'
@@ -605,23 +609,20 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
 
 if __name__ == '__main__':
 
-    # # 1. (OPTIONAL) COPY MMCIFS OVER FROM BIG DATA FOLDER (IF NOT ALREADY DONE FROM DATA_HANDLER.PY):
-    dh.clear_diffdata_mmcif_dir()
+    # # 1. (OPTIONAL) COPY MMCIFS OVER FROM BIG DATA FOLDER:
     # dh.copy_cifs_from_bigfilefolder_to_diff_data()
 
-    # # 2. (OPTIONAL) CLEAR TOKENISED DIR:
+    # 2. REMOVE ALL PREVIOUSLY DOWNLOADED MMCIF FILES FROM `DIFFUSION/DIFF_DATA/MMCIF` DIRECTORY.
+    dh.clear_diffdata_mmcif_dir()
+
+    # 3. REMOVE ALL PREVIOUSLY TOKENISED DATA FROM `DIFFUSION/DIFF_DATA/TOKENISED` DIRECTORY.
     dh.clear_diffdata_tokenised_dir()
 
     from time import time
     start_time = time()
 
-    # 3. PARSE AND TOKENISED MMCIFS AND WRITE SSV TO TOKENISED DIR:
-    _, _lst_file = parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_data/mmCIF',
-                                                         relpath_toknsd_ssv_dir='../diffusion/diff_data/tokenised',
-                                                         relpath_pdblst=None,
-                                                         flatfile_format_to_write='ssv',
-                                                         # pdb_ids=['3C9P'],
-                                                         write_lst_file=True)
+    # 4. PARSE AND TOKENISE MMCIF FILES AND WRITE SSV FILES TO `DIFFUSION/DIFF_DATA/TOKENISED` DIRECTORY:
+    _, _lst_file = parse_tokenise_write_cifs_to_flatfile()
 
     time_taken = time() - start_time
 
@@ -630,8 +631,7 @@ if __name__ == '__main__':
     cif_count = sum(1 for file in path.rglob("*.cif"))
     path = Path('../diffusion/diff_data/tokenised')
     ssv_count = sum(1 for file in path.rglob("*.ssv"))
-
-    print(f'Parsed and tokenised {cif_count} mmCIFs to ssv files. You have {ssv_count} ssv files. '
+    print(f'Parsed and tokenised {cif_count} mmCIF files to .ssv files. You have {ssv_count} .ssv files. '
           f'This took {time_taken:.2f} seconds in total.')
 
     # Parsed and tokenised 573 cif files to ssv files. Tokenisation logic, removed 8 of these for not being suitable
