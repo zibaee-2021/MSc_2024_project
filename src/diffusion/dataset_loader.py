@@ -1,6 +1,7 @@
 #!~/miniconda3/bin/python
 
 import os
+import glob
 from math import sqrt
 from typing import List, Tuple
 import numpy as np
@@ -59,8 +60,10 @@ def _chdir_to_dataset_loader() -> str:
     return cwd
 
 
-def load_dataset(targetfile_lst_path: str) -> Tuple[List, List]:
-    assert os.path.exists(targetfile_lst_path), f'{targetfile_lst_path} cannot be found.)'
+def load_dataset() -> Tuple[List, List]:
+
+    train_list, validation_list = [], []
+    abnormal_structures = []  # list any structures with invalid inter-atomic distances of consecutive residues
 
     print('Starting `load_dataset()`...')
     cwd = _chdir_to_dataset_loader()  # Change current dir. (Store cwd to return to at end).
@@ -69,24 +72,16 @@ def load_dataset(targetfile_lst_path: str) -> Tuple[List, List]:
     sum_d = 0
     nn = 0
 
-    # GET THE LIST OF PDB NAMES FOR PROTEINS TO TOKENISE:
-    targetfile = ''
-    try:
-        with open(targetfile_lst_path, 'r') as lst_f:
-            targetfile = [line.strip() for line in lst_f]
-    except FileNotFoundError:
-        print(f'{lst_f} does not exist.')
-    except Exception as e:
-        print(f"An error occurred: {e}")
+    # GET SSVS IN TOKENISED DIR:
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    abspath_tokenised = os.path.normpath(os.path.join(abs_path, 'diff_data/tokenised'))
+    path_ssvs = glob.glob(os.path.join(abspath_tokenised, f'*.ssv'))
 
-    train_list, validation_list = [], []
-    abnormal_structures = []  # list any structures with invalid inter-atomic distances of consecutive residues
-
-    for line in targetfile:  # Expecting only one PDBid per line.
+    for path_ssv in path_ssvs:  # Expecting only one PDBid per line.
         sp = []
-        target_pdbid = line.rstrip().split()[0]
-        print(f'Read in {target_pdbid}.ssv')
-        pdf_target = pd.read_csv(f'{'../diffusion/diff_data/tokenised'}/{target_pdbid}.ssv', sep=' ')
+        target_pdbid = os.path.basename(path_ssv)
+        print(f'Reading in {target_pdbid} ...')
+        pdf_target = pd.read_csv(path_ssv, sep=' ')
 
         # GET COORDINATES TO 2D ARRAY OF (NUM_OF_ATOMS, 3):
         # coords = pdf_target[['mean_corrected_x', 'mean_corrected_y', 'mean_corrected_z']].values
@@ -190,27 +185,16 @@ def load_dataset(targetfile_lst_path: str) -> Tuple[List, List]:
 
 if __name__ == '__main__':
 
-    # # IF YOU HAVE ALREADY RUN THE TOKENISER AND HAVE A TOKENISED DATASET OF SSV FILES TO USE, THEN
-    # # YOU CAN PROCEED TO LOAD THE DATASET FOR MODEL TRAINING FROM
-    # # `pytorch_protfold_allatomclustrain_singlegpu.main(targetfile_lst_path)`.
-    # # HOWEVER, YOU CAN ALSO PERFORM A TEST RUN OF `load_dataset()` IN ISOLATION FROM HERE IF YOU WANT:
-    # # CREATE A `.lst` FILE OF PDBids e.g. '1AD6' and/or PDBid_chains e.g. 1AD6_A.
-    # # SOME LST FILES ALREADY EXIST IN `src/diffusion/diff_data/PDBid_list` DIRECTORY).
-    # # EXAMPLE OF SOME TEST FILES:
-    # _lst_file = 'pdbchains_9.lst'
-    # _lst_file = '3C9P.lst'  # 3C9P has short HETATM stretch near N-term, hence useful for checking `aaindices`.
-    # _lst_file = 'globin_1.lst'
-    _lst_file = 'pdbchains_565.lst'
-
-    _abs_path = os.path.dirname(os.path.abspath(__file__))
-    _targetfile_lst_path = f'../diffusion/diff_data/PDBid_list/{_lst_file}'
-    abspath_lst_file = os.path.normpath(os.path.join(_abs_path, _targetfile_lst_path))
-    assert os.path.isfile(abspath_lst_file), f'File {abspath_lst_file} does not exist.'
-
     from time import time
     start_time = time()
 
-    _train_list, _validation_list = load_dataset(abspath_lst_file)
+    _train_list, _validation_list = load_dataset()
 
     time_taken = time() - start_time
-    print(f'Dataset loaded into train and validation DataLoader in {time_taken:.2f} seconds.')
+
+    from pathlib import Path
+    _abs_path = os.path.dirname(os.path.abspath(__file__))
+    abspath_emb = os.path.normpath(os.path.join(_abs_path, 'diff_data/tokenised'))
+    path = Path(abspath_emb)
+    ssv_count = sum(1 for file in path.rglob("*.ssv"))
+    print(f'Datasets using {ssv_count} PDBs loaded in {time_taken:.2f} seconds.')
