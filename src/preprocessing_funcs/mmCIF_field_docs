@@ -1,12 +1,8 @@
-What some of the sequence labels/properties (https://mmcif.wwpdb.org/dictionaries/mmcif_ma.dic/Items/) are is not
-so obvious from their names, so I list and describe them here:
 
-** THE PURPOSE OF INCLUDING _pdbx_poly_seq_scheme IS TO INCLUDE ROWS FOR RESIDUES MISSING FROM _atom_site,
-EVEN THOUGH THOSE ROWS WILL JUST CONTAIN NAN (THEN 0) COORDINATES.
-(I AM ALSO USING IT TO CHECK THAT THE RESIDUES ARE INDEED THE SAME FOR THE SEQUENCE POSITION NUMBERING IN
-BOTH SETS OF FIELDS, I.E. IF _pdbx_poly_seq_scheme.seq_id=148 IS GLUTAMATE, THEN _atom_site.label_seq_id=148
-SHOULD ALSO BE GLUTAMATE). AS FAR AS I HAVE SEEN SO FAR, THIS IS INDEED THE CASE. **
+The names given to the attributes aka "items" in mmCIF can be a little obscure.
+Here I just give list the items from the two categories used in this project explaining what they are for:
 
+Note the main use of _pdbx_poly_seq_scheme is for getting the amino acid sequence, and merging it to the atom records.
 
 _pdbx_poly_seq_scheme
 
@@ -31,3 +27,6 @@ _atom_site
 
 (Note the CIF enum includes an `S_` or `A_` prefix, this is just for readability/provenance of each property, so the
 strings themselves are always only read as a substring from the third character onwards.)
+
+
+ (REF: https://mmcif.wwpdb.org/dictionaries/mmcif_ma.dic/Items/)
