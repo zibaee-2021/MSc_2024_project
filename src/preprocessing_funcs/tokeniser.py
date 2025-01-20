@@ -544,7 +544,7 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
         pdb_id = pdb_id.rstrip().split()[0]
         flatfile_format_to_write = flatfile_format_to_write.removeprefix('.').lower()
         pdb_id = pdb_id.removesuffix('.cif')
-        print(f'Starting PDBid={pdb_id} ---------------------------------------------------------')
+        print(f'Starting to tokenise PDBid={pdb_id} -----------------------------------------------------------------')
         if pdb_id == '5TJ5':  # '5TJ5' is one of the 573 single-domain proteins dataset. Its data found to be unusable.
             print(f'{pdb_id} is known to have 2500 missing entries in the aa sequence field. So {pdb_id} will be '
                   f'excluded.')
