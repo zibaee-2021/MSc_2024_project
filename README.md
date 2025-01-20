@@ -1,5 +1,54 @@
 MSc student project 
 
+To run the main functions, it is possible to just use the bash shell scripts in `launchers` directory 
+which is inside the project folder `MSc_2024_project`.
+
+The scripts assume the user is running the code on `joe-desktop`, 
+as it activates the specific `conda env` which is already installed on `joe-desktop`. 
+
+#### *1. Specifying the `PDBids`/`PDBid_chains` to use for training the model*
+Before doing anything, you must select a list of `PDBids` and/or `PDBid_chains` to be used for training the model. 
+This list will first be used by `tokeniser.py` and `plm_embedder.py` to know which `mmCIF` files to parse, tokenise 
+and create embeddings for. The selection is currently specified via passing the path to a `.lst` file that contains the
+`PDBids`/`PDBid_chains`. The `.lst` file(s) should be stored in `src/diffusion/diff_data/PDBid_list` directory.
+
+#### *2. Running `src/preprocessing_funcs/tokeniser.py`*
+It is necessary to run `tokeniser.py` separately, before model training can begin. 
+
+- Decide first if you want to empty out the destination directory `/diffSock/src/diffusion/diff_data/tokenised` to
+remove previously tokenised data (`ssv` files). It can be emptied manually or programmatically by uncommenting 
+`dh.clear_diffdata_tokenised_dir()` (line 607 of `tokeniser.py`).
+
+To run from terminal: `sh ~/PycharmProjects/MSc_project/diffSock/launchers/run_tokeniser.sh`.
+
+#### *3. Running `src/pLM/plm_embedder.py`*
+It is also necessary to run `plm_embedder.py` separately, before model training can begi. 
+
+- Decide first if you want to empty out the destination directory `/diffSock/src/diffusion/diff_data/emb` to
+remove previously tokenised data (`pt` files). It can be emptied manually or programmatically by uncommenting 
+`dh.clear_diffdata_emb_dir()` (line 90 of `plm_embedder.py`).
+
+To run from terminal: `sh ~/PycharmProjects/MSc_project/diffSock/launchers/build_embeddings.sh`.
+
+#### *4. Running `src/diffusion/pytorch_protfold_allatomclustrain_singlegpu.py`*
+To train the model for a selection of `PDBid_chains`, it is expected that the `mmCIF` files are already in 
+`/diffSock/src/diffusion/diff_data/mmCIF`) because they will have been downloaded by `tokeniser.py` in order to 
+tokenise them. Therefore, no `PDBids` nor `PDBid_list` need be specified to this script, though they can be. 
+The script combines all of the `PDBids` passed to it with all that are in the `mmCIF` directory.
+
+`pytorch_protfold_allatomclustrain_singlegpu.py` calls `src/diffusion/dataset_loader.py` which expects to find all of 
+the corresponding tokenised data (`.ssv` files) in `/diffSock/src/diffusion/diff_data/tokenised` and all of the 
+corresponding language model embeddings (`.pt` files) in `/diffSock/src/diffusion/diff_data/emb`.   
+
+To run from terminal: `sh ~/PycharmProjects/MSc_project/diffSock/launchers/train_model.sh`.
+
+#### *(Optional) Running `src/diffusion/dataset_loader.load_datasets()` separately for testing/demonstration purposes:* 
+As mentioned above, `load_datasets()` expects to find both the tokenised data (`.ssv` files) and all of the 
+embeddings (`.pt` files), though the latter is only used for asserting correct dimensions in this function.
+This function requires a PDBid_chains list file path to be manually supplied (~ line 200).
+It does not write any files out.
+
+
 #### ENVIRONMENT, DEPENDENCIES & HARDWARE:
 All code was run in a conda environment.
 My installed packages on MacOS 14.7.2 Intel (CPU is suitable for tokenisation):
