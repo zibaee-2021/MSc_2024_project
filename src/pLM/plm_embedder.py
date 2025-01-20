@@ -5,11 +5,23 @@ sequence-to-sequence model, with accompanying tokeniser, supplied via HuggingFac
 Embeddings are written to file (`.pt`) files.
 """
 import os
+import glob
 from typing import Tuple
+
+import pandas as pd
+import torch
 from transformers import AutoTokenizer
 from transformers import AutoModelForSeq2SeqLM, AutoModel
 from data_layer import data_handler as dh
 from src.preprocessing_funcs import tokeniser as tk
+
+
+def _write_embeddings(aa_seq_embedding: torch.Tensor, pdbid_chain: str) -> None:
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    abspath_diffdata_emb = os.path.normpath(os.path.join(abs_path, '../diffusion/diff_data/emb'))
+    dh.save_torch_tensor_to_pt(pt_tensor_to_save=aa_seq_embedding,
+                               dst_dir=abspath_diffdata_emb,
+                               pdbid_chain=pdbid_chain)
 
 
 def _generate_embeddings_from_aminoacid_sequence(hf_tokeniser, hf_eval_model, pdbid_chain: str, aa_seq: str):
@@ -33,14 +45,7 @@ def _generate_embeddings_from_aminoacid_sequence(hf_tokeniser, hf_eval_model, pd
     # aa_sequence_embedding = embedding[0]
     aa_seq_embedding = embedding.encoder_last_hidden_state
     aa_seq_embedding = aa_seq_embedding.detach()
-
-    # WRITE PT TO EMB DIR:
-    abs_path = os.path.dirname(os.path.abspath(__file__))
-    abspath_diffdata_emb = os.path.normpath(os.path.join(abs_path, '../diffusion/diff_data/emb'))
-    dh.save_torch_tensor_to_pt(pt_tensor_to_save=aa_seq_embedding,
-                               dst_dir=abspath_diffdata_emb,
-                               pdbid_chain=pdbid_chain)
-
+    return aa_seq_embedding
 
 def _load_tokeniser_and_eval_model(model_name: str) -> Tuple[AutoTokenizer, AutoModel]:
     """
@@ -54,17 +59,13 @@ def _load_tokeniser_and_eval_model(model_name: str) -> Tuple[AutoTokenizer, Auto
     return tokeniser, eval_model
 
 
-def _get_aa_sequence_from_ssv(pdbid_chain: str) -> str:
+def _get_aa_sequence_from_ssv(pdf: pd.DataFrame) -> str:
     """
     Get amino acid sequence (1-letter format) for given `pdbid_chain`, reading it directly from its ssv file in
     `/diffusion/diff_data/tokenised` directory.
-    :param pdbid_chain: Identifier of which amino acid sequence to return. E.g. '1ECA_A'.
+    :param pdf: Pandas dataframe of individual PDBid_chain.
     :return: Amino acid sequence (1-letter format) for the specified `pdbid_chain`.
     """
-    abs_path = os.path.dirname(os.path.abspath(__file__))
-    path_tokenised_ssv = f'../diffusion/diff_data/tokenised/{pdbid_chain}.ssv'
-    abspath_tokenised_ssv = os.path.normpath(os.path.join(abs_path, path_tokenised_ssv))
-    pdf = dh.read_tokenised_cif_chain_ssv_to_pdf(abspath_tokenised_ssv)
     aa_pos_seq_pdf = pdf[['S_seq_id', 'S_mon_id']]
     aa_pos_seq_pdf = aa_pos_seq_pdf.drop_duplicates(subset='S_seq_id', keep='first')
     aa_seq = aa_pos_seq_pdf['S_mon_id']
@@ -75,13 +76,21 @@ def _get_aa_sequence_from_ssv(pdbid_chain: str) -> str:
     return aa_sequence
 
 
-def generate_ankh_base_embeddings_from_tokenised_cifs(pdbid_chain: str):
-    aa_sequence = _get_aa_sequence_from_ssv(pdbid_chain)
-    hf_tokeniser, hf_eval_model = _load_tokeniser_and_eval_model(model_name='ElnaggarLab/ankh-base')
-    _generate_embeddings_from_aminoacid_sequence(hf_tokeniser=hf_tokeniser,
-                                                 hf_eval_model=hf_eval_model,
-                                                 pdbid_chain=pdbid_chain,
-                                                 aa_seq=aa_sequence)
+def generate_ankh_base_embeddings_from_tokenised_cifs():
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    abspath_tokenised = os.path.normpath(os.path.join(abs_path, '../diffusion/diff_data/tokenised'))
+    path_ssvs = glob.glob(os.path.join(abspath_tokenised, f'*.ssv'))
+    for path_ssv in path_ssvs:
+        pdf = pd.read_csv(path_ssv, sep=' ')
+        aa_sequence = _get_aa_sequence_from_ssv(pdf=pdf)
+        hf_tokeniser, hf_eval_model = _load_tokeniser_and_eval_model(model_name='ElnaggarLab/ankh-base')
+        pdbid_chain = os.path.basename(path_ssv)
+        pdbid_chain = pdbid_chain.removesuffix('.ssv')
+        aa_seq_embedding = _generate_embeddings_from_aminoacid_sequence(hf_tokeniser=hf_tokeniser,
+                                                     hf_eval_model=hf_eval_model,
+                                                     pdbid_chain=pdbid_chain,
+                                                     aa_seq=aa_sequence)
+        _write_embeddings(aa_seq_embedding=aa_seq_embedding, pdbid_chain=pdbid_chain)
 
 
 if __name__ == '__main__':
@@ -90,23 +99,14 @@ if __name__ == '__main__':
     dh.clear_diffdata_emb_dir()
 
     from time import time
+
     start_time = time()
 
-    _abs_path = os.path.dirname(os.path.abspath(__file__))
-    # lst_file = 'pdbchains_9.lst'
-    lst_file = 'pdbchains_565.lst'
-    _targetfile_lst_path = f'../diffusion/diff_data/PDBid_list/{lst_file}'
-    abspath_lst_file = os.path.normpath(os.path.join(_abs_path, _targetfile_lst_path))
-
-    assert os.path.exists(abspath_lst_file), f'{abspath_lst_file} cannot be found.'
-
-    _pdbid_chains = dh.read_pdb_lst_file(relpath_pdblst=abspath_lst_file)
-
-    for _pdbid_chain in _pdbid_chains:
-        generate_ankh_base_embeddings_from_tokenised_cifs(_pdbid_chain)
+    generate_ankh_base_embeddings_from_tokenised_cifs()
 
     time_taken = time() - start_time
 
+    _abs_path = os.path.dirname(os.path.abspath(__file__))
     from pathlib import Path
     abspath_emb = os.path.normpath(os.path.join(_abs_path, '../diffusion/diff_data/emb'))
     path = Path(abspath_emb)
