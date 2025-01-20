@@ -522,9 +522,15 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
         pdb_ids.extend(_pdb_ids)
 
     pdb_ids = list(set(pdb_ids))
-    assert pdb_ids is not None, 'This is a bug! `pdb_ids` is None, but it should be a list of at least one PDBid.'
-    assert len(pdb_ids) > 0, 'This is a bug! `pdb_ids` is an empty list, but it should be a list of at least one PDBid.'
-    assert len(pdb_ids) > 0, 'This is a bug! `pdb_ids` is an empty list, but it should be a list of at least one PDBid.'
+    if pdb_ids is None or len(pdb_ids) == 0:
+        print("No PDBids have been specified. "
+              "If `src/diffusion/diff_data/mmCIF` dir contains no pre-downloaded mmCIF files, you would need to "
+              "have either passed the file path string of an existing PDBid `.lst` in "
+              "src/diffusion/diff_data/PDBid_list dir and/or pass PDBids to this function "
+              "(`parse_tokenise_write_cifs_to_flatfile()` as a string or Python list of strings)."
+              "As a result, I don't know which mmCIFs you want to tokenise, embed and train on. "
+              "So, I will just use a random selection of 10 PDBid_chains taken from the pdbchains_565.lst")
+        pdb_ids = ['4DNY_A', '1U9P_A', '3TTG_A', '2ATZ_A', '2W0G_A', '4L3U_A', '4L9H_A', '4E6S_A', '1OW1_A', '3SGG_A']
 
     # MAKE A LIST OF PDBIDS THAT ARE SSVS IN TOKENISED DIR (I.E. HAVE ALREADY BEEN TOKENISED):
     cif_tokenised_ssv_dir = '../diffusion/diff_data/tokenised'
@@ -600,7 +606,7 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
 if __name__ == '__main__':
 
     # # 1. (OPTIONAL) COPY MMCIFS OVER FROM BIG DATA FOLDER (IF NOT ALREADY DONE FROM DATA_HANDLER.PY):
-    # dh.clear_diffdata_mmcif_dir()
+    dh.clear_diffdata_mmcif_dir()
     # dh.copy_cifs_from_bigfilefolder_to_diff_data()
 
     # # 2. (OPTIONAL) CLEAR TOKENISED DIR:
