@@ -6,20 +6,9 @@ Store in dicts and save to `../data/enumerations`.
 
 (Atom names MANUALLY collected from https://www.ebi.ac.uk/pdbe-srv/pdbechem/atom/list/ARG to TRP)
 """
-import json
-import os
-# from enum import Enum
 import ast
 from typing import Tuple
 from data_layer import data_handler as dh
-
-
-# class Filename(Enum):
-#     aa_atoms = 'residues_atoms'
-#     atoms = 'unique_atoms_only'
-#     aa = 'residues'
-#     atoms_no_h = 'unique_atoms_only_no_hydrogens'
-#     aa_atoms_no_h = 'residues_atoms_no_hydrogens'
 
 
 def __enumerate_atoms_and_residues() -> Tuple[dict, dict, dict]:
