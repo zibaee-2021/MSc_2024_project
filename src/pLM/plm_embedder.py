@@ -87,21 +87,21 @@ def generate_ankh_base_embeddings_from_tokenised_cifs():
         pdbid_chain = os.path.basename(path_ssv)
         pdbid_chain = pdbid_chain.removesuffix('.ssv')
         aa_seq_embedding = _generate_embeddings_from_aminoacid_sequence(hf_tokeniser=hf_tokeniser,
-                                                     hf_eval_model=hf_eval_model,
-                                                     pdbid_chain=pdbid_chain,
-                                                     aa_seq=aa_sequence)
+                                                                        hf_eval_model=hf_eval_model,
+                                                                        pdbid_chain=pdbid_chain,
+                                                                        aa_seq=aa_sequence)
         _write_embeddings(aa_seq_embedding=aa_seq_embedding, pdbid_chain=pdbid_chain)
 
 
 if __name__ == '__main__':
 
-    # # (OPTIONAL) CLEAR EMB DIR:
+    # REMOVE ALL PREVIOUSLY BUILT PLM EMBEDDINGS FROM `DIFFUSION/DIFF_DATA/EMB` DIRECTORY.
     dh.clear_diffdata_emb_dir()
 
     from time import time
-
     start_time = time()
 
+    # GENERATE THE EMBEDDINGS AND WRITE .PT FILES TO `DIFFUSION/DIFF_DATA/EMB` DIRECTORY:
     generate_ankh_base_embeddings_from_tokenised_cifs()
 
     time_taken = time() - start_time
@@ -111,5 +111,4 @@ if __name__ == '__main__':
     abspath_emb = os.path.normpath(os.path.join(_abs_path, '../diffusion/diff_data/emb'))
     path = Path(abspath_emb)
     pt_count = sum(1 for file in path.rglob("*.pt"))
-
     print(f'Created {pt_count}.pt plm embeddings. This took {time_taken:.2f} seconds in total.')
