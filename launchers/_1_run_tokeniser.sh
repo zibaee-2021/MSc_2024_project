@@ -6,4 +6,4 @@ export PYTHONPATH=$PYTHONPATH:$HOME/diffSock
 export PYTHONPATH=$PYTHONPATH:$HOME/diffSock/data_layer
 
 #!/usr/bin/env python3
-python3 ~/PycharmProjects/MSc_project/diffSock/src/preprocessing_funcs/tokeniser.py
+python3 ~/PycharmProjects/MSc_project/diffSock/src/preprocessing_funcs/tokeniser.py pdbchains_565
