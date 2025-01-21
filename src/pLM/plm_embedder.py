@@ -82,6 +82,12 @@ def generate_ankh_base_embeddings_from_tokenised_cifs():
     abspath_tokenised = os.path.normpath(os.path.join(abs_path, '../diffusion/diff_data/tokenised'))
     path_ssvs = glob.glob(os.path.join(abspath_tokenised, f'*.ssv'))
     for path_ssv in path_ssvs:
+        # IF EMBEDDING .PT FILE ALREADY EXISTS, DON'T REMAKE IT, CONTINUE TO NEXT PDB:
+        path_pt = path_ssv.replace('.ssv', '.pt')
+        abspath_embeddings_pt = os.path.normpath(os.path.join(abs_path, '../diffusion/diff_data/emb', path_pt))
+        if os.path.exists(abspath_embeddings_pt):
+            continue
+
         pdf = pd.read_csv(path_ssv, sep=' ')
         aa_sequence = _get_aa_sequence_from_ssv(pdf=pdf)
         hf_tokeniser, hf_eval_model = _load_tokeniser_and_eval_model(model_name='ElnaggarLab/ankh-base')
@@ -97,11 +103,11 @@ def generate_ankh_base_embeddings_from_tokenised_cifs():
 if __name__ == '__main__':
 
     # REMOVE ALL PREVIOUSLY BUILT PLM EMBEDDINGS FROM `DIFFUSION/DIFF_DATA/EMB` DIRECTORY.
-    # dh.clear_diffdata_emb_dir()
+    # dh.clear_diffdata_emb_dir() # <-- LINE 106: USER TO UNCOMMENT FOR ALL .PT EMBEDDING FILES TO BE MADE IN THIS RUN.
 
     from time import time
     start_time = time()
-
+    print(f'START ***********************************************************************')
     # GENERATE THE EMBEDDINGS AND WRITE .PT FILES TO `DIFFUSION/DIFF_DATA/EMB` DIRECTORY:
     generate_ankh_base_embeddings_from_tokenised_cifs()
 
