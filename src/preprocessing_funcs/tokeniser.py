@@ -613,10 +613,10 @@ if __name__ == '__main__':
     # dh.copy_cifs_from_bigfilefolder_to_diff_data()
 
     # 2. REMOVE ALL PREVIOUSLY DOWNLOADED MMCIF FILES FROM `DIFFUSION/DIFF_DATA/MMCIF` DIRECTORY.
-    dh.clear_diffdata_mmcif_dir()
+    # dh.clear_diffdata_mmcif_dir()
 
     # 3. REMOVE ALL PREVIOUSLY TOKENISED DATA FROM `DIFFUSION/DIFF_DATA/TOKENISED` DIRECTORY.
-    dh.clear_diffdata_tokenised_dir()
+    # dh.clear_diffdata_tokenised_dir()
 
     from time import time
     start_time = time()

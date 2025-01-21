@@ -97,7 +97,7 @@ def generate_ankh_base_embeddings_from_tokenised_cifs():
 if __name__ == '__main__':
 
     # REMOVE ALL PREVIOUSLY BUILT PLM EMBEDDINGS FROM `DIFFUSION/DIFF_DATA/EMB` DIRECTORY.
-    dh.clear_diffdata_emb_dir()
+    # dh.clear_diffdata_emb_dir()
 
     from time import time
     start_time = time()
