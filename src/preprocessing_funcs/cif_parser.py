@@ -40,7 +40,6 @@ A_Cartn_y,        # COORDINATES           - ATOM Y-COORDINATES                  
 A_Cartn_z,        # COORDINATES           - ATOM Z-COORDINATES                                        JUST KEEP
 """
 
-import os
 from typing import List
 import numpy as np
 import pandas as pd

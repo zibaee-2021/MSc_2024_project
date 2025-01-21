@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-import os
+#!~/miniconda3/bin/python
 from data_layer import data_handler
 from src.preprocessing_funcs import tokeniser
 from src.pLM import plm_embedder
