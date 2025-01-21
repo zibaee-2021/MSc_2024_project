@@ -79,8 +79,8 @@ def load_dataset() -> Tuple[List, List]:
 
     for path_ssv in path_ssvs:  # Expecting only one PDBid per line.
         sp = []
-        target_pdbid = os.path.basename(path_ssv)
-        print(f'Reading in {target_pdbid} ...')
+        target_pdbid_ssv = os.path.basename(path_ssv)
+        print(f'Reading in {target_pdbid_ssv} ...')
         pdf_target = pd.read_csv(path_ssv, sep=' ')
 
         # GET COORDINATES TO 2D ARRAY OF (NUM_OF_ATOMS, 3):
@@ -110,6 +110,7 @@ def load_dataset() -> Tuple[List, List]:
 
         bbindices = pdf_target_deduped['bbindices'].tolist()
 
+        target_pdbid = target_pdbid_ssv.removesuffix('.ssv')
         # ONLY INCLUDE PROTEINS WITHIN A CERTAIN SIZE RANGE:
         if len(aacodes) < 10 or len(aacodes) > 500:
             print(f'{target_pdbid} mmCIF is {len(aacodes)} residues long. It is not within the chosen range 10-500 '
