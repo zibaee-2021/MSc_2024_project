@@ -338,7 +338,7 @@ def parse_cif(pdb_id: str, mmcif_dict: dict) -> List[pd.DataFrame]:
     atomsite_pdf = _remove_hetatm_rows(atomsite_pdf)
     # GENERATE A LIST OF TUPLES, EACH TUPLE IS THE ATOMSITE AND POLYSEQ DATA FOR A SINGLE CHAIN
     all_chains_pdfs = _split_up_by_chain(atomsite_pdf, polyseq_pdf)
-    # IF CHAIN SPECIFIED IN LIST FILE, REMOVE ANY OTHER CHAINS
+    # IF CHAIN SPECIFIED IN PDBID, REMOVE ANY OTHER CHAINS <-- Implemented later in tokeniser.py, but could move here.
     parsed_cif_by_chain = []
     for chain_pdf in all_chains_pdfs:
         atomsite_pdf, polyseq_pdf = chain_pdf
