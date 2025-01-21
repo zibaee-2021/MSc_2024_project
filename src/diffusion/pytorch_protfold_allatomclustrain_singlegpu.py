@@ -3,9 +3,7 @@
 Training script for protein structure diffusion model
 (deliberately made as few changes as possible from original RNA script).
 
-
 """
-
 import os
 from typing import List, Tuple
 from numpy.typing import NDArray
