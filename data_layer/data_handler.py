@@ -355,7 +355,7 @@ def write_tokenised_cif_to_ssv(pdb_id: str, pdf: pd.DataFrame, path_dst_dir=None
     pdf.to_csv(path_or_buf=f'{path_dst_dir}/{pdb_id}.ssv', sep=' ', index=False)
 
 
-def write_tokenised_cifs_to_flatfiles(pdb_id: str, pdfs: List[pd.DataFrame], dst_data_dir=None, flatfiles=None):
+def write_tokenised_cifs_to_flatfiles(pdb_id: str, pdfs: List[pd.DataFrame], dst_data_dir=None, flatfile_format=None):
     """
     Write dataframe of single protein, and single chain, with columns CIF.S_seq_id, CIF.S_mon_id, CIF.A_id,
     CIF.A_label_atom_id, ColNames.MEAN_CORR_X, ColNames.MEAN_CORR_Y, ColNames.MEAN_CORR_Z to flat file(s) in local
@@ -365,15 +365,15 @@ def write_tokenised_cifs_to_flatfiles(pdb_id: str, pdfs: List[pd.DataFrame], dst
     :param dst_data_dir: Relative path to destination dir of flatfile of tokenised cif. (Will be called from either
     `diffSock/test`, `diffSock/src/preprocessing_funcs` or `diffSock/src/diffusion`. The responsibility for determining
     the relative destination path is left to the caller).
-    :param flatfiles: List of file formats (e.g. ['ssv', 'csv', 'tsv'], or string of one format, otherwise just
-    one ssv file per protein and chain, by default). E.g. Chain 'A' for PDB id '10J6' is written to `10J6_A.ssv`.
+    :param flatfile_format: Flat file format to write to. E.g. 'ssv', 'csv' or 'tsv'.
     """
+    flatfile_format = flatfile_format.removeprefix('.').lower()
     print(f'PDBid={pdb_id}: write tokenised to flatfile')
     for pdf in pdfs:
-        if flatfiles is None:
-            flatfiles = ['ssv']
-        elif isinstance(flatfiles, str):
-            flatfiles = [flatfiles]
+        if flatfile_format is None:
+            flatfile_format = ['ssv']
+        elif isinstance(flatfile_format, str):
+            flatfile_format = [flatfile_format]
         cwd = ''  # to return to at end of this function.
         if not dst_data_dir:  # i.e. use the top-level general-use `data` dir & define relpath from data_layer
             print(f'You did not pass any destination dir path for writing the tokenised cif flat flatfile to. '
@@ -385,7 +385,7 @@ def write_tokenised_cifs_to_flatfiles(pdb_id: str, pdfs: List[pd.DataFrame], dst
 
         chain = pdf['S_asym_id'].unique()
         chain = chain[0]
-        for flatfile in flatfiles:
+        for flatfile in flatfile_format:
             sep = ' '
             if flatfile == 'tsv':
                 sep = '\t'
@@ -410,19 +410,21 @@ def write_tokenised_cifs_to_flatfiles(pdb_id: str, pdfs: List[pd.DataFrame], dst
             _restore_original_working_dir(cwd)
 
 
-def read_tokenised_cif_ssv_to_pdf(pdb_id: str, relpath_tokensd_dir: str) -> List[pd.DataFrame]:
+def __old_read_tokenised_cif_ssv_to_pdf(pdbid_chain: str, relpath_tokensd_dir: str) -> List[pd.DataFrame]:
     """
-    Read pre-tokenised flatfile (i.e. ssv) of cif for given PDB id, from either `src/diffusion/diff_data/tokenised`or
-    top-level `data/tokenised`. The reason for having option of data path is simply a workaround to problems when
-    reading from top-level data dir on HPC.
-    :param pdb_id: PDB id of protein.
+    **FUNCTION CURRENTLY UNUSED.
+    DESIGNED FOR PREVIOUS LOGIC WHERE MORE THAN ONE CHAIN PER PDBID WAS GOING TO BE USED.
+    KEEPING FUNCTION HERE FOR NOW AS MAY BE USEFUL IN FUTURE.**
+    Read pre-tokenised flatfile (i.e. ssv) of cif for given PDB id, from given path to directory.
+    :param pdbid_chain: PDBid with chain suffix, e.g. '10J6_A'.
     :param relpath_tokensd_dir: Relative path to the ssv holding the tokenised CIF data.
     E.g. `src/diffusion/diff_data/tokenised`, or `data/tokenised`.
     :return: Pre-tokenised CIF, stored as a ssv flatfile, read back into dataframe.
     """
-    os.makedirs(relpath_tokensd_dir, exist_ok=True)
+    if relpath_tokensd_dir is None:
+        relpath_tokensd_dir = '../diffusion/diff_data/tokenised'
     relpath_tokensd_dir = relpath_tokensd_dir.removesuffix('/').removeprefix('/')
-    pattern = fr'{pdb_id}_[A-Z]\.ssv'
+    pattern = fr'{pdbid_chain}_[A-Z]\.ssv'
     ssvs = []
     for f in os.listdir(relpath_tokensd_dir):
         if os.path.isfile(os.path.join(relpath_tokensd_dir, f)) and re.match(pattern, f):
@@ -439,14 +441,18 @@ def read_tokenised_cif_ssv_to_pdf(pdb_id: str, relpath_tokensd_dir: str) -> List
     return pdfs
 
 
-def read_tokenised_cif_chain_ssv_to_pdf(abspath_tokensd_ssv: str) -> pd.DataFrame:
+def read_tokenised_pdbid_chain_ssv_to_pdf(path_tokensd_dir: str, pdbid_chain: str) -> pd.DataFrame:
     """
-    Read pre-tokenised flatfile (i.e. ssv) of cif for given PDBid_chain.
-    :param abspath_tokensd_ssv: Absolute path to a tokenised CIF ssv file. 
-    :return: Tokenised CIF for specified chain, stored as a ssv flatfile, read into dataframe.
+    Read tokenised mmCIF .ssv file for given PDBid_chain.
+    :param path_tokensd_dir: Path to a tokenised mmCIF directory, containing .ssv files.
+    :param pdbid_chain: PDBid with chain suffix, e.g. '10J6_A'.
+    :return: Dataframe of tokenised mmCIF of specified chain.
     """
-    print(f'Reading flatfile of tokenised cif into dataframe: {abspath_tokensd_ssv}')
-    pdf = pd.read_csv(abspath_tokensd_ssv, sep=' ')
+    pdbid_chain = pdbid_chain.removesuffix('.ssv')
+    pdbid_chain = pdbid_chain.removesuffix('.cif')
+    path_tokensd_ssv = os.path.normpath(os.path.join(path_tokensd_dir, f'{pdbid_chain}.ssv'))
+    print(f'Reading ssv of tokenised mmCIF into dataframe: {path_tokensd_ssv}')
+    pdf = pd.read_csv(path_tokensd_ssv, sep=' ')
     return pdf
 
 
