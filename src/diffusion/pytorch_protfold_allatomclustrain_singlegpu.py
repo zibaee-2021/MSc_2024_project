@@ -168,7 +168,8 @@ def random_rotation_matrices(N):
 class DMPDataset(Dataset):
     """
     Dataset class for Diffusion Modelling Pipeline (DMP) dataset. Encapsulate training and validation datasets in
-    PyTorch Datasets, as inputs to PyTorch DataLoader. Additionally, handle data augmentation with random peptide fragments, randomly rotated and noised.
+    PyTorch Datasets, as inputs to PyTorch DataLoader.
+    Additionally, handle data augmentation with random peptide fragments, randomly rotated and noised.
     """
 
     def __init__(self, sample_list, augment=True):
@@ -194,7 +195,7 @@ class DMPDataset(Dataset):
 
         embed = _torch_load_pt(pt_fname=target, is_embedding_file=True)
 
-        linear_layer = nn.Linear(768, 1024, bias=False)
+        linear_layer = nn.Linear(768, 1024, bias=False)  # to match up the dimensions
         embed = linear_layer(embed)
         embed = embed.detach()
 
