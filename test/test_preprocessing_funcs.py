@@ -67,17 +67,17 @@ class TestPreprocessingFuncs(TestCase):
 
     def test_parse_tokenise_and_write_cif_to_flatfile(self):
         pdf, _ = tk.parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=self.test_cif_dir,
-                                                       relpath_toknsd_ssv_dir=self.test_tokenised_dir,
-                                                       relpath_pdblst=None,
-                                                       pdb_ids=self.test_1V5H_ssv[:-4])
+                                                          relpath_toknsd_dir=self.test_tokenised_dir,
+                                                          relpath_pdblst=None,
+                                                          pdb_ids=self.test_1V5H_ssv[:-4])
         # pdf.to_csv(path_or_buf='test_data/tokenised/test_1V5H.ssv', sep=' ', index=False)
         self.assertEqual(18, len(pdf.columns))
 
     def test_parse_tokenise_and_write_cif_to_flatfile__4_chains(self):
         list_of_pdfs, _ = tk.parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir=self.test_cif_dir,
-                                                                relpath_toknsd_ssv_dir=self.test_tokenised_dir,
-                                                                relpath_pdblst=None,
-                                                                pdb_ids=self.test_1OJ6_4chains_cif)
+                                                                   relpath_toknsd_dir=self.test_tokenised_dir,
+                                                                   relpath_pdblst=None,
+                                                                   pdb_ids=self.test_1OJ6_4chains_cif)
         for pdf in list_of_pdfs:
             self.assertEqual(18, len(pdf.columns))
 
