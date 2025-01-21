@@ -3,42 +3,50 @@ MSc student project
 ---
 #### SHELL SCRIPT LAUNCHERS:
 
-You can run the Python scripts via shell scripts in `launchers` directory in the top level of the project folder:
-`sh launchers/tokenise_embed_train.sh` which calls `src/diffusion/tokenise_embed_train.py` to run all scripts.  
+You can run the Python scripts via shell scripts in `launchers` directory in the top level of the project folder:  
+
+`sh launchers/tokenise_embed_train.sh`  
+This calls `src/diffusion/tokenise_embed_train.py`  
+
 Alternatively, for demonstration, each part can be run separately:  
 - `sh launchers/_1_run_tokeniser.sh`  
 - `sh launchers/_2_build_embeddings.sh` 
 - `sh launchers/load_datasets`
 - `sh launchers/_3_train_model.sh`
 
-> Note: running a launcher shell script will automatically activate the conda env (`diffSock` on `joe-desktop`).
-> If you try to manually activate the conda env in the terminal before running a shell script, it seems to cause 
-> some form of conflict and fails to execute the scripts, throwing error messages about being unable to find required 
+> Note: Running any of these launcher shell scripts will automatically activate the conda env (`diffSock` on `joe-desktop`).
+> However, if you try to run one of the shell scripts within an already-activated conda env, it seems to cause 
+> some form of conflict and fails to execute it, throwing error messages about being unable to find required 
 > libraries (like NumPy and Pandas).
+---
+#### Specifying which proteins to train model on:
+- Before running anything, you must decide which proteins will be used for training the model. 
+- Specifying which `PDBids`/`PDBid_chains` to use is done via `tokeniser.py` script.
+- Once `tokeniser.py` has run, the remaining scripts (embedding and model training) will know implicitly which PDBids 
+to work with via reading in .ssv files written to `src/diffusion/diff_data/tokenised` by `tokeniser.py`, so it is not 
+necessary to indicate which PDBids to those scripts as well, only to `tokeniser.py`.
 
 ---
 #### TOKENISER
 
 `src/preprocessing_funcs/tokeniser.py`
 
-(The `tokenise_embed_train.py` script is currently set up to first empty the `mmCIF` and `tokenised` 
-directories, to remove all pre-downloaded `mmCIF` files and pre-tokenised `.ssv` files, so that they downloaded/generated 
-from scratch. If you don't want this to happen but instead to re-use the files in those directories, then you must 
-comment these lines out manually on lines 11 & 12. Conversely the `_1_run_tokeniser.sh` script will call `tokeniser.py`
-directly via its `if __name__ == __main__` wherein it is currently set up to not empty the 2 directories. So this time
-you would need to uncomment them on lines 616 & 619).
+- `tokeniser.py` builds a list of `PDBids` and/or `PDBid_chains` according to one or more of the 3 following paths 
+passed to it. (All of these are optional, as default arguments are also provided.)
 
-Specifying the `PDBids`/`PDBid_chains` to use for training the model, via `tokeniser.py`.  
-Before doing anything, you must decide which proteins will be used for training the model. 
-`tokeniser.py` builds a list of `PDBids` and/or `PDBid_chains` according to paths passed to it, all of these are 
-optional. Without them, defaults will be used.
 1. User-specified directory path from where pre-downloaded `mmCIF` files will be read.  
 The default is `mmCIF` directory at `src/diffusion/diff_data`. Whichever `.cif` files are found there will be parsed and 
 tokenised (unless it finds corresponding `.ssv` files already in `tokenised` directory at `src/diffusion/diff_data`, 
 indicating which, if any, have already been tokenised). 
+
 2. User-specified file path to any existing `.lst` file of `PDBids` and/or `PDBid_chains`.   
 A number of these `.lst` files is located in `PDBid_list` at `src/diffusion/diff_data`.   
-The default is `None`.
+The default is `None`.  
+However, you can also pass the PDBids `.lst` file name at the command line.  
+Currently, `pdbchains_565` is included at the command-line in both shell scripts that call `tokeniser.py`.  
+As a result, the tokeniser searches for `src/diffusion/diff_data/PDBid_list/pdbchains_565.lst`.  
+If it finds this file, it will read in the PDBids from it.
+
 3. User-specified string of `PDBid` and/or `PDBid_chain`; or a Python list of `PDBid` and/or `PDBid_chain` strings.    
 (Either a single string or Python list of strings can be passed to `pdb_ids` argument.)
 The default is `None`.  
@@ -46,17 +54,21 @@ The default is `None`.
 If by the end of this, the list of `PDBids` is still empty, this will be reported (in print statement) and is hard-coded 
 to use `src/diffusion/diff_data/PDBid_list/pdbchains_565.lst` (for simpler testing/demo experience).
 
+> The `tokenise_embed_train.py` script is currently set up to first empty the `mmCIF` and `tokenised` directories, 
+in order to remove any pre-downloaded `mmCIF` files and remove any pre-tokenised `.ssv` files, so that they are all 
+downloaded/generated in *this* run.  
+If you don't want this to happen but instead to re-use the files in those directories, then you must comment these 
+out manually on lines 11 & 12.  
+Conversely, the `_1_run_tokeniser.sh` script will call `tokeniser.py` directly via its `if __name__ == __main__` 
+wherein it is currently set up to *not* empty those two directories.  
+So this time you would need to <u>un</u>comment them on lines 616 and/or 619 if you want the mmCIFs to be downloaded 
+from the API in *this* run and/or for their tokenisation to be performed in *this* run, respectively.
+
+  
 ---
 #### PROTEIN LANGUAGE MODEL EMBEDDER
 
 `src/pLM/plm_embedder.py`  
-
-(The `tokenise_embed_train.py` script is currently set up to first empty the `emb`
-directory, to remove all pre-downloaded `mmCIF` files and pre-tokenised `.ssv` files, so that they downloaded/generated 
-from scratch. If you don't want this to happen but instead to re-use the files in those directories, then you must 
-comment these lines out manually on line 16. Conversely the `_2_build_embeddings.sh` script will call `plm_embedder.py`
-directly via its `if __name__ == __main__` wherein it is currently set up to not empty that directory. So this time
-you would need to uncomment it on line 100).
 
 The choice of which `PDBid_chains` to build protein language model (PLM) embeddings for is implicitly indicated by the tokeniser.  
 `tokeniser.py` (which must be run *before* the `plm_embedder.py`) writes tokenised data to `.ssv` files in `src/diffusion/diff_data/tokenised`.  
@@ -79,34 +91,50 @@ It is also necessary that pLM embeddings, generated by `plm_embedder.py`, will a
 the training script.  
 Without these embeddings, saved to `.pt` files in `src/diffusion/diff_data/emb`, the training script will fail to execute.
 
+
+> The `tokenise_embed_train.py` script is currently set up to first empty the `emb` directory, in order to remove 
+any pre-built embedding `.pt` files, so that they are all generated in *this* run.  
+If you don't want this to happen but instead to re-use the files in those directories in the subsequent model training, 
+then you must comment this out manually on line 16.  
+Conversely, the `_2_build_embeddings.sh` script will call `plm_embedder.py` directly via its `if __name__ == __main__` 
+wherein it is currently set up to *not* empty that directory.  
+So this time you would need to <u>un</u>comment it on line 106 if you want the embeddings to be generated in *this* run.
+
 ---
 #### ENVIRONMENT, DEPENDENCIES & HARDWARE:
 
 All code was run in miniconda3 environment.
 
-My installed packages on MacOS 14.7.2 Intel (CPU is suitable for tokenisation):
-- Conda 24.11.2 (miniconda3)
-- Python 3.12.3
-- NumPy 1.26.4
-- Pandas 2.2.3
-- Biopython 1.84
-- Requests 2.32.3
-- Yaml 0.2.5
-- Matplotlib 3.10.0
+| Package            | version (macOS 14.7.2 Intel x86_64)  | version (Rocky Linux 9.5, x86-64)       |
+|--------------------|--------------------------------------|-----------------------------------------|
+| <code>conda</code> | `24.11.3`                            | `24.11.0`                               |
+| <code>python</code>   | `3.12.3`                             | `3.12.2`                                |
+| `numpy`            | `1.26.4`                             | `2.0.1`                                 |
+| `pandas`           | `2.2.3`                              | `2.2.3`                                 |
+| `biopython`        | `1.84`                               | `1.84`                                  |
+| `requests`         | `2.32.3`                             | `2.32.3`                                |
+| `yaml`             | `0.2.5`                              | `0.2.5`                                 |
+| `matplotlib`       | `3.10.0`                             | `3.9.2`                                 |
+| `transformers`     | `4.48.1 pip install transformers -U` | `4.46.3 conda-forge`                    |
+| `pytorch`          | NA                                   | `2.5.1   py3.12_cuda12.1_cudnn9.1.0_0 ` |
+| `torchvision`      | NA                                   | `0.20.1`                                |
+| `pytorch-cuda`     | NA                                   | `12.1`                                  |
+| `einops`           | NA                                   | `0.8.0`                                 |
 
-Installed packages on Rocky Linux ... 
-- Conda 24.11.2 (miniconda3)
-- Python 3.12.3
-- NumPy 2.2... 
-- Pandas 2.2.3
-- Biopython 1.84
-- Requests 2.32.3
-- Yaml 0.2.5
-- Matplotlib 3.10.0
+`cuda` packages (Rocky Linux only):
 
-- PyTorch 2.3... 
-- torchvision 0.18.1
-- transformers 4.46.2 (HuggingFace package)
+| Package         | Version    | Build | Channel |
+|-----------------|------------|-------|---------|
+| `cuda-cudart`     | `12.1.105`  | `0`     | nvidia  |
+| `cuda-cupti`      | `12.1.105`  | `0`     | nvidia  |
+| `cuda-libraries`  | `12.1.0`    | `0`     | nvidia  |
+| `cuda-nvrtc`      | `12.1.105`  | `0`     | nvidia  |
+| `cuda-nvtx`       | `12.1.105`  | `0`     | nvidia  |
+| `cuda-opencl`     | `12.6.77`   | `0`     | nvidia  |
+| `cuda-runtime`    | `12.1.0`    | `0`     | nvidia  |
+| `cuda-version`    | `12.6`      | `3`     | nvidia  |
+
+GPU Rocky Linux = NVIDIA GeForce GTX 1080 Ti
 
 ---
 ##### Summary of Python scripts and other files:
