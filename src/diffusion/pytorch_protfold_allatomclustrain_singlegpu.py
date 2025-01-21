@@ -90,11 +90,6 @@ def _torch_load_pt(pt_fname: str, is_embedding_file=False):
     return pt
 
 
-def load_dataset() -> Tuple[List, List]:
-    train_list, validation_list = dsl.load_dataset()
-    return train_list, validation_list
-
-
 def lsq_fit(c1, c2):
     """
     Superpose given coordinates.
@@ -167,9 +162,12 @@ def random_rotation_matrices(N):
 
 class DMPDataset(Dataset):
     """
-    Dataset class for Diffusion Modelling Pipeline (DMP) dataset. Encapsulate training and validation datasets in
-    PyTorch Datasets, as inputs to PyTorch DataLoader.
+    Dataset class for Diffusion Modelling Pipeline (DMP).
+    Encapsulate training and validation datasets in PyTorch Datasets (`torch.utils.data.Dataset`).
     Additionally, handle data augmentation with random peptide fragments, randomly rotated and noised.
+    (These datasets will be passed as inputs to PyTorch DataLoaders, which will then call __getitem__() to extract
+    the sample: (embed, noised_coords, noise_levels, noise, aacodes, atomcodes, aaindices, bb_coords, target_coords,
+    target))
     """
 
     def __init__(self, sample_list, augment=True):
@@ -281,7 +279,7 @@ def main() -> Tuple[NDArray[np.int16], NDArray[np.float16], NDArray[np.float16]]
                            cycles=2).cuda()
 
     print("Loading data...")
-    train_list, validation_list = load_dataset()
+    train_list, validation_list = dsl.load_dataset()
 
     ntrain = len(train_list)
     nvalidation = len(validation_list)
