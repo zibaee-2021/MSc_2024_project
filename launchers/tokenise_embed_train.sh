@@ -8,4 +8,4 @@ export PYTHONPATH=$PYTHONPATH:$HOME/diffSock/src
 export PYTHONPATH=$PYTHONPATH:$HOME/diffSock/src/diffusion
 
 #!/usr/bin/env python3
-python3 ~/PycharmProjects/MSc_project/diffSock/tokenise_embed_train.py
+python3 ~/PycharmProjects/MSc_project/diffSock/src/tokenise_embed_train.py
