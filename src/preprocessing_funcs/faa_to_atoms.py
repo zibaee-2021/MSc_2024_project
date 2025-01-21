@@ -47,9 +47,9 @@ def translate_aa_to_atoms(uniprot_ids=None, pdbid_chains=None) -> dict:
 
         abs_path = os.path.dirname(os.path.abspath(__file__))
         for pdbid_chain in pdbid_chains:
-            path_tokenised_ssv = f'../diffusion/diff_data/tokenised/{pdbid_chain}.ssv'
-            abspath_tokenised_ssv = os.path.normpath(os.path.join(abs_path, path_tokenised_ssv))
-            pdf = dh.read_tokenised_cif_chain_ssv_to_pdf(abspath_tokenised_ssv)
+            path_tokenised_dir = f'../diffusion/diff_data/tokenised'
+            abspath_tknsd_dir = os.path.normpath(os.path.join(abs_path, path_tokenised_dir))
+            pdf = dh.read_tokenised_pdbid_chain_ssv_to_pdf(path_tokensd_dir=abspath_tknsd_dir, pdbid_chain=pdbid_chain)
             aa_position_sequence = pdf[['S_seq_id', 'S_mon_id']]
             aa_position_sequence = aa_position_sequence.drop_duplicates(subset='S_seq_id', keep='first')
             aa_sequence = ''.join(aa_position_sequence['S_mon_id'])
