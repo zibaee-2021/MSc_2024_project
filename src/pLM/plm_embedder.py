@@ -47,6 +47,7 @@ def _generate_embeddings_from_aminoacid_sequence(hf_tokeniser, hf_eval_model, pd
     aa_seq_embedding = aa_seq_embedding.detach()
     return aa_seq_embedding
 
+
 def _load_tokeniser_and_eval_model(model_name: str) -> Tuple[AutoTokenizer, AutoModel]:
     """
     Instantiate tokeniser and instantiate pre-trained sequence-to-sequence language model, in evaluation mode.
@@ -112,3 +113,5 @@ if __name__ == '__main__':
     path = Path(abspath_emb)
     pt_count = sum(1 for file in path.rglob("*.pt"))
     print(f'Created {pt_count}.pt plm embeddings. This took {time_taken:.2f} seconds in total.')
+
+    # Took 1400 seconds (i.e. 23 minutes) to generate 565 embeddings on joe-desktop.

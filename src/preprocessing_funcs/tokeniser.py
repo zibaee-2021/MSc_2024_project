@@ -636,4 +636,6 @@ if __name__ == '__main__':
 
     # Parsed and tokenised 573 cif files to ssv files. Tokenisation logic, removed 8 of these for not being suitable
     # for potentially different reasons, so there are 565 ssv files saved to `src/diffusion/diff_data/tokenised`.
-    # (It took 502.31 seconds in total on my MacBook. It took 283 secs on joe-desktop).
+    # (It took 502 seconds in total on my MacBook. It took 283 secs on joe-desktop).
+    # If clearing mmCIF dir first (i.e. no pre-downloaded CIFs) hence requiring 565 API calls to get the mmCIF files
+    # it took twice as long: 592 seconds on joe-desktop.
