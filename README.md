@@ -21,6 +21,11 @@ Alternatively, for demonstration, each part can be run separately:
 
 `src/preprocessing_funcs/tokeniser.py`
 
+(This script is currently set up to first empty the `mmCIF` and `tokenised` directories, to remove all pre-downloaded 
+`mmCIF` files and pre-tokenised `.ssv` files, so that they downloaded/generated from scratch, on lines 616 and 619.
+If you don't want this to happen but instead to re-use the files in those directories, then you must comment these 
+lines out manually).
+
 Specifying the `PDBids`/`PDBid_chains` to use for training the model, via `tokeniser.py`.  
 Before doing anything, you must decide which proteins will be used for training the model. 
 `tokeniser.py` builds a list of `PDBids` and/or `PDBid_chains` according to paths passed to it, all of these are 
@@ -43,6 +48,10 @@ to use `src/diffusion/diff_data/PDBid_list/pdbchains_565.lst` (for simpler testi
 #### PROTEIN LANGUAGE MODEL EMBEDDER
 
 `src/pLM/plm_embedder.py`  
+
+(This script is currently set up to first empty the `emb` directory, to remove all embeddings generated in a previous
+run, on line 100. It will then generate all embeddings from scratch.
+If you don't want this to happen, then you must comment this lines out manually).
 
 The choice of which `PDBid_chains` to build protein language model (PLM) embeddings for is implicitly indicated by the tokeniser.  
 `tokeniser.py` (which must be run *before* the `plm_embedder.py`) writes tokenised data to `.ssv` files in `src/diffusion/diff_data/tokenised`.  
