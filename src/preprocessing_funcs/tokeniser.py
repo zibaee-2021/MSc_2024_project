@@ -51,6 +51,7 @@ atom_label_num        # ENUMERATED ATOMS      - EQUIVALENT TO `atomcodes` IN ORI
 import os
 import re
 import glob
+import sys
 from typing import List, Tuple
 import numpy as np
 import pandas as pd
@@ -402,32 +403,37 @@ def __fetch_mmcif_from_pdb_api_and_write(pdb_id: str, relpath_dst_cif: str) -> N
         file.write(response.text)
 
 
-def _get_mmcif_data(pdb_id: str, relpath_cif_dir: str) -> dict:
+def _get_mmcif_data(pdbid: str, relpath_cif_dir: str) -> dict:
     """
     Read in mmCIF file of specified PDBid, to Python dict. mmCIF file of specified PDBid will be read
     from the specified relative path, if it has previously been downloaded to there, otherwise it will be downloaded
     directly from the rcsb server.
-    :param pdb_id: PDBid of mmCIF file to read in.
+    :param pdbid: PDBid of mmCIF file to read in.
     :param relpath_cif_dir: Relative path to mmCIF files directory.
     :return: Python dict of the specified mmCIF file.
     """
-    relpath_cif_dir = relpath_cif_dir.removesuffix('.cif').removeprefix('/').removesuffix('/')
-    pdb_id = pdb_id.removesuffix('.cif')
-    relpath_cif = f'{relpath_cif_dir}/{pdb_id}.cif'
+    pdbid = pdbid.removesuffix('.cif')
+    if relpath_cif_dir is not None:
+        relpath_cif_dir = relpath_cif_dir.removesuffix('.cif').removeprefix('/').removesuffix('/')
+        relpath_cif = f'{relpath_cif_dir}/{pdbid}.cif'
+    else:
+        relpath_cif_dir = '../diffusion/diff_data/mmCIF'  # Assumes `_chdir_to_preprocessing_funcs_dir()` was called.
+        relpath_cif = f'{relpath_cif_dir}/{pdbid}.cif'
+
     if os.path.exists(relpath_cif):
         try:
             MMCIF2Dict(relpath_cif)
         except ValueError:
-            print(f"{pdb_id}.cif appears to be empty. "
-                  f"Attempt to read {pdb_id} directly from 'https://files.rcsb.org/download/'{pdb_id}")
-            __fetch_mmcif_from_pdb_api_and_write(pdb_id=pdb_id, relpath_dst_cif=relpath_cif)
+            print(f"{pdbid}.cif appears to be empty. "
+                  f"Attempt to read {pdbid} directly from 'https://files.rcsb.org/download/'{pdbid}")
+            __fetch_mmcif_from_pdb_api_and_write(pdb_id=pdbid, relpath_dst_cif=relpath_cif)
     else:
         print(f'Did not find this mmCIF locally ({relpath_cif}). '
-              f"Attempt to read {pdb_id} directly from 'https://files.rcsb.org/download/'{pdb_id}")
-        __fetch_mmcif_from_pdb_api_and_write(pdb_id=pdb_id, relpath_dst_cif=relpath_cif)
+              f"Attempt to read {pdbid} directly from 'https://files.rcsb.org/download/'{pdbid}")
+        __fetch_mmcif_from_pdb_api_and_write(pdb_id=pdbid, relpath_dst_cif=relpath_cif)
     mmcif = MMCIF2Dict(relpath_cif)
     if not mmcif:
-        print(f'{relpath_cif}/{pdb_id}.cif appears to be empty. ')
+        print(f'{relpath_cif}/{pdbid}.cif appears to be empty. ')
     return mmcif
 
 
@@ -438,6 +444,45 @@ def __split_pdbid_chain(pdbid_chain):
         return pdbid, chain
     else:
         return pdbid_chain, None
+
+
+def _is_already_tokenised(relpath_toknsd_dir: str, pdbid: str) -> Tuple[bool, str]:
+    """
+    Check if pre-tokenised .ssv files of given PDBid/PDBid_chain are in given tokenised dir.
+    :param relpath_toknsd_dir: Relative path to tokenised dir to look in.
+    :param pdbid: PDBid or PDBid_chain to search for.
+    :return: True if already tokenised .ssv file found in specified tokenised dir. Return PDBid_chain if True.
+    """
+    # MAKE A LIST OF PDBIDS THAT ARE SSVS IN TOKENISED DIR (I.E. HAVE ALREADY BEEN TOKENISED):
+    pdbid_chain_pretokenised_list = []
+    if relpath_toknsd_dir is not None:
+        if os.path.exists(relpath_toknsd_dir):
+            pdbid_chain_pretokenised_list = [item.removesuffix('.ssv')
+                                            for item in os.listdir(relpath_toknsd_dir)
+                                            if item.endswith('.ssv')]
+
+    pdbid_chain_ptkn = ''
+    is_pretokenised = False
+
+    if pdbid in pdbid_chain_pretokenised_list:
+        is_pretokenised = True
+        pdbid_chain_ptkn = pdbid
+    else:
+        # IF PRE-TOKENISED AND SAVED AS ssv, PDBID WILL INCLUDE CHAIN SUFFIX.
+        # But PDBids passed in may lack the chain, so make dict of PDBid to PDBid_chain for tokenised ones only.
+        pdbid_to_pdbidchain_prtknsd = {}
+        for pdbid_chain_prtknsd in pdbid_chain_pretokenised_list:
+            pdbid_only, _ = __split_pdbid_chain(pdbid_chain_prtknsd)
+            pdbid_to_pdbidchain_prtknsd[pdbid_only] = pdbid_chain_prtknsd
+        pdbid_only, pdbid_chain_prtknsd = None, None
+        # if PDBid only wo chain, check if in pretokenised list, after pdbid_chain str has chain part removed.
+        if pdbid in pdbid_to_pdbidchain_prtknsd:
+            is_pretokenised = True
+            pdbid_chain_ptkn = pdbid_to_pdbidchain_prtknsd[pdbid]
+
+    if is_pretokenised:
+        print(f'PDBid = {pdbid} is already tokenised.')
+    return is_pretokenised, pdbid_chain_ptkn
 
 
 def _generate_list_of_pdbids_in_cif_dir(path_cif_dir: str) -> list:
@@ -462,10 +507,10 @@ def _chdir_to_preprocessing_funcs_dir() -> None:
 
 
 def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_data/mmCIF',
-                                          relpath_toknsd_ssv_dir='../diffusion/diff_data/tokenised',
+                                          relpath_toknsd_dir='../diffusion/diff_data/tokenised',
                                           relpath_pdblst=None,
                                           flatfile_format_to_write='ssv',
-                                          pdb_ids=None,
+                                          pdbids=None,
                                           write_lst_file=True) -> Tuple[List[pd.DataFrame], str]:
     """
     Parse and tokenise sequence and structure fields from mmCIFs of proteins, returning a list of Pandas dataframes,
@@ -480,11 +525,11 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
     Where an mmCIF has > 1 chain, parse & tokenise all polypeptide-only chains & only those with sufficient backbone
     coordinates, according to some pre-decided threshold constant (i.e. `MIN_RATIO_MISSING_BACKBONE_ATOMS`).
     :param relpath_cif_dir: Relative path of directory containing pre-downloaded raw mmCIF files. Has default.
-    :param relpath_toknsd_ssv_dir: Relative path of directory for tokenised mmCIFs as flat files. Has default.
+    :param relpath_toknsd_dir: Relative path of directory for tokenised mmCIFs as flat files. Has default.
     :param relpath_pdblst: <OPTIONAL> Relative path of list file, that lists one or more PDBids or PDBid_chains names.
     e.g. '../diffusion/diff_data/PDBid_list/pdbchains_9.lst'.
     :param flatfile_format_to_write: Write to ssv, csv or tsv. Use ssv by default.
-    :param pdb_ids: <OPTIONAL> PDBid(s) or PDBid_chain to parse & tokenised. Expect either string of PDBid or list
+    :param pdbids: <OPTIONAL> PDBid(s) or PDBid_chain to parse & tokenised. Expect either string of PDBid or list
     of PDBids strings.
     Use 'src/diffusion/diff_data/tokenised' by default, (hence expecting cwd to be 'src/diffusion').
     :param write_lst_file: True to write out a new PDBids_chain `.lst` file of all those that have been parsed and
@@ -506,23 +551,23 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
     for_pdbchain_lst = []
 
     # BUILD LIST OF PDBIDS TO PROCESS, FROM EITHER GIVEN STRING, LIST, .LST FILE OR PATH TO MMCIFS:
-    if pdb_ids:
-        if isinstance(pdb_ids, str):  # If string, it is assumed that this is one PDBid.
-            pdb_ids = [pdb_ids]
+    if pdbids:
+        if isinstance(pdbids, str):  # If string, it is assumed that this is one PDBid.
+            pdbids = [pdbids]
     if relpath_pdblst:
-        if pdb_ids is None:
-            pdb_ids = []
-        pdb_ids.extend(dh.read_pdb_lst_file(relpath_pdblst=relpath_pdblst))
+        if pdbids is None:
+            pdbids = []
+        pdbids.extend(dh.read_pdb_lst_file(relpath_pdblst=relpath_pdblst))
     if relpath_cif_dir:
-        if pdb_ids is None:
-            pdb_ids = []
+        if pdbids is None:
+            pdbids = []
         relpath_cif_dir = relpath_cif_dir.removesuffix('/').removeprefix('/')
         assert os.path.exists(relpath_cif_dir), f"Not found `relpath_cif_dir`={relpath_cif_dir}."
-        _pdb_ids = _generate_list_of_pdbids_in_cif_dir(path_cif_dir=relpath_cif_dir)
-        pdb_ids.extend(_pdb_ids)
+        _pdbids = _generate_list_of_pdbids_in_cif_dir(path_cif_dir=relpath_cif_dir)
+        pdbids.extend(_pdbids)
 
-    if pdb_ids is None or len(pdb_ids) == 0:
-        pdb_ids = []
+    if pdbids is None or len(pdbids) == 0:
+        pdbids = []
         print("No PDBids have been specified. "
               "If `src/diffusion/diff_data/mmCIF` dir contains no pre-downloaded mmCIF files, you would need to "
               "have either passed the file path string of an existing PDBid `.lst` in "
@@ -532,43 +577,40 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
               "So, I will just use `pdbchains_565.lst` (for smoother testing/demo experience)")
 
         relpath_pdblst = '../diffusion/diff_data/PDBid_list/pdbchains_565.lst'
-        pdb_ids.extend(dh.read_pdb_lst_file(relpath_pdblst=relpath_pdblst))
+        pdbids.extend(dh.read_pdb_lst_file(relpath_pdblst=relpath_pdblst))
 
-    pdb_ids = list(set(pdb_ids))
+    pdbids = list(set(pdbids))
 
-    # MAKE A LIST OF PDBIDS THAT ARE SSVS IN TOKENISED DIR (I.E. HAVE ALREADY BEEN TOKENISED):
-    cif_tokenised_ssv_dir = '../diffusion/diff_data/tokenised'
-    pdbid_chains_of_pretokenised = []
-    if os.path.exists(cif_tokenised_ssv_dir):
-        pdbid_chains_of_pretokenised = [item.removesuffix('.ssv')
-                                        for item in os.listdir(cif_tokenised_ssv_dir)
-                                        if item.endswith('.ssv')]
+    # IF ANY PDBIDS IN LIST THAT HAVE DUPLICATE PDBID-UNDERSCORE-CHAIN, KEEP ONLY PDBID-UNDERSCORE-CHAIN:
+    pdbids_to_pdbids_undrscre_chain = {}  # MAP OF PDBID ONLY TO PDBID-UNDERSCORE-CHAIN, e.g. {'1ECA': '1ECA_A'}
+    for this_id in pdbids:
+        pdbid_only = this_id.split('_')[0]
+        if (pdbid_only not in pdbids_to_pdbids_undrscre_chain or
+                len(this_id) > len(pdbids_to_pdbids_undrscre_chain[pdbid_only])):  # this_id has duplicate without chain
+            pdbids_to_pdbids_undrscre_chain[pdbid_only] = this_id  # so replace it with the pdbid-underscore-chain id.
+    this_id, pdbid_only = None, None
 
-    for pdb_id in pdb_ids:  # Expecting only one PDBid per line. (Can be PDBid_chain or just PDBid.)
-        pdb_id = pdb_id.rstrip().split()[0]
-        flatfile_format_to_write = flatfile_format_to_write.removeprefix('.').lower()
-        pdb_id = pdb_id.removesuffix('.cif')
-        print(f'Starting to tokenise PDBid={pdb_id} -----------------------------------------------------------------')
-        if pdb_id == '5TJ5':  # '5TJ5' is one of the 573 single-domain proteins dataset. Its data found to be unusable.
-            print(f'{pdb_id} is known to have 2500 missing entries in the aa sequence field. So {pdb_id} will be '
-                  f'excluded.')
+    pdbids = list(pdbids_to_pdbids_undrscre_chain.values())
+
+    for pdbid in pdbids:  # Expecting only one PDBid per line. (Can be either PDBid_chain or just PDBid).
+        pdbid = pdbid.rstrip().split()[0]
+        pdbid = pdbid.removesuffix('.cif')
+
+        print(f'-------- TOKENISE PDBid = {pdbid} ---------------------------------------------------------')
+        if pdbid == '5TJ5':  # '5TJ5' is one of the 573 single-domain proteins dataset. Its data found to be unusable.
+            print(f'{pdbid} is known to have 2500 missing entries in the aa sequence field. So {pdbid} will be '
+                  f'explicitly excluded for now, but will introduce logic to deal with this in near future.')
             continue
 
-        # THE LOGIC EXPECTS THAT IF IT HAS BEEN TOKENISED AND SAVED AS ssv, THEN IT WILL BE BY THE CHAIN AND SO
-        # MUST HAVE THE SUFFIX `<pdbid>_A.ssv`, `<pdbid>_B.ssv`, ETC, RATHER THAN JUST `<pdbid>.ssv`:
-        if pdb_id in pdbid_chains_of_pretokenised:
-            pdbid_chain = pdb_id  # to make it clear that this is expected to include a chain suffix.
-            print(f'PDBid={pdbid_chain} already tokenised. Reading ssv in to pdf. Add to list.')
-            _cif_pdfs_per_chain = dh.read_tokenised_cif_ssv_to_pdf(relpath_tokensd_dir=relpath_toknsd_ssv_dir,
-                                                                   pdb_id=pdbid_chain)
-            # FURTHERMORE IT IS EXPECTED THERE IS *ONLY ONE CHAIN* PER PDBID, SO IT IS A PYTHON LIST OF ONE PDB_ID.
-            assert _cif_pdfs_per_chain, 'no cif_pdfs_per_chain returned. Expected list of one pdf for one chain.'
+        is_tokenised, pdbid_chain = _is_already_tokenised(relpath_toknsd_dir=relpath_toknsd_dir, pdbid=pdbid)
+        if is_tokenised:
+            print(f'Pretokenised, but adding PDBid={pdbid_chain} to new .lst file to write.')
             for_pdbchain_lst.append(pdbid_chain)
             continue
 
-        # OTHERWISE GET THE MMCIF (LOCALLY OR VIA API), AND EXPECT PDBid TO BE WITHOUT THE CHAIN:
-        pdbid, chain = __split_pdbid_chain(pdb_id)  # Note: chain should be empty string
-        mmcif_dict = _get_mmcif_data(relpath_cif_dir=relpath_cif_dir, pdb_id=pdbid)
+        # OTHERWISE GET THE MMCIF (LOCALLY OR VIA API)
+        pdbid, chain = __split_pdbid_chain(pdbid)
+        mmcif_dict = _get_mmcif_data(relpath_cif_dir=relpath_cif_dir, pdbid=pdbid)
 
         # ** AND FINALLY, YOU CAN START PARSING THE MMCIFS (THAT HAVE NOT ALREADY BEEN PARSED) **
         # PARSE MMCIF TO EXTRACT 14 FIELDS, TO FILTER, IMPUTE, SORT & JOIN ON, RETURNING AN 8-COLUMN DATAFRAME:
@@ -589,9 +631,10 @@ def parse_tokenise_write_cifs_to_flatfile(relpath_cif_dir='../diffusion/diff_dat
 
         cif_pdfs_per_chain = _assign_backbone_position_to_all_residue_rows(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
         cif_pdfs_per_chain = _enumerate_atoms_and_residues(pdfs=cif_pdfs_per_chain, pdb_id=pdbid)
+
         dh.write_tokenised_cifs_to_flatfiles(pdfs=cif_pdfs_per_chain,
-                                             dst_data_dir=relpath_toknsd_ssv_dir,
-                                             flatfiles=flatfile_format_to_write, pdb_id=pdbid)
+                                             dst_data_dir=relpath_toknsd_dir,
+                                             flatfile_format=flatfile_format_to_write, pdb_id=pdbid)
         # ADD CHAIN TO NAME OF PDBID:
         for pdf_chain in cif_pdfs_per_chain:
             get_nums_of_missing_data(pdf_chain)
@@ -613,16 +656,26 @@ if __name__ == '__main__':
     # dh.copy_cifs_from_bigfilefolder_to_diff_data()
 
     # 2. REMOVE ALL PREVIOUSLY DOWNLOADED MMCIF FILES FROM `DIFFUSION/DIFF_DATA/MMCIF` DIRECTORY.
-    # dh.clear_diffdata_mmcif_dir()
+    # dh.clear_diffdata_mmcif_dir() # <-------- LINE 616: USER TO UNCOMMENT FOR ALL mmCIFs TO BE DOWNLOADED IN THIS RUN.
 
     # 3. REMOVE ALL PREVIOUSLY TOKENISED DATA FROM `DIFFUSION/DIFF_DATA/TOKENISED` DIRECTORY.
-    # dh.clear_diffdata_tokenised_dir()
+    # dh.clear_diffdata_tokenised_dir() # <----- LINE 619: USER TO UNCOMMENT FOR ALL mmCIFs TO BE TOKENISED IN THIS RUN.
 
     from time import time
     start_time = time()
+    print(f'START ***********************************************************************')
+    # 4. GET PDB LIST FILE IF PASSED IN:
+    if len(sys.argv) > 1:
+        fname = sys.argv[1]
+        _relpath_pdblst = f'../diffusion/diff_data/PDBid_list/{fname}.lst'
+        print(f'Argument received --> will use this list of PDBids: {_relpath_pdblst}')
 
-    # 4. PARSE AND TOKENISE MMCIF FILES AND WRITE SSV FILES TO `DIFFUSION/DIFF_DATA/TOKENISED` DIRECTORY:
-    _, _lst_file = parse_tokenise_write_cifs_to_flatfile()
+        # 5. PARSE AND TOKENISE MMCIF FILES AND WRITE SSV FILES TO `DIFFUSION/DIFF_DATA/TOKENISED` DIRECTORY:
+        parse_tokenise_write_cifs_to_flatfile(relpath_pdblst=_relpath_pdblst)
+    else:
+        print('No PDBid list filename argument provided.')
+        # 5. PARSE AND TOKENISE MMCIF FILES AND WRITE SSV FILES TO `DIFFUSION/DIFF_DATA/TOKENISED` DIRECTORY:
+        parse_tokenise_write_cifs_to_flatfile()
 
     time_taken = time() - start_time
 
