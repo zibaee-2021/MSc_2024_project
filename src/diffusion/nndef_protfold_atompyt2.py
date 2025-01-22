@@ -217,7 +217,7 @@ class FourierEncodingLayer(nn.Module):
 # DiffusionNet Module
 class DiffusionNet(nn.Module):
     def __init__(self, seqwidth=1024, atomwidth=256, seqheads=16, atomheads=8, seqdepth=8, atomdepth=10, cycles=3):
-        # Might want to look at increasing atomwidth because protein has more atom types (38) than RNA
+        # increase atomwidth because protein has more atom types (38) than RNA..?
         super().__init__()
 
         self.cycles = cycles
