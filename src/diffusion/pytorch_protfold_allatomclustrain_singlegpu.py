@@ -488,16 +488,19 @@ if __name__ == "__main__":
     start_time = time.time()
 
     _epochs, _train_losses, _val_losses = main()
-
+    print('Training completed.')
     time_taken = time.time() - start_time
 
     from pathlib import Path
-    abspath_emb = os.path.normpath(os.path.join(_abs_path, '../diffusion/diff_data/tokenised'))
-    path = Path(abspath_emb)
+    abspath_tok = os.path.normpath(os.path.join(_abs_path, 'diff_data/tokenised'))
+    path = Path(abspath_tok)
     ssv_count = sum(1 for file in path.rglob("*.ssv"))
     print(f"Training on {ssv_count} PDBs completed in {time_taken / 3600:.2f} hours", flush=True)
 
+    print(f'Saving losses to {path_lpe_txt}.')
     losses_per_epoch = np.column_stack((_epochs, _train_losses, _val_losses))
     np.savetxt(path_lpe_txt, losses_per_epoch, fmt=('%d', '%.2f', '%.2f'), delimiter=',')
-    loss_plotter.plot_train_val_errors_per_epoch(path_lpe_txt, include_train=True, include_val=True)
+
+    # Not sure this will plot if running from terminal:
+    # loss_plotter.plot_train_val_errors_per_epoch(path_lpe_txt, include_train=True, include_val=True)
 
