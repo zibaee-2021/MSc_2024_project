@@ -481,6 +481,8 @@ if __name__ == "__main__":
     dateMonth = datetime.datetime.now().strftime("%d%b")  # e.g. '20Jan'
     path_lpe_txt = os.path.normpath(os.path.join(_abs_path, f'../losses/losses_per_epoch_{dateMonth}.txt'))
     path_lpe_dir = os.path.normpath(os.path.join(_abs_path, '../losses'))
+    os.makedirs(path_lpe_dir, exist_ok=True)
+    print(f'Losses will be written to losses_per_epoch_{dateMonth}.txt in {path_lpe_dir}.')
     assert os.path.exists(path_lpe_dir), ("Missing `losses` directory. Needed for saving loss per epoch data. "
                                           "It should be present in `src` directory at same level as `diffusion` dir.")
 
