@@ -355,45 +355,52 @@ def main() -> Tuple[NDArray[np.int16], NDArray[np.float16], NDArray[np.float16]]
         for `noise` (sample[3]) and `target` (sample[9]).
         :return: the combined loss.
         """
-        # I'M NOT 100% CLEAR ON THIS NON_BLOCKING ARGUMENT. DOES IT REDUCE COMPUTATION TIME, IN ASYNCHRONOUS CONTEXT ?
+        # not sure about `non_blocking` argument. Does it reduce computation time, in asynchronous context?
         # (embed, noised_coords, noise_levels, noise, aacodes, atomcodes, aaindices, bb_coords, target_coords, target)
         inputs = _sample[0].cuda(non_blocking=True)  # pLM embedding tensor, `embed`.
         noised_coords = _sample[1].cuda(non_blocking=True)  # prediction after noise added (tbc)
-        noise_levels = _sample[2].cuda(non_blocking=True)  # how much noise to add (tbc)
+        noise_levels = _sample[2].cuda(non_blocking=True)  # how much noise to add. (Constant defined in DMPDataset))
         aacodes = _sample[4].cuda(non_blocking=True)  # Enumeration of amino acids (0-19)
         atomcodes = _sample[5].cuda(non_blocking=True)  # Enumeration of atoms (0-37 or 0-186)
         aaindices = _sample[6].cuda(non_blocking=True)  # zero-indexed position of amino acid in protein.
         bb_coords = _sample[7].cuda(non_blocking=True)  # mean-corrected  X,Y,Z coords of anchor backbone atoms.
         target_coords = _sample[8].cuda(non_blocking=True)  # mean-corrected X,Y,Z coords of atoms.
-        # ? Or
         print(f'Calc loss PDBid={_sample[9]}')
 
+        # PASS THROUGH NEURAL NETWORK TO COMPUTE PREDICTIONS OF THE DENOISED STRUCTURE, COORDINATES AND
+        # PER-RESIDUE CONFIDENCES
+        # pred_denoised, pred_coords, pred_confs = network(x=inputs, aacodes=aacodes, atcodes=atomcodes,
+        #                                                  aaindices=aaindices, noised_coords=noised_coords,
+        #                                                  nlev_in=noise_levels)
         pred_denoised, pred_coords, pred_confs = network(inputs, aacodes, atomcodes, aaindices, noised_coords, noise_levels)
 
-        predmap = torch.cdist(pred_coords, pred_coords)  # What does this do? What is this for ?
-        bb_coords = bb_coords.unsqueeze(0)
-        targmap = torch.cdist(bb_coords, bb_coords)
+        # WEIGHTED SUM OF THREE LOSS CALCULATIONS:---------------------------------------------------------------------
+        # 1. CALCULATE BACKBONE LOSS BY MSE BETWEEN PAIRWISE DISTANCES:
+        predmap = torch.cdist(pred_coords, pred_coords)  # COMPUTE PAIRWISE EUCLID DISTS TWEEN ALL PREDICTED ATOM COORDS
+        bb_coords = bb_coords.unsqueeze(0)  # ADD DIMENSION TO MATCH: CHANGING FROM (N, D) to (1, N, D).
+        targmap = torch.cdist(bb_coords, bb_coords)  # COMPUTE PAIRWISE EUCLID DISTS TWEEN ALL GROUND TRUTH BB COORDS
+        bb_loss = F.mse_loss(predmap, targmap)  # ELEMENT-WISE MEAN-SQUARED ERROR
 
-        bb_loss = F.mse_loss(predmap, targmap)
-
-        diffmap = (targmap - predmap).abs().squeeze(0)
-        incmask = (targmap < 15.0).float().squeeze(0).fill_diagonal_(0)
+        # 2. COMPUTE CONFIDENCE LOSS BY DIFFERENCE BETWEEN PAIRWISE DISTANCES PREDICTED CONFIDENCE SCORES AND LDDT:
+        diffmap = (targmap - predmap).abs().squeeze(0)  # DIFFERENCE BETWEEN PREDICTED PW DISTANCES AND TARGET PW DISTS.
+        incmask = (targmap < 15.0).float().squeeze(0).fill_diagonal_(0)  # FOR CALCULATING LDDT.
         lddt = (0.25 * ((diffmap < 0.5).float() +
                         (diffmap < 1.0).float() +
                         (diffmap < 2.0).float() +
                         (diffmap < 4.0).float()) * incmask).sum(dim=0) / torch.clip(incmask.sum(dim=0), min=1)
+        conf_loss = (torch.sigmoid(pred_confs).squeeze(0) - lddt).abs().mean()  # DIFF TWEEN PREDICTED CONF AND LDDT.
 
-        conf_loss = (torch.sigmoid(pred_confs).squeeze(0) - lddt).abs().mean()
-
-        rot_targets = lsq_fit(target_coords, pred_denoised)
-
-        nwts = (noise_levels.pow(2) + SIGDATA * SIGDATA) / (noise_levels + SIGDATA).pow(2)
+        # 3. COMPUTE DIFFUSION LOSS AS DIFFERENCE BETWEEN PREDICTED COORDS AND TARGET COORDS (ROTATED TO BEST MATCH
+        # PREDICTED COORDS:
+        rot_targets = lsq_fit(target_coords, pred_denoised)  # Rotate target to best align the 3d coords of predicted.
+        nwts = (noise_levels.pow(2) + SIGDATA * SIGDATA) / (noise_levels + SIGDATA).pow(2)  # noise weighting score
         diff_loss = ((rot_targets - pred_denoised).pow(2).sum(dim=2).mean(dim=1) * nwts).mean()
 
+        # COMPUTE TOTAL LOSS AS WEIGHTED SUM OF BACKBONE, CONFIDENCE AND DIFFUSION LOSSES:
         loss = bb_loss + 0.01 * conf_loss + diff_loss
 
         # If loss is null just return zero
-        if loss != loss:
+        if loss != loss:  # (logic unclear to me here)
             loss = 0
 
         return loss
@@ -443,7 +450,7 @@ def main() -> Tuple[NDArray[np.int16], NDArray[np.float16], NDArray[np.float16]]
 
             print(f'Epoch {epoch}, train loss: {train_err:.4f}, val loss: {val_err:.4f}')
             print(f'Time taken = {time.time() - last_time:.2f} s', flush=True)
-            last_time = time.time()
+            last_time = time.time()  # <- already done on line 413 at start of epoch
 
             # SAVE WEIGHTS:
             if val_err < val_err_min:
