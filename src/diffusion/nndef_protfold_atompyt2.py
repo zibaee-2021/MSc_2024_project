@@ -24,14 +24,14 @@ class AlibiPositionalBias(nn.Module):
     @staticmethod
     def _get_slopes(heads):
         def get_slopes_power_of_2(n):
-            start = (2**(-2**-(log2(n)-3)))
+            start = (2**(-2**-(log2(n) - 3)))
             ratio = start
-            return [start*ratio**i for i in range(n)]
+            return [start * ratio**i for i in range(n)]
 
         if log2(heads).is_integer():
             return get_slopes_power_of_2(heads)
 
-        closest_power_of_2 = 2 ** floor(log2(heads))
+        closest_power_of_2 = 2**floor(log2(heads))
         return get_slopes_power_of_2(closest_power_of_2) + get_slopes_power_of_2(2 * closest_power_of_2)[0::2][:heads-closest_power_of_2]
 
     def forward(self, residx):
@@ -265,8 +265,7 @@ class DiffusionNet(nn.Module):
             nn.Linear(atomwidth, 3, bias=False)
         )
 
-    #       network(inputs, aacodes, atomcodes, aaindices, noised_coords, noise_levels) # from line 371 in main()
-    # def forward(self, x, ntcodes, atcodes, ntindices, noised_coords_in, nlev_in):
+    # called via: network(inputs, aacodes, atomcodes, aaindices, noised_coords, noise_levels) # from line ~371 in main()
     def forward(self, x, aacodes, atcodes, aaindices, noised_coords_in, nlev_in):
 
         B, L = x.shape[0:2]
