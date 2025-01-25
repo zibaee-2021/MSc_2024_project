@@ -19,7 +19,7 @@ def _write_embedding(aa_seq_embedding: torch.Tensor, pdbid_chain: str) -> None:
     """
     Write given pLM embedding to .pt file in 'diffusion/diff_data/emb'.
     `PDBid_chain` of this embedding is also passed in as an argument.
-    :param aa_seq_embedding: Protein language model embedding.
+    :param aa_seq_embedding: Protein language model embedding for given amino acid sequence.
     :param pdbid_chain: mmCIF identifier of this protein sequence.
     """
     abs_path = os.path.dirname(os.path.abspath(__file__))
@@ -43,11 +43,11 @@ def _generate_embeddings_from_aminoacid_sequence(hf_tokeniser, hf_eval_model, aa
     decoder_input_ids = decoder_input_ids[:, :-1]
 
     # with torch.no_grad():
-    embedding = hf_eval_model(input_ids=decoder_input_ids,
+    lm_output = hf_eval_model(input_ids=decoder_input_ids,
                               decoder_input_ids=decoder_input_ids)
     # embedding = embedding.last_hidden_state
     # aa_sequence_embedding = embedding[0]
-    aa_seq_embedding = embedding.encoder_last_hidden_state
+    aa_seq_embedding = lm_output.encoder_last_hidden_state
     aa_seq_embedding = aa_seq_embedding.detach()
     return aa_seq_embedding
 
