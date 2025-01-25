@@ -13,10 +13,15 @@ import torch
 from transformers import AutoTokenizer
 from transformers import AutoModelForSeq2SeqLM, AutoModel
 from data_layer import data_handler as dh
-from src.preprocessing_funcs import tokeniser as tk
 
 
-def _write_embeddings(aa_seq_embedding: torch.Tensor, pdbid_chain: str) -> None:
+def _write_embedding(aa_seq_embedding: torch.Tensor, pdbid_chain: str) -> None:
+    """
+    Write given pLM embedding to .pt file in 'diffusion/diff_data/emb'.
+    `PDBid_chain` of this embedding is also passed in as an argument.
+    :param aa_seq_embedding: Protein language model embedding.
+    :param pdbid_chain: mmCIF identifier of this protein sequence.
+    """
     abs_path = os.path.dirname(os.path.abspath(__file__))
     abspath_diffdata_emb = os.path.normpath(os.path.join(abs_path, '../diffusion/diff_data/emb'))
     dh.save_torch_tensor_to_pt(pt_tensor_to_save=aa_seq_embedding,
@@ -24,13 +29,12 @@ def _write_embeddings(aa_seq_embedding: torch.Tensor, pdbid_chain: str) -> None:
                                pdbid_chain=pdbid_chain)
 
 
-def _generate_embeddings_from_aminoacid_sequence(hf_tokeniser, hf_eval_model, pdbid_chain: str, aa_seq: str):
+def _generate_embeddings_from_aminoacid_sequence(hf_tokeniser, hf_eval_model, aa_seq: str):
     """
     Generate protein language embeddings for given amino acid sequence, using the given HuggingFace tokeniser and
     pretrained sequence-to-sequence protein language model, in eval mode. Write embedding to file, (`.pt`).
     :param hf_tokeniser: Specific HuggingFace tokeniser for `hf_eval_model` protein language model.
     :param hf_eval_model: Specific HuggingFace pretrained protein language model, in eval mode.
-    :param pdbid_chain: Identifier of protein sequence language model embedding is being created for, e.g. '1ECA_A'
     :param aa_seq: Amino acid sequence (1-letter format).
     """
     inputs = hf_tokeniser(aa_seq, return_tensors='pt')
@@ -77,7 +81,13 @@ def _get_aa_sequence_from_ssv(pdf: pd.DataFrame) -> str:
     return aa_sequence
 
 
-def generate_ankh_base_embeddings_from_tokenised_cifs():
+def generate_plm_embeddings_from_tokenised_cifs_using_pretrained_models(model_name='ElnaggarLab/ankh-base') -> None:
+    """
+    Generate protein language model embeddings for all tokenised mmCIF .ssv files in 'src/diffusion/diff_data/tokenised'
+    using the given model, via HuggingFace. The default is `Ankh-base` model (Elnaggar et al. 2023).
+    Write the embeddings to .pt files in 'src/diffusion/diff_data/emb'.
+    :param model_name: Name used by HuggingFace to identify one of the transformer models it hosts.Ankh-base by default.
+    """
     abs_path = os.path.dirname(os.path.abspath(__file__))
     abspath_tokenised = os.path.normpath(os.path.join(abs_path, '../diffusion/diff_data/tokenised'))
     path_ssvs = glob.glob(os.path.join(abspath_tokenised, f'*.ssv'))
@@ -90,14 +100,13 @@ def generate_ankh_base_embeddings_from_tokenised_cifs():
 
         pdf = pd.read_csv(path_ssv, sep=' ')
         aa_sequence = _get_aa_sequence_from_ssv(pdf=pdf)
-        hf_tokeniser, hf_eval_model = _load_tokeniser_and_eval_model(model_name='ElnaggarLab/ankh-base')
+        hf_tokeniser, hf_eval_model = _load_tokeniser_and_eval_model(model_name)
         pdbid_chain = os.path.basename(path_ssv)
-        pdbid_chain = pdbid_chain.removesuffix('.ssv')
         aa_seq_embedding = _generate_embeddings_from_aminoacid_sequence(hf_tokeniser=hf_tokeniser,
                                                                         hf_eval_model=hf_eval_model,
-                                                                        pdbid_chain=pdbid_chain,
                                                                         aa_seq=aa_sequence)
-        _write_embeddings(aa_seq_embedding=aa_seq_embedding, pdbid_chain=pdbid_chain)
+        pdbid_chain = pdbid_chain.removesuffix('.ssv')
+        _write_embedding(aa_seq_embedding=aa_seq_embedding, pdbid_chain=pdbid_chain)
 
 
 if __name__ == '__main__':
@@ -109,7 +118,8 @@ if __name__ == '__main__':
     start_time = time()
     print(f'START ***********************************************************************')
     # GENERATE THE EMBEDDINGS AND WRITE .PT FILES TO `DIFFUSION/DIFF_DATA/EMB` DIRECTORY:
-    generate_ankh_base_embeddings_from_tokenised_cifs()
+    _model_name = 'ElnaggarLab/ankh-base'
+    generate_plm_embeddings_from_tokenised_cifs_using_pretrained_models(_model_name)
 
     time_taken = time() - start_time
 

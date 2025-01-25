@@ -26,7 +26,7 @@ if __name__ == "__main__":
 
     # MAKE pLM EMBEDDINGS:
     data_handler.clear_diffdata_emb_dir()
-    plm_embedder.generate_ankh_base_embeddings_from_tokenised_cifs()
+    plm_embedder.generate_plm_embeddings_from_tokenised_cifs_using_pretrained_models()
 
     # TRAIN MODEL:
     pytorch_protfold_allatomclustrain_singlegpu.main()
