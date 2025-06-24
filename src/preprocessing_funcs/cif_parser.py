@@ -53,7 +53,7 @@ def _remove_rows_with_missing_x_coords(pdf: pd.DataFrame) -> pd.DataFrame:
     missing_count = pdf['A_Cartn_x'].isna().sum()
     if missing_count > 0:
         print(f"BEFORE removing them, there are {missing_count} rows with missing values in column 'A_Cartn_x'")
-    pdf = pdf.dropna(how='any', axis=0, inplace=False, subset=['A_Cartn_x'])
+        pdf = pdf.dropna(how='any', axis=0, inplace=False, subset=['A_Cartn_x'])
     missing_count = pdf['A_Cartn_x'].isna().sum()
     if missing_count > 0:
         print(f"AFTER removing them, there are {missing_count} rows with missing values in column 'A_Cartn_x'")
